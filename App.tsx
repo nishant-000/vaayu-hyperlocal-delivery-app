@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   },
   tabPressable: {
     alignItems: "center",
-    justify.content: "center",
+    justifyContent: "center",
   },
   pill: {
     flexDirection: "row",
