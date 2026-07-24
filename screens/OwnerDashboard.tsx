@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator } from 'react-native'
 import tw from 'twrnc'
-import Svg, { Path, Rect, Circle, Line, Polyline } from 'react-native-svg'
+import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
+import { supabase } from '../lib/supabase'
 
 // Language Translations Dictionary for Low-Literacy Shop Owners
 const i18n: Record<string, Record<string, string>> = {
@@ -179,101 +180,27 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'settings'>('orders')
   const [isLiveToday, setIsLiveToday] = useState(true)
   const [lang, setLang] = useState<'en' | 'hi' | 'ta'>('en')
+  const [loading, setLoading] = useState(true)
 
   const t = i18n[lang] || i18n['en']
 
-  // Trigger haptic vibration feedback helper
   const triggerHaptic = () => {
-    try {
-      Vibration.vibrate(80)
-    } catch {
-      // Fallback
-    }
+    try { Vibration.vibrate(80); } catch {}
   }
 
-  // Workers List
-  const [workers, setWorkers] = useState([
-    { id: 'w1', name: 'Suresh (Kitchen)', phone: '+91 98765 11223' },
-  ])
+  // Real Database State (No Mock Data!)
+  const [orders, setOrders] = useState<any[]>([])
+  const [menuItems, setMenuItems] = useState<any[]>([])
+  const [workers, setWorkers] = useState<any[]>([])
+
+  // Form Inputs
   const [newWorkerName, setNewWorkerName] = useState('')
   const [newWorkerPhone, setNewWorkerPhone] = useState('')
 
-  // Food Menu Items with Photos
-  const [menuItems, setMenuItems] = useState([
-    { id: '1', name: 'Spicy Paneer Burger', price: 120, available: true, img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200' },
-    { id: '2', name: 'Salted French Fries', price: 80, available: true, img: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=200' },
-    { id: '3', name: 'Loaded Cheese Pizza', price: 180, available: false, img: 'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=200' }
-  ])
-
-  // Simple Item Add Form with Photo Upload
   const [newItemName, setNewItemName] = useState('')
   const [newItemPrice, setNewItemPrice] = useState('')
   const [newItemImg, setNewItemImg] = useState('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200')
 
-  // Orders State with 15m countdown
-  const [orders, setOrders] = useState([
-    {
-      id: 'ORD-8942',
-      customerName: 'Aditya Sharma',
-      location: 'Block A, Room 102',
-      landmark: 'Near Reception',
-      deliveryMode: 'instant',
-      items: [
-        { id: 'cb_1', name: 'Spicy Paneer Burger', quantity: 2, price: 120, accepted: true },
-        { id: 'cb_2', name: 'Salted French Fries', quantity: 1, price: 80, accepted: true }
-      ],
-      paymentMode: 'cod', // cod = 💵, upi = 📱
-      status: 'incoming',
-      expireTime: Date.now() + 12 * 60 * 1000,
-      totalDuration: 15 * 60 * 1000
-    },
-    {
-      id: 'ORD-7210',
-      customerName: 'Rohan Mehta',
-      location: 'Block C, Room 305',
-      landmark: 'Lift area',
-      deliveryMode: 'regular',
-      selectedSlotLabel: '12:00 PM – 2:00 PM',
-      items: [
-        { id: 'cb_2', name: 'Salted French Fries', quantity: 1, price: 80, accepted: true }
-      ],
-      paymentMode: 'upi',
-      status: 'preparing',
-      expireTime: Date.now() - 5 * 60 * 1000,
-      totalDuration: 15 * 60 * 1000
-    }
-  ])
-
-  // Helper to calculate full order breakdown (Items Subtotal + Delivery Fee + Platform Fee = Grand Total)
-  const getOrderBill = (order: any) => {
-    const isInstant = !(order.deliveryMode === 'regular' || order.selectedSlotLabel)
-    const deliveryFee = isInstant ? 10 : 5
-    const platformFee = 5
-    const itemsSubtotal = order.items
-      .filter((i: any) => i.accepted !== false)
-      .reduce((sum: number, i: any) => sum + i.price * i.quantity, 0)
-    const grandTotal = itemsSubtotal + (itemsSubtotal > 0 ? (deliveryFee + platformFee) : 0)
-    return { isInstant, itemsSubtotal, deliveryFee, platformFee, grandTotal }
-  }
-
-  // Live timer tick
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  // Auto-reject on 15m timeout & haptic trigger on new incoming order
-  useEffect(() => {
-    setOrders(prev => prev.map(o => {
-      if (o.status === 'incoming' && now > o.expireTime) {
-        return { ...o, status: 'cancelled', cancelReason: '15m Timeout Expired' }
-      }
-      return o
-    }))
-  }, [now])
-
-  // Toast message
   const [toast, setToast] = useState<string | null>(null)
   const showToast = (msg: string) => {
     triggerHaptic()
@@ -281,10 +208,85 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     setTimeout(() => setToast(null), 2500)
   }
 
-  // Format 15m countdown mm:ss and progress percentage
-  const getTimerDetails = (expireTime: number, totalDuration: number = 15 * 60 * 1000) => {
+  // 1. Load Initial Real Data from Supabase & Subscribe to Realtime Updates
+  useEffect(() => {
+    async function loadShopData() {
+      setLoading(true)
+
+      // Fetch Orders
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (ordersData) setOrders(ordersData)
+
+      // Fetch Menu Items
+      const { data: menuData } = await supabase
+        .from('menu_items')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (menuData) {
+        setMenuItems(menuData.map(m => ({
+          id: m.id,
+          name: m.name,
+          price: m.price,
+          available: m.is_available,
+          img: m.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'
+        })))
+      }
+
+      // Fetch Shop Workers
+      const { data: workersData } = await supabase
+        .from('shop_workers')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (workersData) {
+        setWorkers(workersData.map(w => ({
+          id: w.id,
+          name: w.worker_name,
+          phone: w.worker_phone
+        })))
+      }
+
+      setLoading(false)
+    }
+
+    loadShopData()
+
+    // Realtime Orders Subscription
+    const ordersSub = supabase
+      .channel('shop_orders_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        console.log('[OwnerDashboard] Realtime order payload:', payload)
+        triggerHaptic()
+        if (payload.eventType === 'INSERT') {
+          setOrders(prev => [payload.new, ...prev])
+          showToast(`🔔 New Order #${payload.new.id} Received!`)
+        } else if (payload.eventType === 'UPDATE') {
+          setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o))
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(ordersSub)
+    }
+  }, [])
+
+  // Timer Tick
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const getTimerDetails = (expireAtStr?: string) => {
+    const expireTime = expireAtStr ? new Date(expireAtStr).getTime() : (now + 15 * 60 * 1000)
     const diff = Math.max(0, Math.floor((expireTime - now) / 1000))
-    const totalSecs = Math.floor(totalDuration / 1000)
+    const totalSecs = 15 * 60
     const ratio = diff / totalSecs
     const mins = Math.floor(diff / 60)
     const secs = diff % 60
@@ -310,82 +312,110 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     return { timeStr, ratio, colorClass, textClass, bgClass, borderClass }
   }
 
-  // Partial Accept Modal
-  const [partialOrder, setPartialOrder] = useState<any>(null)
-  const [checkedItems, setCheckedItems] = useState<{ [key: string]: boolean }>({})
+  // Calculate bill breakdown per order
+  const getOrderBill = (order: any) => {
+    const isInstant = order.delivery_mode === 'instant'
+    const deliveryFee = order.delivery_fee || (isInstant ? 10 : 5)
+    const platformFee = order.platform_fee || 5
+    const itemsSubtotal = order.items_subtotal || (Array.isArray(order.items)
+      ? order.items.reduce((s: number, i: any) => s + (i.price * i.quantity), 0)
+      : 0)
+    const grandTotal = order.grand_total || (itemsSubtotal + deliveryFee + platformFee)
+    return { isInstant, itemsSubtotal, deliveryFee, platformFee, grandTotal }
+  }
 
-  const handleOpenAcceptModal = (order: any) => {
+  // Real Database Order Status Update (Triggers Server-Side Push Notification!)
+  const handleUpdateStatus = async (orderId: string, newStatus: string, reason?: string) => {
     triggerHaptic()
-    setPartialOrder(order)
-    const checks: { [key: string]: boolean } = {}
-    order.items.forEach((item: any, idx: number) => {
-      checks[item.id || idx] = true
-    })
-    setCheckedItems(checks)
-  }
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus, cancel_reason: reason } : o))
+    showToast(`Status updated to ${newStatus}`)
 
-  const handleConfirmAcceptance = () => {
-    if (!partialOrder) return
-    const updatedItems = partialOrder.items.map((item: any, idx: number) => ({
-      ...item,
-      accepted: !!checkedItems[item.id || idx]
-    }))
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus, cancel_reason: reason })
+      .eq('id', orderId)
 
-    if (!updatedItems.some((i: any) => i.accepted)) {
-      showToast('Select at least 1 item')
-      return
+    if (error) {
+      console.error('[OwnerDashboard] Failed to update status in Supabase:', error)
     }
-
-    setOrders(prev => prev.map(o => o.id === partialOrder.id ? { ...o, items: updatedItems, status: 'preparing' } : o))
-    showToast(t.accept)
-    setPartialOrder(null)
   }
 
-  const handleUpdateStatus = (orderId: string, newStatus: string) => {
+  // Stock Toggle in Supabase
+  const handleToggleStock = async (itemId: string, currentAvailable: boolean) => {
     triggerHaptic()
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
-    showToast('Updated!')
-  }
+    const nextAvailable = !currentAvailable
+    setMenuItems(prev => prev.map(i => i.id === itemId ? { ...i, available: nextAvailable } : i))
 
-  const handleAddWorker = () => {
-    if (!newWorkerName || !newWorkerPhone) {
-      showToast('Enter worker info')
-      return
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ is_available: nextAvailable })
+      .eq('id', itemId)
+
+    if (error) {
+      console.error('[OwnerDashboard] Failed to toggle stock in Supabase:', error)
     }
-    setWorkers(prev => [...prev, { id: `w_${Date.now()}`, name: newWorkerName, phone: newWorkerPhone }])
-    setNewWorkerName('')
-    setNewWorkerPhone('')
-    showToast('Worker Added!')
   }
 
-  const handleAddItem = () => {
+  // Add Item to Supabase
+  const handleAddItem = async () => {
     if (!newItemName || !newItemPrice) {
       showToast('Enter food name & price')
       return
     }
-    setMenuItems(prev => [{ id: `i_${Date.now()}`, name: newItemName, price: parseFloat(newItemPrice) || 0, available: true, img: newItemImg }, ...prev])
-    setNewItemName('')
-    setNewItemPrice('')
-    showToast('Food Added!')
+
+    const itemPrice = parseFloat(newItemPrice) || 0
+    const { data, error } = await supabase.from('menu_items').insert([{
+      name: newItemName,
+      price: itemPrice,
+      is_available: true,
+      image_url: newItemImg
+    }]).select()
+
+    if (!error && data && data.length > 0) {
+      const created = data[0]
+      setMenuItems(prev => [{ id: created.id, name: created.name, price: created.price, available: true, img: created.image_url }, ...prev])
+      setNewItemName('')
+      setNewItemPrice('')
+      showToast('Food Added to Menu!')
+    }
+  }
+
+  // Add Worker to Supabase
+  const handleAddWorker = async () => {
+    if (!newWorkerName || !newWorkerPhone) {
+      showToast('Enter worker info')
+      return
+    }
+
+    const { data, error } = await supabase.from('shop_workers').insert([{
+      worker_name: newWorkerName,
+      worker_phone: newWorkerPhone
+    }]).select()
+
+    if (!error && data && data.length > 0) {
+      const created = data[0]
+      setWorkers(prev => [{ id: created.id, name: created.worker_name, phone: created.worker_phone }, ...prev])
+      setNewWorkerName('')
+      setNewWorkerPhone('')
+      showToast('Worker Added!')
+    }
   }
 
   const incomingCount = orders.filter(o => o.status === 'incoming').length
-
-  // Financial summary calculations
   const validOrders = orders.filter(o => o.status !== 'cancelled')
   const totalOrdersCount = validOrders.length
 
-  const instantOrdersCount = validOrders.filter(o => !(o.deliveryMode === 'regular' || o.selectedSlotLabel)).length
+  const instantOrdersCount = validOrders.filter(o => o.delivery_mode === 'instant').length
   const instantDeliveryFeesTotal = instantOrdersCount * 10
 
-  const scheduledOrdersCount = validOrders.filter(o => (o.deliveryMode === 'regular' || o.selectedSlotLabel)).length
+  const scheduledOrdersCount = validOrders.filter(o => o.delivery_mode !== 'instant').length
   const scheduledDeliveryFeesTotal = scheduledOrdersCount * 5
 
   const totalDeliveryFeesCollected = instantDeliveryFeesTotal + scheduledDeliveryFeesTotal
   const totalPlatformFeesToVaayu = totalOrdersCount * 5
   const totalAmountOwedToVaayu = totalDeliveryFeesCollected + totalPlatformFeesToVaayu
 
-  const todayTotalCashCollected = validOrders.reduce((sum, o) => sum + getOrderBill(o).grandTotal, 0)
+  const todayTotalCashCollected = validOrders.reduce((sum, o) => sum + (o.grand_total || getOrderBill(o).grandTotal), 0)
   const shopNetFoodEarnings = todayTotalCashCollected - totalAmountOwedToVaayu
 
   return (
@@ -396,14 +426,14 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         </View>
       )}
 
-      {/* Top Header with Quick Language Selector */}
+      {/* Top Header */}
       <View style={tw`bg-white px-4 pt-8 pb-3 border-b border-gray-200`}>
         <View style={tw`flex-row justify-between items-center mb-1`}>
           <View>
             <Text style={tw`text-[12px] font-black text-green-700 uppercase tracking-widest`}>
               {user?.role === 'worker' ? 'WORKER PORTAL' : 'SHOP OWNER'}
             </Text>
-            <Text style={tw`text-[24px] font-black text-gray-900`}>{user?.name || 'Campus Bites'}</Text>
+            <Text style={tw`text-[24px] font-black text-gray-900`}>{user?.name || 'Campus Bites Cafe'}</Text>
           </View>
 
           {/* Quick Language Toggle */}
@@ -425,7 +455,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           </View>
         </View>
 
-        {/* GIANT ZOMATO-STYLE DAILY TOGGLE BUTTON (56px+ height) */}
+        {/* GIANT ZOMATO-STYLE DAILY GO-LIVE BUTTON */}
         <TouchableOpacity
           onPress={() => {
             const next = !isLiveToday
@@ -447,7 +477,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         </TouchableOpacity>
       </View>
 
-      {/* 2 Simple Large Summary Cards (+20% font size) */}
+      {/* Summary Cards */}
       <View style={tw`flex-row px-4 pt-4 gap-3`}>
         <View style={[tw`flex-1 rounded-2xl p-4 border`, incomingCount > 0 ? tw`bg-red-50 border-red-300` : tw`bg-white border-gray-200`]}>
           <Text style={tw`text-[12px] font-black uppercase text-gray-500`}>{t.newWaiting}</Text>
@@ -461,173 +491,178 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       </View>
 
       <ScrollView contentContainerStyle={tw`p-4 pb-36`}>
-        {/* ── 1. ORDERS TAB (Detailed Delivery & Platform Fee Breakdown) ────── */}
+        {/* ── 1. ORDERS TAB ────── */}
         {activeTab === 'orders' && (
           <View style={tw`gap-4`}>
             <Text style={tw`text-[18px] font-black text-gray-900`}>{t.orders} ({orders.length})</Text>
 
-            {orders.map(order => {
-              const timer = getTimerDetails(order.expireTime, order.totalDuration)
-              const bill = getOrderBill(order)
+            {loading ? (
+              <View style={tw`py-10 items-center justify-center`}>
+                <ActivityIndicator size="large" color="#16a34a" />
+                <Text style={tw`text-xs text-gray-400 font-medium mt-2`}>Loading orders from Supabase...</Text>
+              </View>
+            ) : orders.length === 0 ? (
+              <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-200`}>
+                <Text style={tw`text-4xl mb-2`}>📋</Text>
+                <Text style={tw`text-base font-bold text-gray-900`}>No orders yet today</Text>
+                <Text style={tw`text-xs text-gray-400 font-medium mt-1`}>New customer orders will appear here automatically.</Text>
+              </View>
+            ) : (
+              orders.map(order => {
+                const timer = getTimerDetails(order.expire_at)
+                const bill = getOrderBill(order)
 
-              return (
-                <View key={order.id} style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 shadow-md gap-3`}>
-                  {/* GIANT Order ID & Delivery Room (Focal Point) */}
-                  <View style={tw`flex-row justify-between items-start border-b border-gray-100 pb-3`}>
-                    <View style={tw`flex-1 mr-2`}>
-                      <Text style={tw`text-[28px] font-black text-gray-900 leading-none`}>{order.id}</Text>
-                      <Text style={tw`text-[20px] font-black text-green-700 mt-1`}>📍 {order.location}</Text>
-                    </View>
-
-                    {/* Payment Icon Only (💵 for COD, 📱 for UPI) + Status */}
-                    <View style={tw`items-end gap-1.5`}>
-                      <View style={tw`bg-gray-100 px-3 py-1.5 rounded-full`}>
-                        <Text style={tw`text-2xl`}>{order.paymentMode === 'cod' ? '💵' : '📱'}</Text>
+                return (
+                  <View key={order.id} style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 shadow-md gap-3`}>
+                    <View style={tw`flex-row justify-between items-start border-b border-gray-100 pb-3`}>
+                      <View style={tw`flex-1 mr-2`}>
+                        <Text style={tw`text-[28px] font-black text-gray-900 leading-none`}>#{order.id}</Text>
+                        <Text style={tw`text-[20px] font-black text-green-700 mt-1`}>📍 {order.location}</Text>
                       </View>
-                      <View style={[tw`px-3 py-1 rounded-full`, 
-                        order.status === 'incoming' ? tw`bg-red-100` :
-                        order.status === 'preparing' ? tw`bg-orange-100` :
-                        order.status === 'delivering' ? tw`bg-purple-100` : tw`bg-green-100`
-                      ]}>
-                        <Text style={[tw`text-[12px] font-black uppercase`,
-                          order.status === 'incoming' ? tw`text-red-700` :
-                          order.status === 'preparing' ? tw`text-orange-700` :
-                          order.status === 'delivering' ? tw`text-purple-700` : tw`text-green-700`
+
+                      <View style={tw`items-end gap-1.5`}>
+                        <View style={tw`bg-gray-100 px-3 py-1.5 rounded-full`}>
+                          <Text style={tw`text-2xl`}>{order.payment_mode === 'cod' ? '💵' : '📱'}</Text>
+                        </View>
+                        <View style={[tw`px-3 py-1 rounded-full`, 
+                          order.status === 'incoming' ? tw`bg-red-100` :
+                          order.status === 'preparing' || order.status === 'accepted' ? tw`bg-orange-100` :
+                          order.status === 'out_for_delivery' || order.status === 'delivering' ? tw`bg-purple-100` : tw`bg-green-100`
                         ]}>
-                          {order.status === 'incoming' ? '📥 NEW' :
-                           order.status === 'preparing' ? '🍳 COOK' :
-                           order.status === 'delivering' ? '🛵 ROAD' : '✅ DONE'}
-                        </Text>
+                          <Text style={[tw`text-[12px] font-black uppercase`,
+                            order.status === 'incoming' ? tw`text-red-700` :
+                            order.status === 'preparing' || order.status === 'accepted' ? tw`text-orange-700` :
+                            order.status === 'out_for_delivery' || order.status === 'delivering' ? tw`text-purple-700` : tw`text-green-700`
+                          ]}>
+                            {order.status === 'incoming' ? '📥 NEW' :
+                             order.status === 'preparing' || order.status === 'accepted' ? '🍳 COOK' :
+                             order.status === 'out_for_delivery' || order.status === 'delivering' ? '🛵 ROAD' : '✅ DONE'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  {/* VISUAL COLOR-SHIFTING PROGRESS TIMER BAR (Green -> Orange -> Red) */}
-                  {order.status === 'incoming' && (
-                    <View style={[tw`rounded-2xl p-3 border flex-col gap-1.5`, tw`${timer.bgClass} ${timer.borderClass}`]}>
-                      <View style={tw`flex-row justify-between items-center`}>
-                        <Text style={[tw`text-[13px] font-black`, tw`${timer.textClass}`]}>⏱️ {t.timeLeft}:</Text>
-                        <Text style={[tw`text-[18px] font-black font-mono`, tw`${timer.textClass}`]}>{timer.timeStr}</Text>
-                      </View>
-                      <View style={tw`w-full h-3.5 bg-gray-200 rounded-full overflow-hidden`}>
-                        <View style={[tw`h-full rounded-full`, tw`${timer.colorClass}`, { width: `${Math.max(5, Math.min(100, timer.ratio * 100))}%` }]} />
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Delivery Mode Badge: Scheduled (GREEN) vs Instant (BLUE) */}
-                  {order.deliveryMode === 'regular' || order.selectedSlotLabel ? (
-                    <View style={tw`bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex-row items-center justify-between`}>
-                      <Text style={tw`text-[12px] font-black text-green-700 uppercase`}>{t.scheduled}</Text>
-                      <Text style={tw`text-[13px] font-bold text-green-800`}>
-                        <Text style={tw`font-black text-green-900`}>{order.selectedSlotLabel || '12:00 PM – 2:00 PM'}</Text>
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={tw`bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 flex-row items-center justify-between`}>
-                      <Text style={tw`text-[12px] font-black text-blue-700 uppercase`}>{t.instant}</Text>
-                      <Text style={tw`text-[13px] font-bold text-blue-800`}>
-                        <Text style={tw`font-black text-blue-900`}>Within 15 Mins</Text>
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Items & Fees Breakdown List */}
-                  <View style={tw`bg-gray-50 rounded-2xl p-3 gap-2 border border-gray-200`}>
-                    {order.items.map((it: any, idx: number) => (
-                      <View key={idx} style={tw`flex-row justify-between items-center`}>
-                        <Text style={[tw`text-[15px] font-black`, it.accepted !== false ? tw`text-gray-900` : tw`text-gray-400 line-through`]}>
-                          {it.name} x {it.quantity}
-                        </Text>
-                        <Text style={tw`text-[15px] font-black text-gray-900`}>₹{it.price * it.quantity}</Text>
-                      </View>
-                    ))}
-
-                    <View style={tw`border-t border-gray-200 pt-2 gap-1.5`}>
-                      <View style={tw`flex-row justify-between items-center`}>
-                        <Text style={tw`text-[13px] font-bold text-gray-600`}>{t.subtotal}</Text>
-                        <Text style={tw`text-[13px] font-black text-gray-800`}>₹{bill.itemsSubtotal}</Text>
-                      </View>
-
-                      <View style={tw`flex-row justify-between items-center`}>
-                        <Text style={tw`text-[13px] font-bold text-blue-700`}>
-                          🛵 {t.deliveryFee} ({bill.isInstant ? '⚡ Instant ₹10' : '🟢 Scheduled ₹5'})
-                        </Text>
-                        <Text style={tw`text-[13px] font-black text-blue-800`}>+₹{bill.deliveryFee}</Text>
-                      </View>
-
-                      <View style={tw`flex-row justify-between items-center`}>
-                        <Text style={tw`text-[13px] font-bold text-purple-700`}>⚡ {t.platformFee}</Text>
-                        <Text style={tw`text-[13px] font-black text-purple-800`}>+₹{bill.platformFee}</Text>
-                      </View>
-
-                      <View style={tw`border-t border-gray-300 pt-2 mt-1 flex-row justify-between items-center`}>
-                        <Text style={tw`text-[15px] font-black text-gray-900`}>{t.grandTotal}</Text>
-                        <Text style={tw`text-[20px] font-black text-green-700`}>₹{bill.grandTotal}</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* 30% TALLER ACTION BUTTONS */}
-                  <View style={tw`gap-2.5 mt-1`}>
+                    {/* Progress Timer */}
                     {order.status === 'incoming' && (
-                      <>
-                        <TouchableOpacity
-                          onPress={() => handleOpenAcceptModal(order)}
-                          style={tw`w-full h-14 bg-green-600 rounded-2xl items-center justify-center shadow-lg active:scale-95`}
-                        >
-                          <Text style={tw`text-white font-black text-[17px] uppercase`}>{t.accept} (₹{bill.grandTotal})</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => handleUpdateStatus(order.id, 'cancelled')}
-                          style={tw`w-full h-12 bg-red-100 rounded-2xl items-center justify-center active:scale-95`}
-                        >
-                          <Text style={tw`text-red-700 font-black text-[14px]`}>{t.decline}</Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-
-                    {order.status === 'preparing' && (
-                      <TouchableOpacity
-                        onPress={() => handleUpdateStatus(order.id, 'delivering')}
-                        style={tw`w-full h-14 bg-orange-500 rounded-2xl items-center justify-center shadow-lg active:scale-95`}
-                      >
-                        <Text style={tw`text-white font-black text-[17px] uppercase`}>{t.markReady}</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {order.status === 'delivering' && (
-                      <TouchableOpacity
-                        onPress={() => handleUpdateStatus(order.id, 'completed')}
-                        style={tw`w-full h-14 bg-green-700 rounded-2xl items-center justify-center shadow-lg active:scale-95`}
-                      >
-                        <Text style={tw`text-white font-black text-[17px] uppercase`}>{t.markDelivered}</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {order.status === 'completed' && (
-                      <View style={tw`w-full py-3 bg-green-50 rounded-2xl items-center`}>
-                        <Text style={tw`text-green-800 font-black text-[14px]`}>{t.completed}</Text>
+                      <View style={[tw`rounded-2xl p-3 border flex-col gap-1.5`, tw`${timer.bgClass} ${timer.borderClass}`]}>
+                        <View style={tw`flex-row justify-between items-center`}>
+                          <Text style={[tw`text-[13px] font-black`, tw`${timer.textClass}`]}>⏱️ {t.timeLeft}:</Text>
+                          <Text style={[tw`text-[18px] font-black font-mono`, tw`${timer.textClass}`]}>{timer.timeStr}</Text>
+                        </View>
+                        <View style={tw`w-full h-3.5 bg-gray-200 rounded-full overflow-hidden`}>
+                          <View style={[tw`h-full rounded-full`, tw`${timer.colorClass}`, { width: `${Math.max(5, Math.min(100, timer.ratio * 100))}%` }]} />
+                        </View>
                       </View>
                     )}
 
-                    {order.status === 'cancelled' && (
-                      <View style={tw`w-full py-3 bg-red-50 rounded-2xl items-center`}>
-                        <Text style={tw`text-red-700 font-black text-[14px]`}>{t.rejected}</Text>
+                    {/* Delivery Mode Badge */}
+                    {order.delivery_mode === 'instant' ? (
+                      <View style={tw`bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 flex-row items-center justify-between`}>
+                        <Text style={tw`text-[12px] font-black text-blue-700 uppercase`}>{t.instant}</Text>
+                        <Text style={tw`text-[13px] font-bold text-blue-800`}>Within 15 Mins</Text>
+                      </View>
+                    ) : (
+                      <View style={tw`bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex-row items-center justify-between`}>
+                        <Text style={tw`text-[12px] font-black text-green-700 uppercase`}>{t.scheduled}</Text>
+                        <Text style={tw`text-[13px] font-bold text-green-800`}>{order.selected_slot_label || '12:00 PM – 2:00 PM'}</Text>
                       </View>
                     )}
+
+                    {/* Items & Fees Breakdown */}
+                    <View style={tw`bg-gray-50 rounded-2xl p-3 gap-2 border border-gray-200`}>
+                      {Array.isArray(order.items) && order.items.map((it: any, idx: number) => (
+                        <View key={idx} style={tw`flex-row justify-between items-center`}>
+                          <Text style={tw`text-[15px] font-black text-gray-900`}>{it.name} x {it.quantity || it.qty}</Text>
+                          <Text style={tw`text-[15px] font-black text-gray-900`}>₹{(it.price || 0) * (it.quantity || it.qty)}</Text>
+                        </View>
+                      ))}
+
+                      <View style={tw`border-t border-gray-200 pt-2 gap-1.5`}>
+                        <View style={tw`flex-row justify-between items-center`}>
+                          <Text style={tw`text-[13px] font-bold text-gray-600`}>{t.subtotal}</Text>
+                          <Text style={tw`text-[13px] font-black text-gray-800`}>₹{bill.itemsSubtotal}</Text>
+                        </View>
+
+                        <View style={tw`flex-row justify-between items-center`}>
+                          <Text style={tw`text-[13px] font-bold text-blue-700`}>
+                            🛵 {t.deliveryFee} ({bill.isInstant ? '⚡ Instant ₹10' : '🟢 Scheduled ₹5'})
+                          </Text>
+                          <Text style={tw`text-[13px] font-black text-blue-800`}>+₹{bill.deliveryFee}</Text>
+                        </View>
+
+                        <View style={tw`flex-row justify-between items-center`}>
+                          <Text style={tw`text-[13px] font-bold text-purple-700`}>⚡ {t.platformFee}</Text>
+                          <Text style={tw`text-[13px] font-black text-purple-800`}>+₹{bill.platformFee}</Text>
+                        </View>
+
+                        <View style={tw`border-t border-gray-300 pt-2 mt-1 flex-row justify-between items-center`}>
+                          <Text style={tw`text-[15px] font-black text-gray-900`}>{t.grandTotal}</Text>
+                          <Text style={tw`text-[20px] font-black text-green-700`}>₹{bill.grandTotal}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Action Buttons (Updates Status & Fires Push Notification!) */}
+                    <View style={tw`gap-2.5 mt-1`}>
+                      {order.status === 'incoming' && (
+                        <>
+                          <TouchableOpacity
+                            onPress={() => handleUpdateStatus(order.id, 'accepted')}
+                            style={tw`w-full h-14 bg-green-600 rounded-2xl items-center justify-center shadow-lg active:scale-95`}
+                          >
+                            <Text style={tw`text-white font-black text-[17px] uppercase`}>{t.accept} (₹{bill.grandTotal})</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={() => handleUpdateStatus(order.id, 'cancelled', 'Shop declined order')}
+                            style={tw`w-full h-12 bg-red-100 rounded-2xl items-center justify-center active:scale-95`}
+                          >
+                            <Text style={tw`text-red-700 font-black text-[14px]`}>{t.decline}</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+
+                      {(order.status === 'accepted' || order.status === 'preparing') && (
+                        <TouchableOpacity
+                          onPress={() => handleUpdateStatus(order.id, 'out_for_delivery')}
+                          style={tw`w-full h-14 bg-orange-500 rounded-2xl items-center justify-center shadow-lg active:scale-95`}
+                        >
+                          <Text style={tw`text-white font-black text-[17px] uppercase`}>{t.markReady}</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {(order.status === 'out_for_delivery' || order.status === 'delivering') && (
+                        <TouchableOpacity
+                          onPress={() => handleUpdateStatus(order.id, 'delivered')}
+                          style={tw`w-full h-14 bg-green-700 rounded-2xl items-center justify-center shadow-lg active:scale-95`}
+                        >
+                          <Text style={tw`text-white font-black text-[17px] uppercase`}>{t.markDelivered}</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {order.status === 'delivered' && (
+                        <View style={tw`w-full py-3 bg-green-50 rounded-2xl items-center`}>
+                          <Text style={tw`text-green-800 font-black text-[14px]`}>{t.completed}</Text>
+                        </View>
+                      )}
+
+                      {order.status === 'cancelled' && (
+                        <View style={tw`w-full py-3 bg-red-50 rounded-2xl items-center`}>
+                          <Text style={tw`text-red-700 font-black text-[14px]`}>{t.rejected}</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
-                </View>
-              )
-            })}
+                )
+              })
+            )}
           </View>
         )}
 
-        {/* ── 2. FOOD STOCK SCREEN ─────────────────────────────────────────── */}
+        {/* ── 2. FOOD STOCK SCREEN (Backed by Supabase menu_items) ────── */}
         {activeTab === 'menu' && (
           <View style={tw`gap-4`}>
-            {/* Camera-First Prominent Add Food Form */}
+            {/* Form */}
             <View style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 gap-4 shadow-sm`}>
               <Text style={tw`text-[18px] font-black text-gray-900`}>{t.addFood}</Text>
               
@@ -662,7 +697,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               </TouchableOpacity>
             </View>
 
-            {/* Food Stock List with Thumbnails & Giant Stock Switch */}
+            {/* List */}
             <Text style={tw`text-[18px] font-black text-gray-900 mt-2`}>{t.menu} ({menuItems.length})</Text>
             <View style={tw`gap-3`}>
               {menuItems.map(item => (
@@ -675,10 +710,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   </View>
 
                   <TouchableOpacity
-                    onPress={() => {
-                      triggerHaptic()
-                      setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, available: !i.available } : i))
-                    }}
+                    onPress={() => handleToggleStock(item.id, item.available)}
                     activeOpacity={0.8}
                     style={[
                       tw`px-5 h-12 rounded-2xl items-center justify-center border-2 shadow-sm`,
@@ -695,10 +727,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           </View>
         )}
 
-        {/* ── 3. SETTINGS & VAAYU FINANCIAL BREAKDOWN VAULT ─────────────────── */}
+        {/* ── 3. SETTINGS & VAAYU FINANCIAL BREAKDOWN VAULT ────── */}
         {activeTab === 'settings' && (
           <View style={tw`gap-4`}>
-            {/* VAAYU FINANCIAL SETTLEMENT & RETURN VAULT */}
+            {/* VAAYU FINANCIAL SETTLEMENT VAULT */}
             <View style={tw`bg-white rounded-3xl p-5 border-2 border-purple-300 gap-4 shadow-sm`}>
               <Text style={tw`text-[17px] font-black text-purple-900 uppercase`}>{t.financialSummary}</Text>
               
@@ -736,7 +768,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               </View>
             </View>
 
-            {/* Language Selector Box */}
+            {/* Language Selector */}
             <View style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 gap-3 shadow-sm`}>
               <Text style={tw`text-[16px] font-black text-gray-900`}>{t.language}</Text>
               
@@ -764,7 +796,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               </View>
             </View>
 
-            {/* Worker Staff Access */}
+            {/* Worker Staff Access (Backed by Supabase shop_workers) */}
             <View style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 gap-3 shadow-sm`}>
               <Text style={tw`text-[16px] font-black text-gray-900`}>{t.addWorker}</Text>
               <Text style={tw`text-[13px] text-gray-500 font-medium`}>{t.workerHelp}</Text>
@@ -792,12 +824,18 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               </TouchableOpacity>
 
               {workers.map(w => (
-                <View key={w.id} style={tw`flex-row justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs`}>
+                <View key={w.id} style={tw`flex-row justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-200`}>
                   <View>
                     <Text style={tw`font-bold text-gray-900 text-[14px]`}>{w.name}</Text>
                     <Text style={tw`text-gray-500 text-[12px]`}>{w.phone}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => setWorkers(prev => prev.filter(x => x.id !== w.id))} style={tw`bg-red-100 px-3 py-1.5 rounded-lg`}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      setWorkers(prev => prev.filter(x => x.id !== w.id))
+                      await supabase.from('shop_workers').delete().eq('id', w.id)
+                    }}
+                    style={tw`bg-red-100 px-3 py-1.5 rounded-lg`}
+                  >
                     <Text style={tw`text-red-700 font-bold text-[12px]`}>Remove</Text>
                   </TouchableOpacity>
                 </View>
@@ -811,40 +849,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         )}
       </ScrollView>
 
-      {/* Partial Acceptance Item Checklist Modal */}
-      <Modal visible={!!partialOrder} transparent animationType="slide" onRequestClose={() => setPartialOrder(null)}>
-        <View style={tw`flex-1 justify-end bg-black/60`}>
-          <View style={tw`bg-white rounded-t-3xl p-6 gap-4`}>
-            <Text style={tw`text-[18px] font-black text-gray-900`}>Uncheck items that are out of stock:</Text>
-            
-            {partialOrder?.items.map((item: any, idx: number) => {
-              const itemKey = item.id || idx
-              const isChecked = !!checkedItems[itemKey]
-              return (
-                <TouchableOpacity
-                  key={itemKey}
-                  onPress={() => setCheckedItems(prev => ({ ...prev, [itemKey]: !isChecked }))}
-                  style={[tw`flex-row justify-between items-center p-4 rounded-2xl border-2`, isChecked ? tw`bg-green-50 border-green-600` : tw`bg-red-50 border-red-600`]}
-                >
-                  <Text style={tw`text-[16px] font-black text-gray-900`}>{item.name} x {item.quantity}</Text>
-                  <Text style={[tw`text-[14px] font-black uppercase`, isChecked ? tw`text-green-700` : tw`text-red-700`]}>
-                    {isChecked ? t.inStock : t.soldOut}
-                  </Text>
-                </TouchableOpacity>
-              )
-            })}
-
-            <TouchableOpacity
-              onPress={handleConfirmAcceptance}
-              style={tw`w-full h-14 bg-green-600 rounded-2xl items-center justify-center mt-2 shadow-md`}
-            >
-              <Text style={tw`text-white font-black text-[17px] uppercase`}>{t.accept}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── Sliding Capsule Bottom Navigation Bar ── */}
+      {/* Sliding Bottom Nav Capsule */}
       <View style={tw`absolute bottom-4 left-4 right-4 z-40`}>
         <View style={[tw`rounded-[28px] p-1 border shadow-xl`, { backgroundColor: 'rgba(255, 255, 255, 0.96)', borderColor: 'rgba(255, 255, 255, 0.6)' }]}>
           <View style={tw`flex-row items-center justify-around py-1 px-1`}>

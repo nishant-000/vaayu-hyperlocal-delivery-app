@@ -5,7 +5,7 @@ import tw from 'twrnc'
 import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg'
 
 // Import Screens & Icons
-import HomeScreen, { allShopsList, popularShops } from './screens/HomeScreen'
+import HomeScreen from './screens/HomeScreen'
 import CartScreen from './screens/CartScreen'
 import OrdersScreen from './screens/OrdersScreen'
 import ProfileScreen from './screens/ProfileScreen'
@@ -13,6 +13,8 @@ import SignupScreen from './screens/SignupScreen'
 import ShopDetailsScreen from './screens/ShopDetailsScreen'
 import OwnerDashboard from './screens/OwnerDashboard'
 import { BACKEND_URL } from './screens/apiConfig'
+import { registerForPushNotifications, checkNotificationPermissionStatus, setupNotificationListeners } from './lib/notifications'
+import { PermissionPrePromptModal } from './components/PermissionPrePromptModal'
 
 type TabId = "home" | "orders" | "cart" | "profile"
 
@@ -134,7 +136,7 @@ function NavTab({
 export default function App() {
   // App States
   const [user, setUser] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState('home')
+  const [activeTab, setActiveTab] = useState<TabId>('home')
   const [savedShops, setSavedShops] = useState<Set<number>>(new Set([3]))
   const [selectedShop, setSelectedShop] = useState<any>(null)
   
@@ -143,26 +145,17 @@ export default function App() {
   const [cartShop, setCartShop] = useState<any>(null)
 
   // Orders State
-  const [orders, setOrders] = useState<any[]>([
-    {
-      id: "ORD-8841",
-      shopName: "Campus Bites",
-      items: [{ name: "Spicy Paneer Burger", quantity: 2, price: 120 }],
-      total: 240,
-      status: "delivered",
-      paymentMethod: "cod",
-      createdAt: Date.now() - 3600000 * 24
-    }
-  ])
+  const [orders, setOrders] = useState<any[]>([])
 
-  // Profile Address State (Default: IIIT Tiruchirappalli Gate 1)
+  // Profile Address State
   const [address, setAddress] = useState({
     area: "IIIT Tiruchirappalli",
     room: "Gate 1",
     landmark: "Sethurapatti, Trichy"
   })
 
-  // Notifications Modal State
+  // Notifications Pre-Prompt Modal State
+  const [showPermissionPrePrompt, setShowPermissionPrePrompt] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
 
   // Toast / Alert State
@@ -173,35 +166,42 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 2500)
   }
 
-  // Load orders from backend when user is authenticated
+  // Push Notifications Setup & Permission Check
   useEffect(() => {
-    if (!user?.email) return
-
-    const fetchOrders = async () => {
-      try {
-        const response = await fetch(`${BACKEND_URL}/api/orders?email=${user.email}`)
-        if (response.ok) {
-          const data = await response.json()
-          if (Array.isArray(data) && data.length > 0) {
-            setOrders(data)
-          }
-        }
-      } catch (err) {
-        // Silent catch: use local default state when backend server is offline
+    async function initPush() {
+      const status = await checkNotificationPermissionStatus()
+      if (status !== 'granted' && Platform.OS !== 'web') {
+        setShowPermissionPrePrompt(true)
+      } else if (status === 'granted') {
+        registerForPushNotifications(user?.id || null, user?.role || 'customer')
       }
     }
+    initPush()
 
-    fetchOrders()
+    // Notification tap handler (Deep linking)
+    const cleanupListeners = setupNotificationListeners((orderId) => {
+      showToast(`Opening order #${orderId}`)
+      setActiveTab('orders')
+    })
+
+    return () => {
+      cleanupListeners()
+    }
   }, [user])
 
-  // Handle Save Shop toggle
-  const toggleSave = (id: number) => {
-    setSavedShops(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-    showToast("Shop save state updated!")
+  const handleAllowNotifications = async () => {
+    setShowPermissionPrePrompt(false)
+    await registerForPushNotifications(user?.id || null, user?.role || 'customer')
+  }
+
+  const handleSkipNotifications = () => {
+    setShowPermissionPrePrompt(false)
+  }
+
+  // Auth registration handler
+  const handleRegisterUser = async (registeredUser: any) => {
+    setUser(registeredUser)
+    await registerForPushNotifications(registeredUser.id, registeredUser.role)
   }
 
   // Cart operations
@@ -247,256 +247,137 @@ export default function App() {
     })
   }
 
-  const handlePlaceOrder = async (
+  const handlePlaceOrder = (
     finalTotal: number,
     discount: number,
     appliedPromo: string,
     deliveryMode: 'regular' | 'instant',
     selectedSlotId?: string
   ) => {
-    const localOrderItems = cartItems.map(i => ({
-      id: i.id,
-      name: i.name,
-      quantity: i.quantity || i.qty,
-      price: i.price
-    }))
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/orders/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userEmail: user?.email || 'test@iiitt.ac.in',
-          shopName: cartShop.name,
-          items: localOrderItems,
-          deliveryMode,
-          selectedSlotId
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        Alert.alert("Order Failed", errorData.error || "Failed to place order.")
-        return
-      }
-
-      const createdOrder = await response.json()
-      setOrders(prev => [createdOrder, ...prev])
-      setCartItems([])
-      setCartShop(null)
-      showToast("Order placed successfully via Cash on Delivery!")
-    } catch (error) {
-      console.log("Offline mode: Order placed locally.")
-      // Fallback local mode
-      const fallbackOrder = {
-        id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-        userEmail: user?.email || 'guest@iiitt.ac.in',
-        shopName: cartShop.name,
-        items: [...cartItems],
-        totalAmount: finalTotal,
-        total: finalTotal,
-        deliveryMode,
-        selectedSlotId,
-        selectedSlotLabel: deliveryMode === 'regular' ? (selectedSlotId === 'slot_1' ? '12:00 PM – 2:00 PM' : '7:00 PM – 9:00 PM') : undefined,
-        deliveryVenue: 'IIIT Trichy main gate',
-        status: "pending" as const,
-        createdAt: Date.now()
-      }
-      setOrders(prev => [fallbackOrder, ...prev])
-      setCartItems([])
-      setCartShop(null)
-      showToast("Offline mode: Order placed locally!")
-    }
-  }
-
-  // Simulate active order progression
-  useEffect(() => {
-    const pendingOrders = orders.filter(o => o.status === 'pending')
-    if (pendingOrders.length > 0) {
-      const timer = setTimeout(() => {
-        setOrders(prev => prev.map(o => o.status === 'pending' ? { ...o, status: 'preparing' } : o))
-        showToast("Merchant is preparing your order!")
-      }, 5000)
-      return () => clearTimeout(timer)
-    }
-
-    const preparingOrders = orders.filter(o => o.status === 'preparing')
-    if (preparingOrders.length > 0) {
-      const timer = setTimeout(() => {
-        setOrders(prev => prev.map(o => o.status === 'preparing' ? { ...o, status: 'on_the_way' } : o))
-        showToast("Order is out for delivery!")
-      }, 7000)
-      return () => clearTimeout(timer)
-    }
-  }, [orders])
-
-  // Reorder flow
-  const handleReorder = (order: any) => {
-    const shopsList = (allShopsList && allShopsList.length > 0) ? allShopsList : (popularShops || [])
-    const shopToReorder = shopsList.find((s: any) => s.name === order?.shopName) || shopsList[0] || { id: 1, name: "Campus Bites" }
-    
-    const orderItems = Array.isArray(order?.items) ? order.items : []
-    const updatedItems = orderItems.map((i: any) => ({
-      ...i,
-      id: i.id || `item_${Date.now()}_${Math.random()}`,
-      quantity: i.quantity || 1,
-      shopId: shopToReorder.id,
-      shopName: shopToReorder.name
-    }))
-    
-    setCartShop(shopToReorder)
-    setCartItems(updatedItems)
-    setActiveTab('cart')
-    showToast("Items added back to cart!")
-  }
-
-  const handleTrackOrder = (order: any) => {
+    setCartItems([])
+    setCartShop(null)
     setActiveTab('orders')
-    showToast(`Tracking order: ${order.id}`)
+    showToast("Order placed successfully via Cash on Delivery!")
   }
 
-  const handleSignup = (userData: any) => {
-    // Immediately log user in with zero delay!
-    setUser(userData)
-    setActiveTab('home')
-    showToast("Welcome to Vaayu!")
-
-    // Non-blocking background sync to backend
-    fetch(`${BACKEND_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: userData.email,
-        name: userData.name,
-        phoneNumber: userData.phoneNumber,
-        role: userData.role
-      })
-    }).catch(() => {
-      // Background sync silent catch
-    })
-  }
-
-  // If user is not onboarded, show signup screen
+  // If user is not logged in, show Signup / Login Screen
   if (!user) {
-    return (
-      <SignupScreen
-        onDone={handleSignup}
-      />
-    )
+    return <SignupScreen onRegister={handleRegisterUser} />
   }
 
-  // If partner / owner / worker staff logs in, show merchant dashboard
-  if (user.role === 'owner' || user.role === 'worker') {
+  // If user role is shop_owner or worker, render low-literacy Zomato-partner OwnerDashboard
+  if (user?.role === 'shop_owner' || user?.role === 'worker') {
     return (
-      <SafeAreaView style={[tw`flex-1`, { backgroundColor: '#ffffff' }]}>
-        <StatusBar style="dark" backgroundColor="#ffffff" />
+      <SafeAreaView style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
+        <StatusBar style="dark" />
         <OwnerDashboard user={user} onSignOut={() => setUser(null)} />
       </SafeAreaView>
     )
   }
 
-  const isHomeScreen = activeTab === 'home' && !selectedShop
-  const safeAreaBg = isHomeScreen ? '#8fda58' : '#ffffff'
-  const statusBarStyle = isHomeScreen ? 'light' : 'dark'
-
+  // Customer App Layout
   return (
-    <SafeAreaView style={[tw`flex-1`, { backgroundColor: safeAreaBg }, styles.safeArea]}>
-      <StatusBar style={statusBarStyle} backgroundColor={safeAreaBg} />
-      
-      {/* Toast Alert */}
+    <SafeAreaView style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
+      <StatusBar style="dark" />
+
+      {/* Permission Pre-Prompt Modal */}
+      <PermissionPrePromptModal
+        visible={showPermissionPrePrompt}
+        onAllow={handleAllowNotifications}
+        onSkip={handleSkipNotifications}
+      />
+
+      {/* Toast Banner */}
       {toastMessage && (
-        <View style={[tw`absolute top-16 left-4 right-4 z-50 rounded-full px-4 py-3 shadow-lg justify-center items-center`, { backgroundColor: '#8fda58' }]}>
-          <Text style={tw`text-white text-xs font-bold text-center`}>{toastMessage}</Text>
+        <View style={tw`absolute top-12 left-4 right-4 z-50 bg-black rounded-2xl p-4 items-center shadow-xl`}>
+          <Text style={tw`text-white font-black text-xs text-center`}>✨ {toastMessage}</Text>
         </View>
       )}
 
-      {/* Main Content Pane */}
-      <View style={tw`flex-1`}>
-        {selectedShop ? (
-          <ShopDetailsScreen
-            shop={selectedShop}
-            cartItems={cartItems}
-            onBack={() => setSelectedShop(null)}
-            onAddToCart={addToCart}
-            onChangeQuantity={changeQuantity}
-            onViewCart={() => {
-              setSelectedShop(null)
-              setActiveTab('cart')
-            }}
-          />
-        ) : (
-          <View style={tw`flex-1`}>
-            {activeTab === 'home' && (
-              <HomeScreen
-                user={user}
-                savedShops={savedShops}
-                cartItems={cartItems}
-                address={address}
-                onSelectShop={setSelectedShop}
-                onToggleSave={toggleSave}
-                onOpenCart={() => setActiveTab('cart')}
-                onOpenNotifications={() => setShowNotifications(true)}
-              />
-            )}
-            {activeTab === 'orders' && (
-              <OrdersScreen
-                orders={orders}
-                onReorder={handleReorder}
-                onTrackOrder={handleTrackOrder}
-              />
-            )}
-            {activeTab === 'cart' && (
-              <CartScreen
-                cartItems={cartItems}
-                cartShop={cartShop}
-                changeQuantity={changeQuantity}
-                placeOrder={handlePlaceOrder}
-                address={address}
-                setAddress={setAddress}
-                onContinueShopping={() => setActiveTab('home')}
-              />
-            )}
-            {activeTab === 'profile' && (
-              <ProfileScreen
-                user={user}
-                onSignOut={() => {
-                  setUser(null)
-                  setCartItems([])
-                  setCartShop(null)
-                }}
-              />
-            )}
-          </View>
-        )}
-      </View>
+      {/* Main Screen Switcher */}
+      {selectedShop ? (
+        <ShopDetailsScreen
+          shop={selectedShop}
+          cartItems={cartItems}
+          onBack={() => setSelectedShop(null)}
+          onAddToCart={addToCart}
+          onChangeQuantity={changeQuantity}
+          onViewCart={() => {
+            setSelectedShop(null)
+            setActiveTab('cart')
+          }}
+        />
+      ) : (
+        <>
+          {activeTab === 'home' && (
+            <HomeScreen
+              onSelectShop={setSelectedShop}
+              cartItems={cartItems}
+              onOpenCart={() => setActiveTab('cart')}
+              onOpenNotifications={() => setShowNotifications(true)}
+              address={address}
+              onOpenAddressPicker={() => setActiveTab('profile')}
+            />
+          )}
 
-      {/* Bottom Nav Capsule */}
-      {!selectedShop && (
-        <View style={styles.wrapper} pointerEvents="box-none">
-          <View style={styles.bar}>
-            {NAV_ITEMS.map(({ id, label, Icon, maxWidth }) => (
-              <NavTab
-                key={id}
-                id={id}
-                label={label}
-                Icon={Icon}
-                isActive={activeTab === id}
-                maxWidth={maxWidth}
-                onPress={() => {
-                  setSelectedShop(null)
-                  setActiveTab(id)
-                }}
-              />
-            ))}
+          {activeTab === 'orders' && (
+            <OrdersScreen
+              orders={orders}
+              onReorder={(order) => {
+                showToast("Items added from previous order!")
+                setActiveTab('cart')
+              }}
+              onTrackOrder={(order) => {
+                showToast(`Tracking #${order.id}`)
+              }}
+              user={user}
+            />
+          )}
+
+          {activeTab === 'cart' && (
+            <CartScreen
+              cartItems={cartItems}
+              cartShop={cartShop}
+              changeQuantity={changeQuantity}
+              placeOrder={handlePlaceOrder}
+              address={address}
+              setAddress={setAddress}
+              onContinueShopping={() => setActiveTab('home')}
+              user={user}
+            />
+          )}
+
+          {activeTab === 'profile' && (
+            <ProfileScreen
+              user={user}
+              address={address}
+              setAddress={setAddress}
+              savedShops={savedShops}
+              onSignOut={() => setUser(null)}
+            />
+          )}
+
+          {/* Bottom Floating Navigation Capsule */}
+          <View style={styles.wrapper}>
+            <View style={styles.bar}>
+              {NAV_ITEMS.map((item) => (
+                <NavTab
+                  key={item.id}
+                  {...item}
+                  isActive={activeTab === item.id}
+                  onPress={() => setActiveTab(item.id)}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        </>
       )}
 
-      {/* ── Campus Notifications Modal Drawer (Overlays navigation bar) ── */}
+      {/* Campus Notifications Drawer */}
       {showNotifications && (
-        <View style={[tw`absolute inset-0 justify-end`, { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100 }]}>
-          <View style={tw`bg-white rounded-t-3xl p-6 pb-28 border-t border-gray-100 max-h-[85%]`}>
-            <View style={tw`flex-row items-center justify-between pb-4 border-b border-gray-100 mb-4`}>
+        <View style={tw`absolute inset-0 z-50 bg-black/60 justify-end`}>
+          <View style={tw`bg-white rounded-t-3xl p-6 pb-28 gap-4 shadow-2xl`}>
+            <View style={tw`flex-row justify-between items-center pb-3 border-b border-gray-100`}>
               <View style={tw`flex-row items-center gap-2`}>
                 <Text style={tw`text-2xl`}>🔔</Text>
                 <Text style={tw`text-[20px] font-black text-gray-900`}>Campus Notifications</Text>
@@ -527,20 +408,9 @@ export default function App() {
                   <View style={tw`flex-1`}>
                     <Text style={tw`text-[14px] font-black text-gray-900 mb-0.5`}>Campus Bites Special Offer</Text>
                     <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
-                      Get 20% off on all burgers & sides today with code CAMPUS20.
+                      Get 20% off on all burgers & sides today with code VAAYU50.
                     </Text>
                     <Text style={tw`text-[10px] text-gray-400 font-bold mt-1`}>2 hours ago</Text>
-                  </View>
-                </View>
-
-                <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 flex-row items-start gap-3`}>
-                  <Text style={tw`text-2xl`}>⚡</Text>
-                  <View style={tw`flex-1`}>
-                    <Text style={tw`text-[14px] font-black text-gray-900 mb-0.5`}>15-Min Delivery Guarantee</Text>
-                    <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
-                      Groceries & essentials now deliver to Gate 1 in under 15 mins.
-                    </Text>
-                    <Text style={tw`text-[10px] text-gray-400 font-bold mt-1`}>Yesterday</Text>
                   </View>
                 </View>
               </View>
@@ -589,7 +459,7 @@ const styles = StyleSheet.create({
   },
   tabPressable: {
     alignItems: "center",
-    justifyContent: "center",
+    justify.content: "center",
   },
   pill: {
     flexDirection: "row",

@@ -1,41 +1,57 @@
-import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native'
 import tw from 'twrnc'
-import Svg, { Path, Polyline, Circle, Line } from 'react-native-svg'
+import Svg, { Polyline } from 'react-native-svg'
+import { supabase } from '../lib/supabase'
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
-  delivered:   { label: 'Delivered',            color: '#8fda58', bg: '#eeeff5', dot: '#8fda58' },
-  delivering:  { label: 'Out for Delivery',     color: '#7c3aed', bg: '#f3e8ff', dot: '#7c3aed' },
-  on_the_way:  { label: 'Out for Delivery',     color: '#7c3aed', bg: '#f3e8ff', dot: '#7c3aed' },
-  preparing:   { label: 'Accepted & Preparing', color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
-  incoming:    { label: 'Order Placed',         color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
-  pending:     { label: 'Order Placed',         color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
-  cancelled:   { label: 'Cancelled',           color: '#dc2626', bg: '#fef2f2', dot: '#dc2626' },
+  delivered:        { label: 'Delivered',            color: '#8fda58', bg: '#eeeff5', dot: '#8fda58' },
+  out_for_delivery: { label: 'Out for Delivery',     color: '#7c3aed', bg: '#f3e8ff', dot: '#7c3aed' },
+  delivering:       { label: 'Out for Delivery',     color: '#7c3aed', bg: '#f3e8ff', dot: '#7c3aed' },
+  preparing:        { label: 'Accepted & Preparing', color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  accepted:         { label: 'Accepted by Shop',     color: '#16a34a', bg: '#dcfce7', dot: '#16a34a' },
+  incoming:         { label: 'Order Placed',         color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
+  pending:          { label: 'Order Placed',         color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
+  cancelled:        { label: 'Cancelled',            color: '#dc2626', bg: '#fef2f2', dot: '#dc2626' },
 }
 
 const tabs = ['All', 'Active', 'Past']
 
-function LiveTracker() {
+function LiveTracker({ activeOrder }: { activeOrder: any }) {
+  if (!activeOrder) return null
+
+  const getStepIndex = (status: string) => {
+    if (status === 'delivered') return 3
+    if (status === 'out_for_delivery' || status === 'delivering') return 2
+    if (status === 'preparing' || status === 'accepted') return 1
+    return 0 // incoming / pending
+  }
+
+  const currentStep = getStepIndex(activeOrder.status)
+
   return (
     <View style={[tw`mx-4 mb-4 rounded-3xl overflow-hidden`, { backgroundColor: '#8fda58' }]}>
       <View style={tw`p-4`}>
         <View style={tw`flex-row items-start justify-between mb-3`}>
-          <View>
+          <View style={tw`flex-1 mr-2`}>
             <Text style={[tw`text-[10px] font-bold uppercase tracking-widest mb-1`, { color: '#c084fc' }]}>Live tracking</Text>
-            <Text style={tw`text-white font-black text-[18px]`}>The Brew House</Text>
-            <Text style={[tw`text-[12px] font-medium mt-0.5`, { color: '#eeeff5' }]}>Cappuccino x2 · Chocolate Muffin x1</Text>
+            <Text style={tw`text-white font-black text-[18px]`}>Order #{activeOrder.id}</Text>
+            <Text style={[tw`text-[12px] font-medium mt-0.5`, { color: '#eeeff5' }]} numberOfLines={1}>
+              📍 {activeOrder.location}
+            </Text>
           </View>
           <View style={tw`bg-white/20 rounded-2xl px-3 py-1.5 items-center`}>
-            <Text style={tw`text-white font-black text-[16px] leading-none`}>12:45</Text>
-            <Text style={[tw`text-[9px] font-bold uppercase`, { color: '#eeeff5' }]}>left</Text>
+            <Text style={tw`text-white font-black text-[15px] leading-none uppercase`}>
+              {activeOrder.status === 'out_for_delivery' ? 'ON ROAD' : activeOrder.status === 'preparing' ? 'COOKING' : 'PENDING'}
+            </Text>
           </View>
         </View>
 
         {/* Progress steps */}
         <View style={tw`flex-row items-center mt-4`}>
           {['Placed', 'Preparing', 'Out for Delivery', 'Delivered'].map((step, i) => {
-            const done = i < 2
-            const active = i === 2
+            const done = i < currentStep
+            const active = i === currentStep
             return (
               <View key={step} style={tw`flex-1 items-center`}>
                 <View style={tw`flex-row items-center w-full`}>
@@ -71,23 +87,67 @@ interface OrdersScreenProps {
   orders: any[]
   onReorder: (order: any) => void
   onTrackOrder: (order: any) => void
+  user: any
 }
 
-export default function OrdersScreen({ orders, onReorder, onTrackOrder }: OrdersScreenProps) {
+export default function OrdersScreen({ orders: initialOrders, onReorder, onTrackOrder, user }: OrdersScreenProps) {
   const [activeTab, setActiveTab] = useState('All')
+  const [orders, setOrders] = useState<any[]>(initialOrders || [])
+  const [loading, setLoading] = useState(false)
+
+  // Fetch real orders from Supabase & Subscribe to Realtime Updates
+  useEffect(() => {
+    async function fetchOrders() {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        setOrders(data)
+      }
+      setLoading(false)
+    }
+
+    fetchOrders()
+
+    // Subscribe to Supabase Realtime on orders table
+    const subscription = supabase
+      .channel('customer_orders_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          console.log('[OrdersScreen] Realtime order update detected:', payload)
+          if (payload.eventType === 'INSERT') {
+            setOrders(prev => [payload.new, ...prev])
+          } else if (payload.eventType === 'UPDATE') {
+            setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(subscription)
+    }
+  }, [user])
 
   const filtered = orders.filter(o => {
-    if (activeTab === 'Active') return o.status === 'on_the_way' || o.status === 'preparing' || o.status === 'pending'
+    if (activeTab === 'Active') return o.status === 'out_for_delivery' || o.status === 'delivering' || o.status === 'preparing' || o.status === 'accepted' || o.status === 'incoming' || o.status === 'pending'
     if (activeTab === 'Past') return o.status === 'delivered' || o.status === 'cancelled'
     return true
   })
 
+  const activeOrder = orders.find(o => o.status !== 'delivered' && o.status !== 'cancelled')
+
   return (
-    <View style={tw`flex-1`}>
+    <View style={tw`flex-1 bg-gray-50`}>
       {/* Header */}
       <View style={tw`bg-white border-b border-gray-100 px-4 pt-6 pb-3`}>
         <Text style={tw`text-[24px] font-black text-gray-900`}>My Orders</Text>
-        <Text style={tw`text-[13px] text-gray-400 font-medium mt-0.5`}>Track and reorder your deliveries</Text>
+        <Text style={tw`text-[13px] text-gray-400 font-medium mt-0.5`}>Live tracking & order status</Text>
         
         {/* Tabs */}
         <View style={tw`flex-row gap-2 mt-3`}>
@@ -110,91 +170,55 @@ export default function OrdersScreen({ orders, onReorder, onTrackOrder }: Orders
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32 pt-4`}>
-        {/* Live tracker card — only show when active tab includes on_the_way */}
-        {(activeTab === 'All' || activeTab === 'Active') && <LiveTracker />}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-36 pt-4`}>
+        {/* Live tracker card for active order */}
+        {activeOrder && (activeTab === 'All' || activeTab === 'Active') && (
+          <LiveTracker activeOrder={activeOrder} />
+        )}
 
         <View style={tw`flex-col gap-3 px-4`}>
-          {filtered.length === 0 ? (
-            <View style={tw`items-center justify-center py-12`}>
-              <Text style={tw`text-4xl mb-3`}>📦</Text>
-              <Text style={tw`text-gray-400 font-medium text-sm`}>No orders found in this section</Text>
+          {loading ? (
+            <View style={tw`py-10 items-center justify-center`}>
+              <ActivityIndicator size="large" color="#8fda58" />
+              <Text style={tw`text-xs text-gray-400 font-medium mt-2`}>Syncing live orders...</Text>
+            </View>
+          ) : filtered.length === 0 ? (
+            <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-100`}>
+              <Text style={tw`text-4xl mb-2`}>📦</Text>
+              <Text style={tw`text-base font-bold text-gray-900`}>No orders found</Text>
+              <Text style={tw`text-xs text-gray-400 font-medium mt-1`}>Your order history will appear here.</Text>
             </View>
           ) : (
             filtered.map(order => {
               const s = statusConfig[order.status] || { label: order.status, color: '#6b7280', bg: '#f3f4f6', dot: '#9ca3af' }
               return (
-                <View key={order.id} style={tw`bg-white rounded-3xl overflow-hidden shadow-sm`}>
-                  <View style={tw`flex-row gap-3 p-3`}>
-                    <Image
-                      source={{ uri: order.img || 'https://images.unsplash.com/photo-1667329829058-ac191ba4a905?w=200&h=200&fit=crop&auto=format' }}
-                      style={tw`w-16 h-16 rounded-2xl`}
-                      resizeMode="cover"
-                    />
+                <View key={order.id} style={tw`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100`}>
+                  <View style={tw`flex-row gap-3 p-4`}>
+                    <View style={tw`w-14 h-14 rounded-2xl bg-green-100 items-center justify-center`}>
+                      <Text style={tw`text-2xl`}>🍔</Text>
+                    </View>
                     <View style={tw`flex-1 min-w-0`}>
                       <View style={tw`flex-row items-start justify-between gap-2`}>
-                        <Text style={tw`font-bold text-[14px] text-gray-900`}>{order.shopName || order.shop}</Text>
-                        <View
-                          style={[
-                            tw`rounded-full px-2 py-0.5 flex-row items-center gap-1`,
-                            { backgroundColor: s.bg }
-                          ]}
-                        >
+                        <Text style={tw`font-black text-[16px] text-gray-900`}>#{order.id}</Text>
+                        <View style={[tw`rounded-full px-2.5 py-0.5 flex-row items-center gap-1`, { backgroundColor: s.bg }]}>
                           <View style={[tw`w-1.5 h-1.5 rounded-full`, { backgroundColor: s.dot }]} />
-                          <Text style={{ color: s.color, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>
+                          <Text style={{ color: s.color, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }}>
                             {s.label}
                           </Text>
                         </View>
                       </View>
-                      <Text style={tw`text-[11px] text-gray-400 font-medium mt-0.5`} numberOfLines={1}>
-                        {order.items.map((it: any) => typeof it === 'string' ? it : `${it.quantity || it.qty}x ${it.name}`).join(' · ')}
+
+                      <Text style={tw`text-[12px] text-gray-500 font-medium mt-1`} numberOfLines={1}>
+                        📍 {order.location}
                       </Text>
-                      {/* Delivery Mode & Slot & Venue Details */}
-                      <View style={tw`flex-row flex-wrap items-center gap-1.5 mt-1.5`}>
-                        <View style={tw`bg-gray-100 rounded-md px-1.5 py-0.5`}>
-                          <Text style={tw`text-[9px] text-gray-500 font-bold uppercase`}>
-                            {order.deliveryMode === 'instant' ? '⚡ Instant' : `📅 Slot: ${order.selectedSlotLabel || 'Regular'}`}
-                          </Text>
-                        </View>
-                        <View style={tw`bg-gray-100 rounded-md px-1.5 py-0.5`}>
-                          <Text style={tw`text-[9px] text-gray-500 font-bold uppercase`} numberOfLines={1}>
-                            📍 {order.deliveryVenue || 'IIIT Trichy Main Gate'}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={tw`flex-row items-center justify-between mt-2`}>
-                        <Text style={tw`text-[12px] text-gray-500 font-medium`}>
-                          {order.date || new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                      <View style={tw`flex-row items-center justify-between mt-2 pt-2 border-t border-gray-100`}>
+                        <Text style={tw`text-[12px] text-gray-400 font-medium`}>
+                          {new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Text>
-                        <Text style={tw`font-black text-[14px] text-gray-900`}>₹{order.totalAmount || order.total}</Text>
+                        <Text style={tw`font-black text-[16px] text-gray-900`}>₹{order.grand_total || order.total_amount || 0}</Text>
                       </View>
                     </View>
-                  </View>
-
-                  {/* Actions */}
-                  <View style={tw`border-t border-gray-100 flex-row`}>
-                    <TouchableOpacity
-                      onPress={() => onTrackOrder(order)}
-                      style={tw`flex-1 py-2.5 items-center justify-center`}
-                    >
-                      <Text style={tw`text-[12px] font-semibold text-gray-500`}>View details</Text>
-                    </TouchableOpacity>
-                    <View style={tw`w-px bg-gray-100`} />
-                    {order.status === 'delivered' || order.status === 'cancelled' ? (
-                      <TouchableOpacity
-                        onPress={() => onReorder(order)}
-                        style={tw`flex-1 py-2.5 items-center justify-center`}
-                      >
-                        <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Reorder</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        onPress={() => onTrackOrder(order)}
-                        style={tw`flex-1 py-2.5 items-center justify-center`}
-                      >
-                        <Text style={tw`text-[12px] font-bold text-blue-600`}>Track order</Text>
-                      </TouchableOpacity>
-                    )}
                   </View>
                 </View>
               )
