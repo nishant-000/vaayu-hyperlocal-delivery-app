@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, Alert, Platform, StatusBar as RNStatusBar, Animated, Easing, Pressable, ScrollView } from 'react-native'
+import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, StatusBar as RNStatusBar, Animated, Easing, Pressable, ScrollView } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg'
@@ -268,16 +268,16 @@ export default function App() {
   // If user role is shop_owner or worker, render low-literacy Zomato-partner OwnerDashboard
   if (user?.role === 'shop_owner' || user?.role === 'worker') {
     return (
-      <SafeAreaView style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
+      <View style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
         <StatusBar style="dark" />
         <OwnerDashboard user={user} onSignOut={() => setUser(null)} />
-      </SafeAreaView>
+      </View>
     )
   }
 
   // Customer App Layout
   return (
-    <SafeAreaView style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
+    <View style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
       <StatusBar style="dark" />
 
       {/* Permission Pre-Prompt Modal */}
@@ -428,7 +428,7 @@ export default function App() {
           </View>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   )
 }
 

@@ -11,27 +11,40 @@ try {
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://npshikrjdvvdqjrybeju.supabase.co';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wc2hpa3JqZHZ2ZHFqcnliZWp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0Njk1NjUsImV4cCI6MjA5OTA0NTU2NX0.XlugAPESA28iLxUUXwSSFRGea0bx22JO9qZEAxHXaBQ';
 
-// Storage adapter compatible with React Native & Web
+// In-memory fallback map if native AsyncStorage module is unavailable
+const memoryStore = new Map<string, string>();
+
 const CustomAsyncStorage = {
-  getItem: (key: string) => {
+  getItem: async (key: string) => {
     if (Platform.OS === 'web') {
-      try { return Promise.resolve(localStorage.getItem(key)); } catch { return Promise.resolve(null); }
+      try { return localStorage.getItem(key); } catch { return memoryStore.get(key) || null; }
     }
-    return AsyncStorage.getItem(key);
+    try {
+      const val = await AsyncStorage.getItem(key);
+      return val;
+    } catch (e) {
+      return memoryStore.get(key) || null;
+    }
   },
-  setItem: (key: string, value: string) => {
+  setItem: async (key: string, value: string) => {
+    memoryStore.set(key, value);
     if (Platform.OS === 'web') {
       try { localStorage.setItem(key, value); } catch {}
-      return Promise.resolve();
+      return;
     }
-    return AsyncStorage.setItem(key, value);
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (e) {}
   },
-  removeItem: (key: string) => {
+  removeItem: async (key: string) => {
+    memoryStore.delete(key);
     if (Platform.OS === 'web') {
       try { localStorage.removeItem(key); } catch {}
-      return Promise.resolve();
+      return;
     }
-    return AsyncStorage.removeItem(key);
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (e) {}
   },
 };
 

@@ -50,20 +50,29 @@ export const DEFAULT_CONFIG: AppConfig = {
   ]
 };
 
-// Storage helper
+// In-memory fallback map
+const configMemoryStore = new Map<string, string>();
+
 const getStorageItem = async (key: string) => {
   if (Platform.OS === 'web') {
-    try { return localStorage.getItem(key); } catch { return null; }
+    try { return localStorage.getItem(key); } catch { return configMemoryStore.get(key) || null; }
   }
-  return AsyncStorage.getItem(key);
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch (e) {
+    return configMemoryStore.get(key) || null;
+  }
 };
 
 const setStorageItem = async (key: string, value: string) => {
+  configMemoryStore.set(key, value);
   if (Platform.OS === 'web') {
     try { localStorage.setItem(key, value); } catch {}
     return;
   }
-  return AsyncStorage.setItem(key, value);
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch (e) {}
 };
 
 export async function fetchRemoteConfig(): Promise<AppConfig> {
