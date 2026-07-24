@@ -1,25 +1,36 @@
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-// Configure Notification Handler behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+let Notifications: any = null;
+try {
+  if (Platform.OS !== 'web') {
+    Notifications = require('expo-notifications');
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  }
+} catch (e) {
+  console.log('[Notifications] Native notifications module not available in this environment.');
+}
 
 export async function checkNotificationPermissionStatus() {
-  if (Platform.OS === 'web') return 'granted';
-  const { status } = await Notifications.getPermissionsAsync();
-  return status;
+  if (Platform.OS === 'web' || !Notifications) return 'granted';
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status;
+  } catch (err) {
+    console.log('[Notifications] Could not fetch permissions status:', err);
+    return 'granted';
+  }
 }
 
 export async function registerForPushNotifications(userId: string | null, role: 'customer' | 'shop_owner' | 'worker') {
-  if (Platform.OS === 'web') {
-    console.log('[Notifications] Web platform, skipping native push registration.');
+  if (Platform.OS === 'web' || !Notifications) {
+    console.log('[Notifications] Skipping push registration (web or module unavailable).');
     return null;
   }
 
@@ -37,8 +48,12 @@ export async function registerForPushNotifications(userId: string | null, role: 
       return null;
     }
 
-    // Get Expo Push Token
-    const tokenData = await Notifications.getExpoPushTokenAsync().catch(() => null);
+    // Safely attempt token retrieval
+    const tokenData = await Notifications.getExpoPushTokenAsync().catch((err: any) => {
+      console.log('[Notifications] Expo push token fetch failed:', err?.message || err);
+      return null;
+    });
+
     const token = tokenData?.data;
 
     if (!token) {
@@ -74,19 +89,25 @@ export async function registerForPushNotifications(userId: string | null, role: 
 }
 
 export function setupNotificationListeners(onSelectOrder: (orderId: string) => void) {
-  if (Platform.OS === 'web') return () => {};
+  if (Platform.OS === 'web' || !Notifications) return () => {};
 
-  // Handle notification tap / response
-  const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
-    const data = response.notification.request.content.data;
-    console.log('[Notifications] Notification tapped with data:', data);
+  try {
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
+      const data = response?.notification?.request?.content?.data;
+      console.log('[Notifications] Notification tapped with data:', data);
 
-    if (data && data.orderId) {
-      onSelectOrder(data.orderId);
-    }
-  });
+      if (data && data.orderId) {
+        onSelectOrder(data.orderId);
+      }
+    });
 
-  return () => {
-    responseSubscription.remove();
-  };
+    return () => {
+      try {
+        responseSubscription.remove();
+      } catch {}
+    };
+  } catch (err) {
+    console.log('[Notifications] Unable to set up notification response listener:', err);
+    return () => {};
+  }
 }
