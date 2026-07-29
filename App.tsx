@@ -262,7 +262,7 @@ export default function App() {
 
   // If user is not logged in, show Signup / Login Screen
   if (!user) {
-    return <SignupScreen onRegister={handleRegisterUser} />
+    return <SignupScreen onDone={handleRegisterUser} onRegister={handleRegisterUser} />
   }
 
   // If user role is shop_owner or worker, render low-literacy Zomato-partner OwnerDashboard

@@ -10,7 +10,8 @@ const ALLOWED_DOMAINS = ['iiitt.ac.in']
 type SignupStep = 'carousel' | 'login' | 'signup_student' | 'signup_owner' | 'verify'
 
 interface SignupScreenProps {
-  onDone: (userData: any) => void
+  onDone?: (userData: any) => void
+  onRegister?: (userData: any) => void
 }
 
 const APP_CATEGORIES = ['Food', 'Grocery', 'Pharmacy', 'Stationery', 'Others']
@@ -190,7 +191,7 @@ function PremiumInputField({
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
-export default function SignupScreen({ onDone }: SignupScreenProps) {
+export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) {
   const [step, setStep] = useState<SignupStep>('carousel')
   const [activeSlide, setActiveSlide] = useState(0)
   const scrollViewRef = useRef<ScrollView>(null)
@@ -246,9 +247,17 @@ export default function SignupScreen({ onDone }: SignupScreenProps) {
     setStep('verify')
   }
 
+  const completeAuth = (userData: any) => {
+    if (typeof onDone === 'function') {
+      onDone(userData)
+    } else if (typeof onRegister === 'function') {
+      onRegister(userData)
+    }
+  }
+
   // Instant App Launch upon OTP entry (Post-verification screen removed)
   const handleVerificationComplete = () => {
-    onDone({
+    completeAuth({
       role,
       name: role === 'customer' ? (name.trim() || 'Aditya Sharma') : shopName,
       email,
@@ -259,7 +268,7 @@ export default function SignupScreen({ onDone }: SignupScreenProps) {
 
   const handleLoginSubmit = () => {
     const determinedRole = role === 'owner' ? 'owner' : (email.toLowerCase().includes('shop') || email.toLowerCase().includes('owner') ? 'owner' : 'customer')
-    onDone({
+    completeAuth({
       role: determinedRole,
       name: determinedRole === 'owner' ? (shopName || 'Campus Bites Cafe') : (name.trim() || 'Aditya Sharma'),
       email: email || (determinedRole === 'owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
