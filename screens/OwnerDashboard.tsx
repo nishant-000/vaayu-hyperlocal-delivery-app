@@ -339,10 +339,20 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     }
   }
 
+  const [activeShopId, setActiveShopId] = useState<string | null>(user?.shop_id || null)
+
   // 1. Load Initial Real Data from Supabase & Subscribe to Realtime Updates
   useEffect(() => {
     async function loadShopData() {
       setLoading(true)
+
+      // Fetch Active Shop ID if not set on user session
+      if (!user?.shop_id) {
+        const { data: shopsData } = await supabase.from('shops').select('id').limit(1)
+        if (shopsData && shopsData.length > 0) {
+          setActiveShopId(shopsData[0].id)
+        }
+      }
 
       // Fetch Orders
       const { data: ordersData } = await supabase
@@ -488,15 +498,20 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
   // Add Item to Supabase
   const handleAddItem = async () => {
-    if (!newItemName || !newItemPrice) {
+    if (!activeShopId) {
+      showToast('Unable to identify your shop — please log out and back in')
+      return
+    }
+
+    if (!newItemName.trim() || !newItemPrice.trim()) {
       showToast('Enter food name & price')
       return
     }
 
     const itemPrice = parseFloat(newItemPrice) || 0
     const { data, error } = await supabase.from('menu_items').insert([{
-      shop_id: activeShopId || '11111111-1111-1111-1111-111111111111',
-      name: newItemName,
+      shop_id: activeShopId,
+      name: newItemName.trim(),
       price: itemPrice,
       is_available: true,
       image_url: newItemImg
