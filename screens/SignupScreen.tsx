@@ -257,21 +257,23 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
   // Instant App Launch upon OTP entry (Post-verification screen removed)
   const handleVerificationComplete = () => {
+    const determinedRole = role === 'owner' ? 'shop_owner' : 'customer'
     completeAuth({
-      role,
-      name: role === 'customer' ? (name.trim() || 'Aditya Sharma') : shopName,
+      role: determinedRole,
+      name: determinedRole === 'shop_owner' ? (shopName.trim() || 'Campus Bites Cafe') : (name.trim() || 'Aditya Sharma'),
       email,
       phoneNumber: phone,
-      category: role === 'owner' ? effectiveCategory : undefined
+      category: determinedRole === 'shop_owner' ? effectiveCategory : undefined
     })
   }
 
   const handleLoginSubmit = () => {
-    const determinedRole = role === 'owner' ? 'owner' : (email.toLowerCase().includes('shop') || email.toLowerCase().includes('owner') ? 'owner' : 'customer')
+    const isOwner = role === 'owner' || email.toLowerCase().includes('shop') || email.toLowerCase().includes('owner')
+    const determinedRole = isOwner ? 'shop_owner' : 'customer'
     completeAuth({
       role: determinedRole,
-      name: determinedRole === 'owner' ? (shopName || 'Campus Bites Cafe') : (name.trim() || 'Aditya Sharma'),
-      email: email || (determinedRole === 'owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
+      name: determinedRole === 'shop_owner' ? (shopName || 'Campus Bites Cafe') : (name.trim() || 'Aditya Sharma'),
+      email: email || (determinedRole === 'shop_owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
       phoneNumber: '+91 98765 43210'
     })
   }
@@ -458,11 +460,12 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
             <CustomInput
               label="Email Address"
-              placeholder="e.g. 251420@iiitt.ac.in"
+              placeholder={role === 'owner' ? "e.g. owner@campusbites.com" : "e.g. 251420@iiitt.ac.in"}
               value={email}
               onChange={setEmail}
               type="email-address"
               Icon={IconEmail}
+              hint={role === 'owner' ? "Registered shop owner email address" : "Must use official @iiitt.ac.in email address"}
             />
 
             <CustomInput

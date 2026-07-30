@@ -265,8 +265,8 @@ export default function App() {
     return <SignupScreen onDone={handleRegisterUser} onRegister={handleRegisterUser} />
   }
 
-  // If user role is shop_owner or worker, render low-literacy Zomato-partner OwnerDashboard
-  if (user?.role === 'shop_owner' || user?.role === 'worker') {
+  // If user role is shop_owner or owner or worker, render low-literacy Zomato-partner OwnerDashboard
+  if (user?.role === 'shop_owner' || user?.role === 'owner' || user?.role === 'worker') {
     return (
       <View style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
         <StatusBar style="dark" />

@@ -102,13 +102,13 @@ export default function SignupScreen({ onDone }: { onDone: (userData: any) => vo
     if (val && idx < 3) {
       document.getElementById(`otp-${idx + 1}`)?.focus()
     } else if (val && idx === 3) {
-      // Completed verify
+      const determinedRole = role === 'owner' ? 'shop_owner' : 'customer'
       onDone({
-        role,
-        name: role === 'customer' ? (name.trim() || 'Aditya Sharma') : (shopName.trim() || name.trim() || 'Campus Bites Cafe'),
-        email: email || (role === 'owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
+        role: determinedRole,
+        name: determinedRole === 'customer' ? (name.trim() || 'Aditya Sharma') : (shopName.trim() || name.trim() || 'Campus Bites Cafe'),
+        email: email || (determinedRole === 'shop_owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
         phoneNumber: phone || '+91 98765 43210',
-        category: role === 'owner' ? effectiveCategory : undefined
+        category: determinedRole === 'shop_owner' ? effectiveCategory : undefined
       })
     }
   }
