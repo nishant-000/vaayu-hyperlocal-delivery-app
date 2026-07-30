@@ -15,6 +15,7 @@ import OwnerDashboard from './screens/OwnerDashboard'
 import { BACKEND_URL } from './screens/apiConfig'
 import { registerForPushNotifications, checkNotificationPermissionStatus, setupNotificationListeners } from './lib/notifications'
 import { PermissionPrePromptModal } from './components/PermissionPrePromptModal'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 type TabId = "home" | "orders" | "cart" | "profile"
 
@@ -277,7 +278,8 @@ export default function App() {
 
   // Customer App Layout
   return (
-    <View style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
+    <ErrorBoundary>
+      <View style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
       <StatusBar style="dark" />
 
       {/* Permission Pre-Prompt Modal */}
@@ -429,7 +431,8 @@ export default function App() {
         </View>
       )}
     </View>
-  )
+  </ErrorBoundary>
+)
 }
 
 const styles = StyleSheet.create({
