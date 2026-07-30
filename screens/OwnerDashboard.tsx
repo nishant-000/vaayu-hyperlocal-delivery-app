@@ -228,7 +228,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       const blob = await response.blob()
       const contentType = blob.type || 'image/jpeg'
       const fileName = `item_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
-      const filePath = `menu/${fileName}`
+      const filePath = activeShopId ? `menu/${activeShopId}/${fileName}` : `menu/general/${fileName}`
 
       // 3. Upload to Supabase Storage bucket 'product-images'
       const { error: uploadError } = await supabase.storage
@@ -812,10 +812,19 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             <View style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 gap-4 shadow-sm`}>
               <Text style={tw`text-[18px] font-black text-gray-900`}>{t.addFood}</Text>
               
+              {!activeShopId ? (
+                <View style={tw`w-full p-3 bg-yellow-50 border border-yellow-200 rounded-2xl flex-row items-center gap-2.5`}>
+                  <ActivityIndicator size="small" color="#d97706" />
+                  <Text style={tw`text-[12px] font-bold text-yellow-900 flex-1`}>
+                    Loading shop profile... Form disabled until shop ID resolves.
+                  </Text>
+                </View>
+              ) : null}
+
               <TouchableOpacity
                 onPress={() => setShowImagePickerModal(true)}
-                disabled={isUploadingPhoto}
-                style={tw`w-full h-24 bg-green-50 border-2 border-dashed border-green-500 rounded-2xl items-center justify-center gap-1 active:scale-95`}
+                disabled={isUploadingPhoto || !activeShopId}
+                style={[tw`w-full h-24 bg-green-50 border-2 border-dashed border-green-500 rounded-2xl items-center justify-center gap-1 active:scale-95`, !activeShopId && tw`opacity-50`]}
               >
                 {isUploadingPhoto ? (
                   <ActivityIndicator size="large" color="#16a34a" />
@@ -833,6 +842,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 placeholder={t.namePlaceholder}
                 value={newItemName}
                 onChangeText={setNewItemName}
+                editable={!!activeShopId}
                 style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900`}
               />
 
@@ -841,12 +851,14 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 keyboardType="number-pad"
                 value={newItemPrice}
                 onChangeText={setNewItemPrice}
+                editable={!!activeShopId}
                 style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900`}
               />
 
               <TouchableOpacity
                 onPress={handleAddItem}
-                style={tw`w-full h-14 bg-green-600 rounded-2xl items-center justify-center shadow-md active:scale-95`}
+                disabled={!activeShopId}
+                style={[tw`w-full h-14 bg-green-600 rounded-2xl items-center justify-center shadow-md active:scale-95`, !activeShopId && tw`opacity-50`]}
               >
                 <Text style={tw`text-white font-black text-[16px]`}>{t.saveFood}</Text>
               </TouchableOpacity>
