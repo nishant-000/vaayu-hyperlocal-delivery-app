@@ -677,32 +677,38 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         {activeTab === 'settings' && (
           <div className="flex flex-col gap-4">
             <div className="bg-white rounded-3xl p-5 border-2 border-purple-300 flex flex-col gap-4 shadow-sm">
-              <h2 className="text-[17px] font-black text-purple-900 uppercase">{t.financialSummary}</h2>
+              <h2 className="text-[16px] font-black text-purple-900 uppercase">{t.financialSummary}</h2>
               
               <div className="bg-purple-50 rounded-2xl p-4 border border-purple-200 flex flex-col gap-2.5">
-                <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs">
-                  <span className="font-bold text-purple-800">{t.instantDeliveryTag}</span>
-                  <span className="font-black text-purple-900">{instantOrdersCount} × ₹10 = ₹{instantDeliveryFeesTotal}</span>
+                <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs flex-wrap gap-1">
+                  <span className="font-bold text-purple-800 flex-1 min-w-[120px]">{t.instantDeliveryTag}</span>
+                  <span className="font-black text-purple-900 text-right">{instantOrdersCount} × ₹10 = ₹{instantDeliveryFeesTotal}</span>
                 </div>
 
-                <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs">
-                  <span className="font-bold text-purple-800">{t.scheduledDeliveryTag}</span>
-                  <span className="font-black text-purple-900">{scheduledOrdersCount} × ₹5 = ₹{scheduledDeliveryFeesTotal}</span>
+                <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs flex-wrap gap-1">
+                  <span className="font-bold text-purple-800 flex-1 min-w-[120px]">{t.scheduledDeliveryTag}</span>
+                  <span className="font-black text-purple-900 text-right">{scheduledOrdersCount} × ₹5 = ₹{scheduledDeliveryFeesTotal}</span>
                 </div>
 
-                <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs">
-                  <span className="font-bold text-purple-800">{t.platformFeeTag}</span>
-                  <span className="font-black text-purple-900">{totalOrdersCount} × ₹5 = ₹{totalPlatformFeesToVaayu}</span>
+                <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs flex-wrap gap-1">
+                  <span className="font-bold text-purple-800 flex-1 min-w-[120px]">{t.platformFeeTag}</span>
+                  <span className="font-black text-purple-900 text-right">{totalOrdersCount} × ₹5 = ₹{totalPlatformFeesToVaayu}</span>
                 </div>
 
                 <div className="bg-purple-200/60 rounded-xl p-3 mt-1">
                   <p className="text-[12px] font-black text-purple-900 uppercase">{t.totalOwedToVaayu}</p>
-                  <p className="text-[24px] font-black text-purple-950 mt-0.5">₹{totalAmountOwedToVaayu}</p>
+                  <p className="text-[22px] font-black text-purple-950 mt-0.5">₹{totalAmountOwedToVaayu}</p>
+                  <p className="text-[11px] font-bold text-purple-800 mt-1">
+                    (₹{totalDeliveryFeesCollected} Delivery + ₹{totalPlatformFeesToVaayu} Platform Fee)
+                  </p>
                 </div>
 
                 <div className="bg-green-100 rounded-xl p-3 border border-green-300 mt-1">
                   <p className="text-[12px] font-black text-green-900 uppercase">{t.shopNetEarnings}</p>
-                  <p className="text-[24px] font-black text-green-900 mt-0.5">₹{shopNetFoodEarnings}</p>
+                  <p className="text-[22px] font-black text-green-900 mt-0.5">₹{shopNetFoodEarnings}</p>
+                  <p className="text-[11px] font-bold text-green-800 mt-1">
+                    Total Cash ₹{todayTotalCashCollected} - Vaayu Return ₹{totalAmountOwedToVaayu}
+                  </p>
                 </div>
               </div>
             </div>

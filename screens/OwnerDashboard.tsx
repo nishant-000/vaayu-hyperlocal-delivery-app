@@ -732,36 +732,36 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           <View style={tw`gap-4`}>
             {/* VAAYU FINANCIAL SETTLEMENT VAULT */}
             <View style={tw`bg-white rounded-3xl p-5 border-2 border-purple-300 gap-4 shadow-sm`}>
-              <Text style={tw`text-[17px] font-black text-purple-900 uppercase`}>{t.financialSummary}</Text>
+              <Text style={tw`text-[16px] font-black text-purple-900 uppercase`}>{t.financialSummary}</Text>
               
               <View style={tw`bg-purple-50 rounded-2xl p-4 border border-purple-200 gap-2.5`}>
-                <View style={tw`flex-row justify-between items-center pb-2 border-b border-purple-200`}>
-                  <Text style={tw`text-[13px] font-bold text-purple-800`}>{t.instantDeliveryTag}</Text>
-                  <Text style={tw`text-[14px] font-black text-purple-900`}>{instantOrdersCount} × ₹10 = ₹{instantDeliveryFeesTotal}</Text>
+                <View style={tw`flex-row justify-between items-center pb-2 border-b border-purple-200 flex-wrap gap-1`}>
+                  <Text style={tw`text-[12px] font-bold text-purple-800 flex-1 min-w-[120px]`}>{t.instantDeliveryTag}</Text>
+                  <Text style={tw`text-[13px] font-black text-purple-900 text-right`}>{instantOrdersCount} × ₹10 = ₹{instantDeliveryFeesTotal}</Text>
                 </View>
 
-                <View style={tw`flex-row justify-between items-center pb-2 border-b border-purple-200`}>
-                  <Text style={tw`text-[13px] font-bold text-purple-800`}>{t.scheduledDeliveryTag}</Text>
-                  <Text style={tw`text-[14px] font-black text-purple-900`}>{scheduledOrdersCount} × ₹5 = ₹{scheduledDeliveryFeesTotal}</Text>
+                <View style={tw`flex-row justify-between items-center pb-2 border-b border-purple-200 flex-wrap gap-1`}>
+                  <Text style={tw`text-[12px] font-bold text-purple-800 flex-1 min-w-[120px]`}>{t.scheduledDeliveryTag}</Text>
+                  <Text style={tw`text-[13px] font-black text-purple-900 text-right`}>{scheduledOrdersCount} × ₹5 = ₹{scheduledDeliveryFeesTotal}</Text>
                 </View>
 
-                <View style={tw`flex-row justify-between items-center pb-2 border-b border-purple-200`}>
-                  <Text style={tw`text-[13px] font-bold text-purple-800`}>{t.platformFeeTag}</Text>
-                  <Text style={tw`text-[14px] font-black text-purple-900`}>{totalOrdersCount} × ₹5 = ₹{totalPlatformFeesToVaayu}</Text>
+                <View style={tw`flex-row justify-between items-center pb-2 border-b border-purple-200 flex-wrap gap-1`}>
+                  <Text style={tw`text-[12px] font-bold text-purple-800 flex-1 min-w-[120px]`}>{t.platformFeeTag}</Text>
+                  <Text style={tw`text-[13px] font-black text-purple-900 text-right`}>{totalOrdersCount} × ₹5 = ₹{totalPlatformFeesToVaayu}</Text>
                 </View>
 
                 <View style={tw`bg-purple-200/60 rounded-xl p-3 mt-1`}>
                   <Text style={tw`text-[12px] font-black text-purple-900 uppercase`}>{t.totalOwedToVaayu}</Text>
-                  <Text style={tw`text-[24px] font-black text-purple-950 mt-0.5`}>₹{totalAmountOwedToVaayu}</Text>
-                  <Text style={tw`text-[11px] font-bold text-purple-800 mt-1`}>
+                  <Text style={tw`text-[22px] font-black text-purple-950 mt-0.5`}>₹{totalAmountOwedToVaayu}</Text>
+                  <Text style={tw`text-[11px] font-bold text-purple-800 mt-1 flex-wrap`}>
                     (₹{totalDeliveryFeesCollected} Delivery + ₹{totalPlatformFeesToVaayu} Platform Fee)
                   </Text>
                 </View>
 
                 <View style={tw`bg-green-100 rounded-xl p-3 border border-green-300 mt-1`}>
                   <Text style={tw`text-[12px] font-black text-green-900 uppercase`}>{t.shopNetEarnings}</Text>
-                  <Text style={tw`text-[24px] font-black text-green-900 mt-0.5`}>₹{shopNetFoodEarnings}</Text>
-                  <Text style={tw`text-[11px] font-bold text-green-800 mt-1`}>
+                  <Text style={tw`text-[22px] font-black text-green-900 mt-0.5`}>₹{shopNetFoodEarnings}</Text>
+                  <Text style={tw`text-[11px] font-bold text-green-800 mt-1 flex-wrap`}>
                     Total Cash ₹{todayTotalCashCollected} - Vaayu Return ₹{totalAmountOwedToVaayu}
                   </Text>
                 </View>
