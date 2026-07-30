@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibr
 import tw from 'twrnc'
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
 import * as ImagePicker from 'expo-image-picker'
+import * as ImageManipulator from 'expo-image-manipulator'
 import { supabase } from '../lib/supabase'
 
 // Language Translations Dictionary for Low-Literacy Shop Owners
@@ -212,19 +213,28 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
   const [showImagePickerModal, setShowImagePickerModal] = useState(false)
 
-  // Upload local URI to Supabase Storage bucket 'product-images' and return public URL
+  // Upload local URI to Supabase Storage bucket 'product-images' with compression and return public URL
   const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
     try {
-      const response = await fetch(uri)
+      // 1. Compress & Resize image to max width 1080px (0.7 quality) for fast mobile uploading
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1080 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      )
+
+      // 2. Fetch blob and retrieve actual content-type
+      const response = await fetch(manipResult.uri)
       const blob = await response.blob()
-      const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg'
-      const fileName = `item_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      const contentType = blob.type || 'image/jpeg'
+      const fileName = `item_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
       const filePath = `menu/${fileName}`
 
+      // 3. Upload to Supabase Storage bucket 'product-images'
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(filePath, blob, {
-          contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+          contentType: contentType,
           upsert: true,
         })
 
@@ -233,6 +243,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         return null
       }
 
+      // 4. Retrieve permanent public URL
       const { data: publicUrlData } = supabase.storage
         .from('product-images')
         .getPublicUrl(filePath)
@@ -484,6 +495,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
     const itemPrice = parseFloat(newItemPrice) || 0
     const { data, error } = await supabase.from('menu_items').insert([{
+      shop_id: activeShopId || '11111111-1111-1111-1111-111111111111',
       name: newItemName,
       price: itemPrice,
       is_available: true,
