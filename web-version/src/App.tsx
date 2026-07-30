@@ -454,8 +454,10 @@ export default function App() {
   }, [orders])
 
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
-  const deliveryFee = subtotal === 0 ? 0 : subtotal >= 150 ? 0 : 15
-  const cartTotal = subtotal + deliveryFee
+  const isFreeDelivery = subtotal >= 150
+  const deliveryFee = subtotal === 0 || isFreeDelivery ? 0 : 10
+  const platformFee = subtotal === 0 ? 0 : 5
+  const cartTotal = subtotal + deliveryFee + platformFee
 
   if (!user) {
     return (
@@ -1293,9 +1295,15 @@ export default function App() {
                         <span>Item Subtotal</span>
                         <span>₹{subtotal}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500 py-1">
-                        <span>Delivery Fee</span>
-                        <span>{deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}</span>
+                      <div className="flex justify-between text-xs py-1">
+                        <span className="text-gray-500">Delivery Fee</span>
+                        <span className={isFreeDelivery ? "font-black text-green-600" : "text-gray-600"}>
+                          {isFreeDelivery ? "🎉 FREE" : `₹${deliveryFee}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs text-purple-700 py-1 font-medium">
+                        <span>Platform Fee (Vaayu)</span>
+                        <span className="font-bold">₹{platformFee}</span>
                       </div>
                       <div className="flex justify-between text-sm font-bold text-gray-900 border-t border-gray-50 pt-2.5 mt-2">
                         <span>Total Bill</span>

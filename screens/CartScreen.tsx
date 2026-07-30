@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Line, Polyline } from 'react-native-svg'
-import { fetchRemoteConfig, validatePromoCodeServerSide, AppConfig, DEFAULT_CONFIG } from '../lib/remoteConfig'
+import { fetchRemoteConfig, subscribeToRemoteConfig, validatePromoCodeServerSide, AppConfig, DEFAULT_CONFIG } from '../lib/remoteConfig'
 import { supabase } from '../lib/supabase'
 
 interface CartScreenProps {
@@ -54,9 +54,11 @@ export default function CartScreen({
   const [feesExpanded, setFeesExpanded] = useState(false)
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG)
 
-  // Fetch Remote Config for live fees
+  // Fetch Remote Config & Subscribe to Realtime Updates for Instant Fee Changes
   useEffect(() => {
     fetchRemoteConfig().then(setConfig)
+    const unsubscribe = subscribeToRemoteConfig(setConfig)
+    return () => unsubscribe()
   }, [])
 
   const slots = [
@@ -64,8 +66,11 @@ export default function CartScreen({
     { id: 'slot_2', label: '7:00 PM – 9:00 PM' }
   ]
 
+  const freeDeliveryThreshold = config.free_delivery_threshold || 150
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * (i.quantity || i.qty), 0)
-  const deliveryFee = subtotal === 0 ? 0 : (deliveryMode === 'instant' ? config.delivery_fee.instant : config.delivery_fee.scheduled)
+  const isFreeDelivery = subtotal >= freeDeliveryThreshold
+  const baseDeliveryFee = deliveryMode === 'instant' ? config.delivery_fee.instant : config.delivery_fee.scheduled
+  const deliveryFee = subtotal === 0 || isFreeDelivery ? 0 : baseDeliveryFee
   const platformFee = subtotal === 0 ? 0 : config.platform_fee
   const otherCharges = deliveryFee + platformFee
   const total = Math.max(0, subtotal + otherCharges - promoDiscountAmount)
@@ -359,6 +364,22 @@ export default function CartScreen({
           {promoError ? (
             <Text style={tw`text-[12px] text-red-500 font-semibold mt-2`}>{promoError}</Text>
           ) : null}
+        </View>
+
+        {/* Free Delivery Status Banner */}
+        <View style={[tw`mx-4 mt-3 rounded-2xl p-3.5 border flex-row items-center gap-2.5`, isFreeDelivery ? tw`bg-green-50 border-green-200` : tw`bg-blue-50 border-blue-100`]}>
+          <Text style={tw`text-lg`}>{isFreeDelivery ? '🎉' : '🚚'}</Text>
+          <View style={tw`flex-1`}>
+            {isFreeDelivery ? (
+              <Text style={tw`text-[12px] font-black text-green-800`}>
+                FREE Delivery Unlocked! (Order above ₹{freeDeliveryThreshold})
+              </Text>
+            ) : (
+              <Text style={tw`text-[12px] font-bold text-blue-900`}>
+                Add ₹{freeDeliveryThreshold - subtotal} more for <Text style={tw`font-black text-green-700`}>FREE Delivery!</Text>
+              </Text>
+            )}
+          </View>
         </View>
 
         {/* Bill summary */}

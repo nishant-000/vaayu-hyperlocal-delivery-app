@@ -1,5 +1,4 @@
 import { supabase, CustomAsyncStorage } from './supabase';
-import { Platform } from 'react-native';
 
 const CACHE_KEY = 'VAAYU_APP_CONFIG';
 const CACHE_TIMESTAMP_KEY = 'VAAYU_APP_CONFIG_TS';
@@ -7,6 +6,7 @@ const TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
 export interface AppConfig {
   delivery_fee: { instant: number; scheduled: number };
+  free_delivery_threshold: number; // Free delivery threshold (default 150)
   platform_fee: number;
   min_order_value: number;
   service_radius_or_blocks: string[];
@@ -30,6 +30,7 @@ export interface AppConfig {
 
 export const DEFAULT_CONFIG: AppConfig = {
   delivery_fee: { instant: 10, scheduled: 5 },
+  free_delivery_threshold: 150,
   platform_fee: 5,
   min_order_value: 30,
   service_radius_or_blocks: ["Gate 1", "Block A", "Block B", "Block C", "Admin Block", "Library"],
@@ -70,7 +71,11 @@ export async function fetchRemoteConfig(): Promise<AppConfig> {
     if (!error && data && data.length > 0) {
       const freshConfig: any = { ...DEFAULT_CONFIG };
       data.forEach(item => {
-        freshConfig[item.key] = item.value;
+        try {
+          freshConfig[item.key] = typeof item.value === 'string' ? JSON.parse(item.value) : item.value;
+        } catch {
+          freshConfig[item.key] = item.value;
+        }
       });
       config = freshConfig as AppConfig;
 
