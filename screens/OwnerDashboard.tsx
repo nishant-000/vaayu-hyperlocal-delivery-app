@@ -212,7 +212,39 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
   const [showImagePickerModal, setShowImagePickerModal] = useState(false)
 
-  // Camera Handler with runtime permission check
+  // Upload local URI to Supabase Storage bucket 'product-images' and return public URL
+  const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
+    try {
+      const response = await fetch(uri)
+      const blob = await response.blob()
+      const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg'
+      const fileName = `item_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `menu/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, blob, {
+          contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+          upsert: true,
+        })
+
+      if (uploadError) {
+        showToast('Upload failed: ' + uploadError.message)
+        return null
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath)
+
+      return publicUrlData.publicUrl
+    } catch (err: any) {
+      showToast('Upload error: ' + (err.message || 'Failed to process image'))
+      return null
+    }
+  }
+
+  // Camera Handler with runtime permission check & Supabase storage upload
   const handleLaunchCamera = async () => {
     setShowImagePickerModal(false)
     try {
@@ -236,16 +268,25 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedUri = result.assets[0].uri
         setIsUploadingPhoto(true)
-        setNewItemImg(selectedUri)
+        showToast('Uploading photo to cloud...')
+
+        const publicUrl = await uploadImageToSupabase(selectedUri)
         setIsUploadingPhoto(false)
-        showToast('📷 Food photo captured!')
+
+        if (publicUrl) {
+          setNewItemImg(publicUrl)
+          showToast('📷 Photo uploaded & attached!')
+        } else {
+          showToast('Upload failed, please try again')
+        }
       }
     } catch (err: any) {
+      setIsUploadingPhoto(false)
       showToast('Unable to open camera')
     }
   }
 
-  // Gallery Fallback Handler with runtime permission check
+  // Gallery Fallback Handler with runtime permission check & Supabase storage upload
   const handleLaunchGallery = async () => {
     setShowImagePickerModal(false)
     try {
@@ -269,11 +310,20 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedUri = result.assets[0].uri
         setIsUploadingPhoto(true)
-        setNewItemImg(selectedUri)
+        showToast('Uploading photo to cloud...')
+
+        const publicUrl = await uploadImageToSupabase(selectedUri)
         setIsUploadingPhoto(false)
-        showToast('🖼️ Food photo selected!')
+
+        if (publicUrl) {
+          setNewItemImg(publicUrl)
+          showToast('🖼️ Photo uploaded & attached!')
+        } else {
+          showToast('Upload failed, please try again')
+        }
       }
     } catch (err: any) {
+      setIsUploadingPhoto(false)
       showToast('Unable to open gallery')
     }
   }
