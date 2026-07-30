@@ -85,8 +85,7 @@ export async function fetchRemoteConfig(): Promise<AppConfig> {
     }
 
     return config;
-  } catch (err) {
-    console.warn('[RemoteConfig] Failed to fetch live config, using cached/default:', err);
+  } catch {
     return DEFAULT_CONFIG;
   }
 }
@@ -98,7 +97,6 @@ export function subscribeToRemoteConfig(onUpdate: (config: AppConfig) => void) {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'app_config' },
       async () => {
-        console.log('[RemoteConfig] Realtime update detected in app_config!');
         const updatedConfig = await fetchRemoteConfig();
         onUpdate(updatedConfig);
       }
@@ -118,7 +116,6 @@ export async function validatePromoCodeServerSide(code: string, cartTotal: numbe
     });
 
     if (error) {
-      console.error('[RemoteConfig] RPC validate_promo_code error:', error);
       return { valid: false, reason: 'Failed to validate promo code' };
     }
 

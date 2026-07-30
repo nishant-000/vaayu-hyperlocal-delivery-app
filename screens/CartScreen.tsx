@@ -337,7 +337,7 @@ export default function CartScreen({
           <Text style={tw`text-[13px] font-bold text-gray-700 mb-2`}>Promo code</Text>
           <View style={tw`flex-row gap-2`}>
             <TextInput
-              placeholder="Enter code (try VAAYU50)"
+              placeholder="Enter promo code"
               value={promoInput}
               onChangeText={text => { setPromoInput(text); setPromoError('') }}
               autoCapitalize="characters"

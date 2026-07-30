@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
+import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../lib/supabase'
 
 // Language Translations Dictionary for Low-Literacy Shop Owners
@@ -208,6 +209,75 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     setTimeout(() => setToast(null), 2500)
   }
 
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [showImagePickerModal, setShowImagePickerModal] = useState(false)
+
+  // Camera Handler with runtime permission check
+  const handleLaunchCamera = async () => {
+    setShowImagePickerModal(false)
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Camera access is required so shop owners can photograph food products for your store listing. Please grant camera permission in your device settings.',
+          [{ text: 'OK' }]
+        )
+        return
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedUri = result.assets[0].uri
+        setIsUploadingPhoto(true)
+        setNewItemImg(selectedUri)
+        setIsUploadingPhoto(false)
+        showToast('📷 Food photo captured!')
+      }
+    } catch (err: any) {
+      showToast('Unable to open camera')
+    }
+  }
+
+  // Gallery Fallback Handler with runtime permission check
+  const handleLaunchGallery = async () => {
+    setShowImagePickerModal(false)
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Photo library access is required so shop owners can select food photos. Please grant photo library permission in your device settings.',
+          [{ text: 'OK' }]
+        )
+        return
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedUri = result.assets[0].uri
+        setIsUploadingPhoto(true)
+        setNewItemImg(selectedUri)
+        setIsUploadingPhoto(false)
+        showToast('🖼️ Food photo selected!')
+      }
+    } catch (err: any) {
+      showToast('Unable to open gallery')
+    }
+  }
+
   // 1. Load Initial Real Data from Supabase & Subscribe to Realtime Updates
   useEffect(() => {
     async function loadShopData() {
@@ -260,7 +330,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     const ordersSub = supabase
       .channel('shop_orders_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        console.log('[OwnerDashboard] Realtime order payload:', payload)
         triggerHaptic()
         if (payload.eventType === 'INSERT') {
           setOrders(prev => [payload.new, ...prev])
@@ -667,11 +736,20 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               <Text style={tw`text-[18px] font-black text-gray-900`}>{t.addFood}</Text>
               
               <TouchableOpacity
-                onPress={() => showToast("Photo attached!")}
+                onPress={() => setShowImagePickerModal(true)}
+                disabled={isUploadingPhoto}
                 style={tw`w-full h-24 bg-green-50 border-2 border-dashed border-green-500 rounded-2xl items-center justify-center gap-1 active:scale-95`}
               >
-                <Text style={tw`text-3xl`}>📷</Text>
-                <Text style={tw`text-green-800 font-black text-[13px]`}>{t.photoButton}</Text>
+                {isUploadingPhoto ? (
+                  <ActivityIndicator size="large" color="#16a34a" />
+                ) : (
+                  <>
+                    <Text style={tw`text-3xl`}>📷</Text>
+                    <Text style={tw`text-green-800 font-black text-[13px]`}>
+                      {newItemImg && !newItemImg.includes('unsplash') ? '✅ PHOTO ATTACHED (TAP TO CHANGE)' : t.photoButton}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
 
               <TextInput
@@ -878,9 +956,48 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 </TouchableOpacity>
               )
             })}
+      {/* Photo Source Action Sheet / Modal */}
+      <Modal
+        visible={showImagePickerModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowImagePickerModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowImagePickerModal(false)}
+          style={tw`flex-1 bg-black/50 justify-end`}
+        >
+          <View style={tw`bg-white rounded-t-3xl p-6 gap-3`}>
+            <Text style={tw`text-[18px] font-black text-gray-900 text-center mb-2`}>
+              Select Product Photo Source
+            </Text>
+
+            <TouchableOpacity
+              onPress={handleLaunchCamera}
+              style={tw`w-full py-4 bg-green-600 rounded-2xl flex-row items-center justify-center gap-3 active:scale-95`}
+            >
+              <Text style={tw`text-xl`}>📷</Text>
+              <Text style={tw`text-white font-black text-[16px]`}>Take Photo (Camera)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleLaunchGallery}
+              style={tw`w-full py-4 bg-purple-700 rounded-2xl flex-row items-center justify-center gap-3 active:scale-95`}
+            >
+              <Text style={tw`text-xl`}>🖼️</Text>
+              <Text style={tw`text-white font-black text-[16px]`}>Choose from Gallery</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowImagePickerModal(false)}
+              style={tw`w-full py-3 bg-gray-100 rounded-2xl items-center justify-center mt-1`}
+            >
+              <Text style={tw`text-gray-700 font-bold text-[14px]`}>Cancel</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   )
 }

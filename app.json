@@ -1,13 +1,26 @@
 {
   "expo": {
-    "name": "College Delivery App Store",
-    "slug": "college-delivery-app-store",
+    "name": "Vaayu",
+    "slug": "vaayu-campus-delivery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Vaayu needs photo library access so shop owners can select product photos for their store.",
+          "cameraPermission": "Vaayu needs camera access so shop owners can photograph products for their store listing."
+        }
+      ]
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Vaayu needs camera access so shop owners can photograph products for their store listing.",
+        "NSPhotoLibraryUsageDescription": "Vaayu needs photo library access so shop owners can select product photos for their store."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,6 +29,11 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "package": "com.vaayu.campusdelivery",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "splash": {

@@ -260,21 +260,26 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const determinedRole = role === 'owner' ? 'shop_owner' : 'customer'
     completeAuth({
       role: determinedRole,
-      name: determinedRole === 'shop_owner' ? (shopName.trim() || 'Campus Bites Cafe') : (name.trim() || 'Aditya Sharma'),
-      email,
-      phoneNumber: phone,
+      name: determinedRole === 'shop_owner' ? shopName.trim() : name.trim(),
+      email: email.trim(),
+      phoneNumber: phone.trim(),
       category: determinedRole === 'shop_owner' ? effectiveCategory : undefined
     })
   }
 
   const handleLoginSubmit = () => {
+    if (!email.trim() || !password) {
+      Alert.alert('Validation Error', 'Please enter your registered email address and password.')
+      return
+    }
+
     const isOwner = role === 'owner' || email.toLowerCase().includes('shop') || email.toLowerCase().includes('owner')
     const determinedRole = isOwner ? 'shop_owner' : 'customer'
     completeAuth({
       role: determinedRole,
-      name: determinedRole === 'shop_owner' ? (shopName || 'Campus Bites Cafe') : (name.trim() || 'Aditya Sharma'),
-      email: email || (determinedRole === 'shop_owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
-      phoneNumber: '+91 98765 43210'
+      name: determinedRole === 'shop_owner' ? (shopName.trim() || email.split('@')[0]) : (name.trim() || email.split('@')[0]),
+      email: email.trim(),
+      phoneNumber: phone.trim()
     })
   }
 

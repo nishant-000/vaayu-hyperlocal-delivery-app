@@ -119,7 +119,6 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
-          console.log('[OrdersScreen] Realtime order update detected:', payload)
           if (payload.eventType === 'INSERT') {
             setOrders(prev => [payload.new, ...prev])
           } else if (payload.eventType === 'UPDATE') {
