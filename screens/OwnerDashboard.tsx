@@ -426,8 +426,26 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       })
       .subscribe()
 
+    // Realtime Stock Subscription — updates menu item quantities in real-time after orders are placed
+    const menuSub = supabase
+      .channel('shop_menu_realtime')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'menu_items' }, (payload) => {
+        const updated = payload.new
+        setMenuItems(prev => prev.map(item =>
+          item.id === updated.id
+            ? {
+                ...item,
+                stockQuantity: updated.stock_quantity ?? 0,
+                available: updated.is_available && (updated.stock_quantity === undefined || updated.stock_quantity === null || updated.stock_quantity > 0),
+              }
+            : item
+        ))
+      })
+      .subscribe()
+
     return () => {
       supabase.removeChannel(ordersSub)
+      supabase.removeChannel(menuSub)
     }
   }, [])
 

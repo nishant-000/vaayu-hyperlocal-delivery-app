@@ -406,7 +406,6 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
       title: 'Account',
       items: [
         { icon: '👤', label: 'Edit profile', sub: 'Name, phone, email' },
-        { icon: '🔒', label: 'Privacy & security', sub: 'Password & security' },
       ],
     },
     {

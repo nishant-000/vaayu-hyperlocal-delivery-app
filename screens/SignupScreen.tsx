@@ -480,6 +480,24 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
                   <PremiumInputField placeholder="Password" value={password} onChange={setPassword} secure />
                 </View>
 
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!email.trim()) {
+                      Alert.alert('Enter Email', 'Please enter your email address first.')
+                      return
+                    }
+                    const { error } = await supabase.auth.resetPasswordForEmail(email.trim())
+                    if (error) {
+                      Alert.alert('Error', 'Could not send reset email.')
+                    } else {
+                      Alert.alert('Check Your Inbox', `Password reset link sent to ${email.trim()}.`)
+                    }
+                  }}
+                  style={tw`self-end`}
+                >
+                  <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
+                </TouchableOpacity>
+
                 <View style={tw`gap-3`}>
                   <TouchableOpacity onPress={handleLoginSubmit}>
                     <LinearGradient
@@ -610,6 +628,25 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
               secure
               Icon={IconLock}
             />
+
+            {/* Forgot Password */}
+            <TouchableOpacity
+              onPress={async () => {
+                if (!email.trim()) {
+                  Alert.alert('Enter Email', 'Please enter your email address first, then tap Forgot Password.')
+                  return
+                }
+                const { error } = await supabase.auth.resetPasswordForEmail(email.trim())
+                if (error) {
+                  Alert.alert('Error', 'Could not send reset email. Please try again.')
+                } else {
+                  Alert.alert('Check Your Inbox', `A password reset link has been sent to ${email.trim()}. Please check your email.`)
+                }
+              }}
+              style={tw`self-end mb-2 mt-1`}
+            >
+              <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity onPress={handleLoginSubmit} style={tw`mt-4 mb-6`}>
               <LinearGradient

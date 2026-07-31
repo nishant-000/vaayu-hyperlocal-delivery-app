@@ -102,6 +102,16 @@ export default function CartScreen({
       return
     }
 
+    // Enforce stock quantity limits before placing order
+    for (const cartItem of cartItems) {
+      const shopItem = cartShop?.items?.find((i: any) => i.id === cartItem.id)
+      const available = shopItem?.stockQuantity ?? shopItem?.stock_quantity
+      if (available !== undefined && available !== null && (cartItem.quantity || cartItem.qty) > available) {
+        alert(`"${cartItem.name}" only has ${available} unit(s) available. Please reduce the quantity.`)
+        return
+      }
+    }
+
     setIsSubmitting(true)
     const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`
     const expireTime = new Date(Date.now() + 15 * 60 * 1000).toISOString()
@@ -139,6 +149,24 @@ export default function CartScreen({
       const { error } = await supabase.from('orders').insert([orderPayload])
       if (error) {
         console.error('[CartScreen] Error inserting order into Supabase:', error)
+      } else {
+        // Decrement stock_quantity for each ordered item in Supabase (real-time update)
+        for (const cartItem of cartItems) {
+          const qty = cartItem.quantity || cartItem.qty || 1
+          const shopItem = cartShop?.items?.find((i: any) => i.id === cartItem.id)
+          const currentStock = shopItem?.stockQuantity ?? shopItem?.stock_quantity
+
+          if (currentStock !== undefined && currentStock !== null) {
+            const newStock = Math.max(0, currentStock - qty)
+            await supabase
+              .from('menu_items')
+              .update({
+                stock_quantity: newStock,
+                is_available: newStock > 0
+              })
+              .eq('id', cartItem.id)
+          }
+        }
       }
     } catch (err) {
       console.warn('[CartScreen] Order insert error:', err)
