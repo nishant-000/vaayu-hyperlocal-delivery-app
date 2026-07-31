@@ -21,6 +21,7 @@ export default function ShopDetailsScreen({
   onViewCart
 }: ShopDetailsScreenProps) {
   const shopItems = shop.items || []
+  const isShopOpen = shop.isLiveToday !== false && shop.is_open !== false
   
   // Calculate cart quantities and subtotal for this shop
   const shopCartItems = cartItems.filter(item => item.shopId === shop.id || item.shopName === shop.name)
@@ -49,9 +50,9 @@ export default function ShopDetailsScreen({
         {/* Shop details text & Phone Contact */}
         <View style={tw`absolute bottom-4 left-4 right-4`}>
           <View style={tw`flex-row items-center justify-between mb-1`}>
-            <View style={[tw`rounded-full px-2.5 py-0.5`, shop.isLiveToday !== false ? tw`bg-green-600` : tw`bg-red-600`]}>
+            <View style={[tw`rounded-full px-2.5 py-0.5`, isShopOpen ? tw`bg-green-600` : tw`bg-red-600`]}>
               <Text style={tw`text-white text-[10px] font-black uppercase`}>
-                {shop.isLiveToday !== false ? '🟢 OPEN TODAY' : '🔴 OFFLINE'}
+                {isShopOpen ? '🟢 OPEN TODAY' : '🔴 OFFLINE'}
               </Text>
             </View>
 
@@ -70,6 +71,18 @@ export default function ShopDetailsScreen({
 
       {/* Menu items listing */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`p-4 pb-36`}>
+        {!isShopOpen && (
+          <View style={tw`bg-red-50 border border-red-200 rounded-2xl p-3.5 mb-4 flex-row items-center gap-2.5 shadow-xs`}>
+            <Text style={tw`text-xl`}>🛑</Text>
+            <View style={tw`flex-1`}>
+              <Text style={tw`text-[13px] font-black text-red-900`}>Store is Currently Offline</Text>
+              <Text style={tw`text-[11px] font-semibold text-red-700 mt-0.5`}>
+                This shop is closed and not accepting new orders right now.
+              </Text>
+            </View>
+          </View>
+        )}
+
         <Text style={tw`text-[17px] font-bold text-gray-900 mb-4`}>Menu Items</Text>
         <View style={tw`flex-col gap-4`}>
           {shopItems.map((item: any) => {
@@ -90,7 +103,11 @@ export default function ShopDetailsScreen({
                     resizeMode="cover"
                   />
                   
-                  {!isItemAvailable ? (
+                  {!isShopOpen ? (
+                    <View style={tw`bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 mt-2`}>
+                      <Text style={tw`text-[11px] font-bold text-red-600`}>STORE CLOSED</Text>
+                    </View>
+                  ) : !isItemAvailable ? (
                     <View style={tw`bg-gray-100 border border-gray-300 rounded-lg px-3 py-1.5 mt-2`}>
                       <Text style={tw`text-[11px] font-bold text-gray-500`}>SOLD OUT</Text>
                     </View>

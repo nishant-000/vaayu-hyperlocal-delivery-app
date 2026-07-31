@@ -102,6 +102,12 @@ export default function CartScreen({
       return
     }
 
+    // Block order placement if shop is currently offline
+    if (cartShop && (cartShop.isLiveToday === false || cartShop.is_open === false)) {
+      alert(`"${cartShop.name || 'This shop'}" is currently offline and not accepting orders. Please try again when the shop is open.`)
+      return
+    }
+
     // Enforce stock quantity limits before placing order
     for (const cartItem of cartItems) {
       const shopItem = cartShop?.items?.find((i: any) => i.id === cartItem.id)
