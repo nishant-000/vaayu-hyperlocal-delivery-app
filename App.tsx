@@ -382,7 +382,7 @@ export default function App() {
             <View style={tw`flex-row justify-between items-center pb-3 border-b border-gray-100`}>
               <View style={tw`flex-row items-center gap-2`}>
                 <Text style={tw`text-2xl`}>🔔</Text>
-                <Text style={tw`text-[20px] font-black text-gray-900`}>Campus Notifications</Text>
+                <Text style={tw`text-[20px] font-black text-gray-900`}>Notifications</Text>
               </View>
               <TouchableOpacity
                 onPress={() => setShowNotifications(false)}
@@ -392,41 +392,14 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={tw`max-h-96`}>
-              <View style={tw`gap-3`}>
-                <View style={tw`bg-green-50 border border-green-100 rounded-2xl p-4 flex-row items-start gap-3`}>
-                  <Text style={tw`text-2xl`}>🎉</Text>
-                  <View style={tw`flex-1`}>
-                    <Text style={tw`text-[14px] font-black text-gray-900 mb-0.5`}>Welcome to IIIT Tiruchirappalli!</Text>
-                    <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
-                      Official campus delivery is live for Gate 1 & Hostels.
-                    </Text>
-                    <Text style={tw`text-[10px] text-gray-400 font-bold mt-1`}>Just now</Text>
-                  </View>
-                </View>
-
-                <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 flex-row items-start gap-3`}>
-                  <Text style={tw`text-2xl`}>🍔</Text>
-                  <View style={tw`flex-1`}>
-                    <Text style={tw`text-[14px] font-black text-gray-900 mb-0.5`}>Campus Bites Special Offer</Text>
-                    <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
-                      Get 20% off on all burgers & sides today with code VAAYU50.
-                    </Text>
-                    <Text style={tw`text-[10px] text-gray-400 font-bold mt-1`}>2 hours ago</Text>
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              onPress={() => {
-                setShowNotifications(false)
-                showToast("All notifications marked as read")
-              }}
-              style={[tw`w-full py-4 rounded-2xl items-center mt-5 mb-6`, { backgroundColor: '#8fda58' }]}
-            >
-              <Text style={tw`text-[15px] font-black text-white`}>Mark All as Read</Text>
-            </TouchableOpacity>
+            {/* Empty state — no real notifications yet */}
+            <View style={tw`py-12 items-center justify-center gap-3`}>
+              <Text style={tw`text-5xl`}>🔕</Text>
+              <Text style={tw`text-[16px] font-black text-gray-800 mt-2`}>No notifications yet</Text>
+              <Text style={tw`text-[12px] text-gray-400 font-medium text-center px-6`}>
+                Order updates and alerts will appear here when available.
+              </Text>
+            </View>
           </View>
         </View>
       )}
