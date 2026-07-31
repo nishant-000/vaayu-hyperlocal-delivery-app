@@ -663,6 +663,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           <Text style={tw`text-[12px] font-black uppercase text-gray-500`}>{t.todayCash}</Text>
           <Text style={tw`text-[32px] font-black text-gray-900 mt-0.5`}>₹{todayTotalCashCollected}</Text>
         </View>
+      </View>
+
       {/* Delivery Fee Policy Banner */}
       <View style={tw`px-4 pt-3`}>
         <View style={tw`bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3.5 flex-row items-center gap-3 shadow-xs`}>
