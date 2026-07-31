@@ -68,9 +68,9 @@ export default function CartScreen({
 
   const freeDeliveryThreshold = config.free_delivery_threshold || 150
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * (i.quantity || i.qty), 0)
-  const isFreeDelivery = subtotal >= freeDeliveryThreshold
+  const isScheduledFree = deliveryMode === 'regular' && subtotal >= freeDeliveryThreshold
   const baseDeliveryFee = deliveryMode === 'instant' ? config.delivery_fee.instant : config.delivery_fee.scheduled
-  const deliveryFee = subtotal === 0 || isFreeDelivery ? 0 : baseDeliveryFee
+  const deliveryFee = subtotal === 0 ? 0 : (deliveryMode === 'instant' ? config.delivery_fee.instant : (isScheduledFree ? 0 : baseDeliveryFee))
   const platformFee = subtotal === 0 ? 0 : config.platform_fee
   const otherCharges = deliveryFee + platformFee
   const total = Math.max(0, subtotal + otherCharges - promoDiscountAmount)
@@ -367,16 +367,21 @@ export default function CartScreen({
         </View>
 
         {/* Free Delivery Status Banner */}
-        <View style={[tw`mx-4 mt-3 rounded-2xl p-3.5 border flex-row items-center gap-2.5`, isFreeDelivery ? tw`bg-green-50 border-green-200` : tw`bg-blue-50 border-blue-100`]}>
-          <Text style={tw`text-lg`}>{isFreeDelivery ? '🎉' : '🚚'}</Text>
+        {/* Free Delivery Promo Banner */}
+        <View style={[tw`mx-4 mt-3 rounded-2xl p-3.5 border flex-row items-center gap-2.5`, deliveryMode === 'instant' ? tw`bg-purple-50 border-purple-200` : isScheduledFree ? tw`bg-green-50 border-green-200` : tw`bg-blue-50 border-blue-100`]}>
+          <Text style={tw`text-lg`}>{deliveryMode === 'instant' ? '⚡' : isScheduledFree ? '🎉' : '🚚'}</Text>
           <View style={tw`flex-1`}>
-            {isFreeDelivery ? (
+            {deliveryMode === 'instant' ? (
+              <Text style={tw`text-[12px] font-bold text-purple-950`}>
+                Instant Delivery: Standard ₹10 fee applies. <Text style={tw`font-black underline`}>Free delivery ≥ ₹150 is valid ONLY for Scheduled Delivery.</Text>
+              </Text>
+            ) : isScheduledFree ? (
               <Text style={tw`text-[12px] font-black text-green-800`}>
-                FREE Delivery Unlocked! (Order above ₹{freeDeliveryThreshold})
+                FREE Scheduled Delivery Unlocked! (Order ≥ ₹{freeDeliveryThreshold})
               </Text>
             ) : (
               <Text style={tw`text-[12px] font-bold text-blue-900`}>
-                Add ₹{freeDeliveryThreshold - subtotal} more for <Text style={tw`font-black text-green-700`}>FREE Delivery!</Text>
+                Add ₹{freeDeliveryThreshold - subtotal} more for <Text style={tw`font-black text-green-700`}>FREE Scheduled Delivery!</Text>
               </Text>
             )}
           </View>
