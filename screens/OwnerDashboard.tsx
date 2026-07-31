@@ -340,17 +340,25 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   }
 
   const [activeShopId, setActiveShopId] = useState<string | null>(user?.shop_id || null)
+  const [shopName, setShopName] = useState<string>(user?.shop_name || 'Campus Bites Cafe')
 
   // 1. Load Initial Real Data from Supabase & Subscribe to Realtime Updates
   useEffect(() => {
     async function loadShopData() {
       setLoading(true)
 
-      // Fetch Active Shop ID if not set on user session
-      if (!user?.shop_id) {
-        const { data: shopsData } = await supabase.from('shops').select('id').limit(1)
+      // Fetch Active Shop Details
+      const targetShopId = activeShopId || user?.shop_id
+      if (targetShopId) {
+        const { data: currentShop } = await supabase.from('shops').select('id, name').eq('id', targetShopId).single()
+        if (currentShop && currentShop.name) {
+          setShopName(currentShop.name)
+        }
+      } else {
+        const { data: shopsData } = await supabase.from('shops').select('id, name').limit(1)
         if (shopsData && shopsData.length > 0) {
           setActiveShopId(shopsData[0].id)
+          setShopName(shopsData[0].name)
         }
       }
 
@@ -542,6 +550,32 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     }
   }
 
+  // Delete Item from Supabase & Local State
+  const handleDeleteItem = async (itemId: string) => {
+    triggerHaptic()
+    Alert.alert(
+      "Delete Item",
+      "Are you sure you want to delete this item from your store menu?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setMenuItems(prev => prev.filter(i => i.id !== itemId))
+            const { error } = await supabase.from('menu_items').delete().eq('id', itemId)
+            if (error) {
+              console.error('[OwnerDashboard] Failed to delete item:', error)
+              showToast('Failed to delete item')
+            } else {
+              showToast('Item deleted from menu')
+            }
+          }
+        }
+      ]
+    )
+  }
+
   // Add Item to Supabase
   const handleAddItem = async () => {
     if (!activeShopId) {
@@ -622,11 +656,12 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       {/* Top Header */}
       <View style={tw`bg-white px-4 pt-8 pb-3 border-b border-gray-200`}>
         <View style={tw`flex-row justify-between items-center mb-1`}>
-          <View>
-            <Text style={tw`text-[12px] font-black text-green-700 uppercase tracking-widest`}>
-              {user?.role === 'worker' ? 'WORKER PORTAL' : 'SHOP OWNER'}
+          <View style={tw`flex-1 mr-2`}>
+            <Text style={tw`text-[11px] font-black text-green-700 uppercase tracking-widest`}>
+              {user?.role === 'worker' ? 'WORKER PORTAL' : 'SHOP OWNER PORTAL'}
             </Text>
-            <Text style={tw`text-[24px] font-black text-gray-900`}>{user?.name || 'Campus Bites Cafe'}</Text>
+            <Text style={tw`text-[22px] font-black text-gray-900`} numberOfLines={1}>{shopName}</Text>
+            <Text style={tw`text-[11px] font-bold text-gray-500`}>{user?.email || user?.name}</Text>
           </View>
 
           {/* Quick Language Toggle */}
@@ -939,18 +974,28 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       <Text style={tw`text-[15px] font-black text-green-700 mt-0.5`}>₹{item.price}</Text>
                     </View>
 
-                    <TouchableOpacity
-                      onPress={() => handleToggleStock(item.id, item.available)}
-                      activeOpacity={0.8}
-                      style={[
-                        tw`px-4 h-11 rounded-2xl items-center justify-center border-2 shadow-sm`,
-                        item.available ? tw`bg-green-600 border-green-700` : tw`bg-red-600 border-red-700`
-                      ]}
-                    >
-                      <Text style={tw`text-white font-black text-[13px] uppercase`}>
-                        {item.available ? t.inStock : t.soldOut}
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={tw`flex-row items-center gap-2`}>
+                      <TouchableOpacity
+                        onPress={() => handleToggleStock(item.id, item.available)}
+                        activeOpacity={0.8}
+                        style={[
+                          tw`px-3.5 h-11 rounded-2xl items-center justify-center border-2 shadow-sm`,
+                          item.available ? tw`bg-green-600 border-green-700` : tw`bg-red-600 border-red-700`
+                        ]}
+                      >
+                        <Text style={tw`text-white font-black text-[12px] uppercase`}>
+                          {item.available ? t.inStock : t.soldOut}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => handleDeleteItem(item.id)}
+                        activeOpacity={0.7}
+                        style={tw`w-11 h-11 bg-red-50 border-2 border-red-200 rounded-2xl items-center justify-center active:scale-95 shadow-xs`}
+                      >
+                        <Text style={tw`text-base`}>🗑️</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
                   {/* Manual Real-Time Stock Increment/Decrement Controls (+ and -) */}
