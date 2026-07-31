@@ -121,13 +121,13 @@ export default function CartScreen({
 
     const orderPayload = {
       id: orderId,
-      customer_id: user?.id || null,
-      shop_id: cartShop?.id || 'c1111111-1111-1111-1111-111111111111',
+      user_id: user?.id || null,                                          // actual column name
+      shop_id: cartShop?.id || null,
+      shop_name: cartShop?.name || '',                                     // actual column
       customer_name: user?.name || 'Campus Student',
-      location: `${address.area}, ${address.room}`,
-      landmark: address.landmark || 'Gate 1',
+      location: `${address.area}, Room ${address.room}${address.landmark ? ' · ' + address.landmark : ''}`,
       delivery_mode: deliveryMode,
-      selected_slot_label: selectedSlotLabel,
+      selected_slot_label: selectedSlotLabel || null,
       payment_mode: 'cod',
       status: 'incoming',
       items: cartItems.map(i => ({
@@ -135,12 +135,10 @@ export default function CartScreen({
         name: i.name,
         quantity: i.quantity || i.qty,
         price: i.price,
-        accepted: true
       })),
       items_subtotal: subtotal,
       delivery_fee: deliveryFee,
       platform_fee: platformFee,
-      promo_discount: promoDiscountAmount,
       grand_total: total,
       expire_at: expireTime,
     }
