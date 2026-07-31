@@ -870,16 +870,32 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       </View>
                     )}
 
-                    {/* Delivery Mode Badge */}
+                    {/* Delivery Mode Badge & Delivery Time Instruction */}
                     {order.delivery_mode === 'instant' ? (
-                      <View style={tw`bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 flex-row items-center justify-between`}>
-                        <Text style={tw`text-[12px] font-black text-blue-700 uppercase`}>{t.instant}</Text>
-                        <Text style={tw`text-[13px] font-bold text-blue-800`}>Within 15 Mins</Text>
+                      <View style={tw`bg-blue-50 border border-blue-200 rounded-2xl p-3 flex-row items-center justify-between shadow-xs`}>
+                        <View style={tw`flex-1 mr-2`}>
+                          <Text style={tw`text-[12px] font-black text-blue-900 uppercase tracking-wide`}>⚡ INSTANT DELIVERY (ASAP)</Text>
+                          <Text style={tw`text-[11px] font-bold text-blue-700 mt-0.5`}>Deliver to Main Gate within 15–20 minutes</Text>
+                        </View>
+                        <Text style={tw`text-[13px] font-black text-blue-800`}>ASAP</Text>
                       </View>
                     ) : (
-                      <View style={tw`bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex-row items-center justify-between`}>
-                        <Text style={tw`text-[12px] font-black text-green-700 uppercase`}>{t.scheduled}</Text>
-                        <Text style={tw`text-[13px] font-bold text-green-800`}>{order.selected_slot_label || '12:00 PM – 2:00 PM'}</Text>
+                      <View style={tw`bg-purple-50 border-2 border-purple-300 rounded-2xl p-3.5 flex-col gap-1.5 shadow-xs`}>
+                        <View style={tw`flex-row items-center justify-between`}>
+                          <View style={tw`flex-row items-center gap-1.5`}>
+                            <Text style={tw`text-base`}>📅</Text>
+                            <Text style={tw`text-[12px] font-black text-purple-950 uppercase tracking-wide`}>SCHEDULED DELIVERY SLOT</Text>
+                          </View>
+                          <View style={tw`bg-purple-600 rounded-lg px-2.5 py-1`}>
+                            <Text style={tw`text-white font-black text-[12px]`}>
+                              {order.selected_slot_label || '12:40 PM – 1:40 PM'}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={tw`text-[12px] font-bold text-purple-950 leading-snug mt-1`}>
+                          ⚠️ <Text style={tw`font-black underline`}>SHOP NOTICE:</Text> Please prepare and deliver this order to Main Gate <Text style={tw`font-black text-purple-950 underline`}>EXACTLY during slot time: {order.selected_slot_label || '12:40 PM – 1:40 PM'}</Text>.
+                        </Text>
                       </View>
                     )}
 

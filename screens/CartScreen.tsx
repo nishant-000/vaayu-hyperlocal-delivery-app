@@ -122,7 +122,7 @@ export default function CartScreen({
     const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`
     const expireTime = new Date(Date.now() + 15 * 60 * 1000).toISOString()
     const selectedSlotLabel = deliveryMode === 'regular'
-      ? (selectedSlotId === 'slot_1' ? '12:00 PM – 2:00 PM' : '7:00 PM – 9:00 PM')
+      ? (selectedSlotId === 'slot_1' ? '12:40 PM – 1:40 PM (Lunch Slot)' : '8:00 PM – 9:00 PM (Dinner Slot)')
       : undefined
 
     const orderPayload = {
