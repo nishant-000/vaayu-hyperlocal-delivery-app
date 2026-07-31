@@ -46,15 +46,23 @@ export default function ShopDetailsScreen({
           <IconArrowLeft color="#1f2937" size={20} />
         </TouchableOpacity>
         
-        {/* Shop details text */}
+        {/* Shop details text & Phone Contact */}
         <View style={tw`absolute bottom-4 left-4 right-4`}>
-          <View style={tw`flex-row items-center gap-2 mb-1`}>
-            <View style={tw`bg-green-500 rounded-full px-2 py-0.5`}>
-              <Text style={tw`text-white text-[10px] font-black`}>OPEN TODAY</Text>
+          <View style={tw`flex-row items-center justify-between mb-1`}>
+            <View style={[tw`rounded-full px-2.5 py-0.5`, shop.isLiveToday !== false ? tw`bg-green-600` : tw`bg-red-600`]}>
+              <Text style={tw`text-white text-[10px] font-black uppercase`}>
+                {shop.isLiveToday !== false ? '🟢 OPEN TODAY' : '🔴 OFFLINE'}
+              </Text>
+            </View>
+
+            {/* Shop Contact Phone Badge */}
+            <View style={tw`bg-black/60 px-3 py-1 rounded-full border border-white/30 flex-row items-center gap-1.5`}>
+              <Text style={tw`text-xs`}>📞</Text>
+              <Text style={tw`text-[12px] font-black text-white`}>{shop.phone || '+91 98765 43210'}</Text>
             </View>
           </View>
           <Text style={tw`text-2xl font-black text-white leading-tight`}>{shop.name}</Text>
-          <Text style={tw`text-[12px] text-white/80 mt-0.5 font-semibold`}>
+          <Text style={tw`text-[12px] text-white/90 mt-0.5 font-semibold`}>
             {shop.category || 'Campus Shop'} · 10-15 min delivery
           </Text>
         </View>
