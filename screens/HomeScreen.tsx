@@ -31,6 +31,15 @@ export const categories = [
     isLarge: true,
   },
   {
+    id: 6,
+    name: "Others",
+    title: "OTHERS",
+    sub: "SERVICES & MORE",
+    badge: "CAMPUS PICKUP",
+    img: require('../assets/categories/others.jpg'),
+    isLarge: true,
+  },
+  {
     id: 3,
     name: "Pharmacy",
     title: "PHARMACY",
@@ -46,15 +55,6 @@ export const categories = [
     sub: "BOOKS & LABS",
     badge: "EXAM SPECIALS",
     img: require('../assets/categories/stationery.jpg'),
-    isLarge: false,
-  },
-  {
-    id: 6,
-    name: "Others",
-    title: "OTHERS",
-    sub: "SERVICES & MORE",
-    badge: "CAMPUS PICKUP",
-    img: require('../assets/categories/others.jpg'),
     isLarge: false,
   },
 ]
