@@ -351,56 +351,37 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     }
   }
 
-  // Real Supabase User Login Authentication
+  // Strict Supabase User Login — password is always verified
   const handleLoginSubmit = async () => {
     const cleanEmail = email.trim()
     if (!cleanEmail || !password) {
-      Alert.alert('Validation Error', 'Please enter your registered email address and password.')
+      Alert.alert('Validation Error', 'Please enter your email address and password.')
       return
     }
 
     setIsSubmitting(true)
 
-    // 1. Primary Auth attempt: Supabase Auth signInWithPassword
-    const { data: authData } = await supabase.auth.signInWithPassword({
+    // Strict auth: password MUST be correct — no fallbacks
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password: password
     })
 
-    let authUser = authData?.user
-
-    // 2. Fallback attempt: If email confirmation is enabled in Supabase Auth, check profiles table by email
-    if (!authUser) {
-      const { data: profileByEmail } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', cleanEmail)
-        .single()
-
-      if (profileByEmail) {
-        authUser = {
-          id: profileByEmail.id,
-          email: profileByEmail.email
-        } as any
-      }
-    }
-
-    // 3. Fallback for valid campus emails
-    if (!authUser && cleanEmail.includes('@')) {
-      authUser = {
-        id: `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-        email: cleanEmail
-      } as any
-    }
-
-    if (!authUser) {
+    if (authError || !authData?.user) {
       setIsSubmitting(false)
-      Alert.alert(
-        'Login Failed',
-        'Invalid email address or password. Please check your credentials or create a new account.'
-      )
+      const msg = authError?.message || ''
+      if (msg.includes('Email not confirmed')) {
+        Alert.alert(
+          'Email Not Confirmed',
+          'Please check your inbox and click the confirmation link sent to your email, then try logging in again.'
+        )
+      } else {
+        Alert.alert('Login Failed', 'Incorrect email or password. Please try again.')
+      }
       return
     }
+
+    const authUser = authData.user
 
     // Query profiles & shops table to resolve role and store details
     const { data: profile } = await supabase
@@ -417,8 +398,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
     setIsSubmitting(false)
 
-    const isPartnerRole = role === 'owner' || cleanEmail.toLowerCase().includes('shop') || cleanEmail.toLowerCase().includes('owner')
-    const determinedRole = shop ? 'shop_owner' : (profile?.role || (isPartnerRole ? 'shop_owner' : 'customer'))
+    const determinedRole = shop ? 'shop_owner' : (profile?.role || 'customer')
     const displayName = shop?.name || profile?.full_name || cleanEmail.split('@')[0] || 'Student'
 
     completeAuth({
@@ -426,7 +406,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       role: determinedRole,
       name: displayName,
       email: cleanEmail,
-      phoneNumber: profile?.phone || phone.trim() || '',
+      phoneNumber: profile?.phone || '',
       shop_id: shop?.id || profile?.shop_id || undefined,
       shop_name: shop?.name || undefined
     })
