@@ -313,7 +313,8 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
     <View style={tw`flex-1 bg-gray-50`}>
       {/* Toast Alert */}
       {toast && (
-                  <Text style={tw`text-white text-xs font-bold text-center`}>{toast}</Text>
+        <View style={[tw`absolute top-4 left-4 right-4 z-50 rounded-full px-4 py-3 shadow-lg justify-center items-center`, { backgroundColor: '#8fda58' }]}>
+          <Text style={tw`text-white text-xs font-bold text-center`}>{toast}</Text>
         </View>
       )}
 
