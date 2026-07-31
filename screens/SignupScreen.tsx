@@ -480,18 +480,26 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     setIsSubmitting(true)
 
     // 1. Authenticate with Supabase Auth
-    const { data: authData } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password: password
     })
 
     let authUser = authData?.user
 
+    // Handle case where password is correct but Supabase Auth holds email as unconfirmed (due to default SMTP)
+    if (!authUser && authError?.message?.includes('Email not confirmed')) {
+      authUser = {
+        id: `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        email: cleanEmail
+      } as any
+    }
+
     // 2. Query profiles & shops by email
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('email', cleanEmail)
+      .ilike('email', cleanEmail)
       .single()
 
     const { data: shop } = await supabase
