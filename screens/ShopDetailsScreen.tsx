@@ -48,18 +48,14 @@ export default function ShopDetailsScreen({
         
         {/* Shop details text */}
         <View style={tw`absolute bottom-4 left-4 right-4`}>
-          <View style={tw`flex-row items-center gap-2`}>
+          <View style={tw`flex-row items-center gap-2 mb-1`}>
             <View style={tw`bg-green-500 rounded-full px-2 py-0.5`}>
-              <Text style={tw`text-white text-[10px] font-black`}>OPEN</Text>
-            </View>
-            <View style={tw`flex-row items-center gap-0.5`}>
-              <IconStar color="#fbbf24" size={12} />
-              <Text style={tw`text-[12px] font-bold text-white ml-0.5`}>{shop.rating}</Text>
+              <Text style={tw`text-white text-[10px] font-black`}>OPEN TODAY</Text>
             </View>
           </View>
-          <Text style={tw`text-2xl font-black text-white mt-1 leading-tight`}>{shop.name}</Text>
+          <Text style={tw`text-2xl font-black text-white leading-tight`}>{shop.name}</Text>
           <Text style={tw`text-[12px] text-white/80 mt-0.5 font-semibold`}>
-            {shop.tag} · {shop.time} delivery
+            {shop.category || 'Campus Shop'} · 10-15 min delivery
           </Text>
         </View>
       </View>
@@ -70,6 +66,7 @@ export default function ShopDetailsScreen({
         <View style={tw`flex-col gap-4`}>
           {shopItems.map((item: any) => {
             const currentQty = cartItems.find(i => i.id === item.id)?.quantity || 0
+            const isItemAvailable = item.isAvailable !== false && (item.stockQuantity === undefined || item.stockQuantity > 0)
             return (
               <View key={item.id} style={tw`flex-row justify-between items-center gap-3 py-3 border-b border-gray-100`}>
                 <View style={tw`flex-1`}>
@@ -85,7 +82,11 @@ export default function ShopDetailsScreen({
                     resizeMode="cover"
                   />
                   
-                  {currentQty > 0 ? (
+                  {!isItemAvailable ? (
+                    <View style={tw`bg-gray-100 border border-gray-300 rounded-lg px-3 py-1.5 mt-2`}>
+                      <Text style={tw`text-[11px] font-bold text-gray-500`}>SOLD OUT</Text>
+                    </View>
+                  ) : currentQty > 0 ? (
                     <View style={[tw`flex-row items-center rounded-lg px-2.5 py-1 mt-2 gap-3`, { backgroundColor: '#8fda58' }]}>
                       <TouchableOpacity onPress={() => onChangeQuantity(item.id, -1)}>
                         <Text style={tw`text-white font-bold text-base px-1`}>-</Text>

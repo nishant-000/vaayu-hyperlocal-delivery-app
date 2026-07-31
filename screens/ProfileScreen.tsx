@@ -11,11 +11,7 @@ const AVATAR_OPTIONS = [
   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format',
 ]
 
-const stats = [
-  { label: 'Orders', value: '24' },
-  { label: 'Saved', value: '8' },
-  { label: 'Reviews', value: '12' },
-]
+
 
 function ChevronRight() {
   return (
@@ -340,16 +336,6 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
                 <Text style={tw`text-[11px] text-green-600 font-semibold`}>Campus verified</Text>
               </View>
             </View>
-          </View>
-
-          {/* Stats */}
-          <View style={tw`flex-row mt-4 pt-4 border-t border-gray-100`}>
-            {stats.map((s, i) => (
-              <View key={s.label} style={[tw`flex-1 items-center`, i < stats.length - 1 ? tw`border-r border-gray-100` : {}]}>
-                <Text style={tw`text-[20px] font-black text-gray-900`}>{s.value}</Text>
-                <Text style={tw`text-[11px] text-gray-400 font-medium`}>{s.label}</Text>
-              </View>
-            ))}
           </View>
         </View>
 

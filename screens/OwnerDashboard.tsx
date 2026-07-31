@@ -381,7 +381,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           id: m.id,
           name: m.name,
           price: m.price,
-          available: m.is_available,
+          available: m.is_available && (m.stock_quantity === undefined || m.stock_quantity === null || m.stock_quantity > 0),
+          stockQuantity: m.stock_quantity ?? 0,
           img: m.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'
         })))
       }
@@ -1044,7 +1045,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
                       <TextInput
                         keyboardType="number-pad"
-                        value={String(item.stockQuantity ?? 10)}
+                        value={String(item.stockQuantity ?? 0)}
                         onChangeText={(text) => handleDirectStockQuantityChange(item.id, text)}
                         scrollEnabled={false}
                         multiline={false}

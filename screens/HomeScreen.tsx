@@ -372,9 +372,8 @@ export default function HomeScreen({
                   <View style={tw`p-4`}>
                     <View style={tw`flex-row justify-between items-center mb-1`}>
                       <Text style={tw`text-[18px] font-black text-gray-900 flex-1 mr-2`} numberOfLines={1}>{shop.name}</Text>
-                      <View style={tw`flex-row items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-md border border-yellow-200`}>
-                        <IconStar color="#eab308" size={14} />
-                        <Text style={tw`text-[12px] font-black text-gray-800`}>{shop.rating}</Text>
+                      <View style={tw`bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200`}>
+                        <Text style={tw`text-[11px] font-bold text-emerald-800 uppercase`}>{shop.category || 'Shop'}</Text>
                       </View>
                     </View>
 
