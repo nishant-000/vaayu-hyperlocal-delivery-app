@@ -268,18 +268,127 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
     return (
       <View style={tw`flex-1 bg-gray-50`}>
         <BackHeader title="Terms & Privacy Policy" onBack={() => setActiveModal(null)} />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`p-5 pb-20`}>
-          <View style={tw`bg-white rounded-3xl p-5 gap-4 shadow-sm`}>
-            <Text style={tw`text-[15px] font-black text-gray-900`}>1. Service Terms</Text>
-            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
-              CampusDeliver provides on-campus order fulfillment for students and partners at IIIT Tiruchirappalli. All orders must comply with institute conduct guidelines.
-            </Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`p-4 pb-20 gap-4`}>
 
-            <Text style={tw`text-[15px] font-black text-gray-900 pt-2`}>2. Privacy Policy</Text>
-            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
-              Student data (roll numbers, emails) is strictly protected and only used for verifying campus membership and delivering orders to Gate 1.
+          {/* Header Card */}
+          <View style={tw`bg-[#1a3a2a] rounded-3xl p-5`}>
+            <Text style={tw`text-[22px] font-black text-white tracking-tight`}>VAAYU</Text>
+            <Text style={tw`text-[13px] font-bold text-white/80 mt-0.5`}>Terms and Conditions & Privacy Policy</Text>
+            <Text style={tw`text-[11px] text-white/60 font-medium mt-2 leading-relaxed`}>
+              Campus grocery and essentials delivery for IIIT Trichy. Please read the guidelines below to ensure smooth ordering and delivery for everyone.
             </Text>
           </View>
+
+          {/* Delivery Methods */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-3 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900`}>🚚 Delivery Methods & Timings</Text>
+
+            <View style={tw`bg-blue-50 rounded-2xl p-4 border border-blue-100`}>
+              <Text style={tw`text-[13px] font-black text-blue-900 mb-1`}>📅 Scheduled Delivery</Text>
+              <Text style={tw`text-[12px] text-blue-800 font-medium leading-relaxed`}>
+                We offer 2 daily delivery slots for grouped (bulk) orders:{'\n'}
+                • <Text style={tw`font-bold`}>Lunch Slot (Slot 1):</Text> 12:40 PM – 1:40 PM{'\n'}
+                • <Text style={tw`font-bold`}>Dinner Slot (Slot 2):</Text> 8:00 PM – 9:00 PM{'\n\n'}
+                Delivery Fee: ₹5 on orders under ₹150.{'\n'}
+                <Text style={tw`font-black text-green-800`}>FREE Delivery on all orders ₹150 and above!</Text>
+              </Text>
+            </View>
+
+            <View style={tw`bg-purple-50 rounded-2xl p-4 border border-purple-100`}>
+              <Text style={tw`text-[13px] font-black text-purple-900 mb-1`}>⚡ Instant Delivery</Text>
+              <Text style={tw`text-[12px] text-purple-800 font-medium leading-relaxed`}>
+                Need your groceries urgently? Choose Instant Delivery to receive your order at the main gate within 20 minutes of confirmation.{'\n\n'}
+                Delivery Fee: <Text style={tw`font-black`}>₹10 per order (always applies, no free delivery)</Text>
+              </Text>
+            </View>
+
+            <View style={tw`bg-gray-50 rounded-2xl p-3 border border-gray-100`}>
+              <Text style={tw`text-[12px] font-bold text-gray-700`}>📍 Delivery Location</Text>
+              <Text style={tw`text-[12px] text-gray-500 font-medium mt-1`}>
+                All deliveries are made only to the <Text style={tw`font-bold text-gray-800`}>IIIT Trichy Main Gate</Text>. Please collect your order on time.
+              </Text>
+            </View>
+          </View>
+
+          {/* Order Process */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-2 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900 mb-1`}>📋 Order Process & Cancellations</Text>
+            {[
+              'Choose the delivery type and timing before confirming.',
+              'Once confirmed, orders cannot be modified or cancelled.',
+              'You will receive a phone call once your order arrives.',
+              'For bulk orders, please pick up promptly to avoid crowding.',
+            ].map((item, i) => (
+              <Text key={i} style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• {item}</Text>
+            ))}
+          </View>
+
+          {/* Payment */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-2 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900 mb-1`}>💳 Payment & Fees</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• Payment must be made immediately upon receiving your order.</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• All item prices and delivery fees will be clearly shown before payment.</Text>
+          </View>
+
+          {/* Replacement */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-2 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900 mb-1`}>🔄 Replacement Policy</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• If you receive a damaged, expired, or unusable product, report it immediately at the time of pickup.</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• The item will be exchanged in the next available delivery slot, at no extra cost.</Text>
+            <Text style={tw`text-[12px] text-red-600 font-bold leading-relaxed`}>• Replacement is only applicable if the issue is confirmed at time of delivery — claims made later will not be accepted.</Text>
+          </View>
+
+          {/* Uncollected Orders */}
+          <View style={tw`bg-red-50 rounded-3xl p-5 gap-2 shadow-sm border border-red-100`}>
+            <Text style={tw`text-[15px] font-black text-red-900 mb-1`}>⚠️ Uncollected Orders Policy</Text>
+            <Text style={tw`text-[12px] text-red-800 font-medium leading-relaxed`}>• <Text style={tw`font-bold`}>1st occurrence:</Text> A warning will be issued.</Text>
+            <Text style={tw`text-[12px] text-red-800 font-medium leading-relaxed`}>• <Text style={tw`font-bold`}>2nd occurrence:</Text> A ₹50 penalty will be added to your next order.</Text>
+            <Text style={tw`text-[12px] text-red-800 font-bold leading-relaxed`}>• <Text style={tw`font-black`}>3rd occurrence:</Text> You will be permanently banned from VAAYU services.</Text>
+            <Text style={tw`text-[12px] text-red-700 font-medium leading-relaxed`}>• Items remaining uncollected for a long duration may no longer be usable or refundable. VAAYU will not be responsible for reimbursement.</Text>
+          </View>
+
+          {/* User Conduct */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-2 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900 mb-1`}>🤝 User Conduct Guidelines</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• Please treat delivery partners and support staff respectfully.</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• Misuse of service, rude behavior, or fraud may result in service suspension.</Text>
+          </View>
+
+          {/* Privacy Policy */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-2 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900 mb-1`}>🔒 Privacy Policy</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• We collect your name, contact details, and order information to process deliveries efficiently.</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• Your data is used only for service improvement and communication.</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-bold leading-relaxed`}>• We never sell or share your data with external parties.</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• You may request account deletion at any time; however, some data may be retained for legal purposes.</Text>
+          </View>
+
+          {/* Service Limitations */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-2 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900 mb-1`}>ℹ️ Service Limitations & Disclaimers</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• While we aim to deliver on time, delays may occur due to vendor availability, traffic, or technical issues.</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>• Services may be temporarily unavailable during system maintenance.</Text>
+          </View>
+
+          {/* Policy Updates */}
+          <View style={tw`bg-white rounded-3xl p-5 gap-2 shadow-sm`}>
+            <Text style={tw`text-[15px] font-black text-gray-900 mb-1`}>🔔 Policy Updates</Text>
+            <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
+              We may update these terms occasionally. We will notify you of any important changes directly through the app. Continued use of VAAYU means you accept the latest terms.
+            </Text>
+          </View>
+
+          {/* Contact */}
+          <View style={tw`bg-[#1a3a2a] rounded-3xl p-5`}>
+            <Text style={tw`text-[14px] font-black text-white mb-1`}>📬 Need Help?</Text>
+            <Text style={tw`text-[12px] text-white/80 font-medium leading-relaxed`}>
+              Feel free to message us anytime for support. We're here to make grocery delivery simple, affordable, and reliable on campus!
+            </Text>
+            <View style={tw`mt-3 bg-white/10 rounded-2xl px-4 py-3`}>
+              <Text style={tw`text-[12px] font-black text-white`}>✉️  vaayu.support@gmail.com</Text>
+            </View>
+          </View>
+
         </ScrollView>
       </View>
     )

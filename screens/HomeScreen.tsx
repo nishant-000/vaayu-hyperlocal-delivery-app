@@ -119,8 +119,10 @@ export default function HomeScreen({
             desc: m.description,
             price: m.price,
             isAvailable: m.is_available,
+            stockQuantity: m.stock_quantity ?? 0,
             img: m.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'
-          })) : []
+          })) : [],
+          phone: s.phone || ''
         }))
         setShops(formatted)
       } else {
@@ -293,7 +295,7 @@ export default function HomeScreen({
             </View>
           </View>
 
-          {/* Row 2: Grocery */}
+          {/* Row 2: Grocery + Others */}
           <View style={tw`flex-row gap-3`}>
             {(() => {
               const grocery = categories.find(c => c.name === 'Grocery')!
@@ -321,6 +323,37 @@ export default function HomeScreen({
                     ) : null}
                   </View>
                   <Image source={grocery.img} style={tw`w-18 h-18 absolute bottom-1 right-1 rounded-xl`} resizeMode="contain" />
+                </TouchableOpacity>
+              )
+            })()}
+
+            {/* Others card beside Grocery */}
+            {(() => {
+              const others = categories.find(c => c.name === 'Others')!
+              const isSelected = selectedCategory === others.id
+              return (
+                <TouchableOpacity
+                  onPress={() => setSelectedCategory(isSelected ? null : others.id)}
+                  activeOpacity={0.85}
+                  style={[
+                    tw`flex-1 bg-white rounded-3xl p-4 justify-between border relative overflow-hidden`,
+                    {
+                      borderColor: isSelected ? '#8fda58' : '#f3f4f6',
+                      borderWidth: isSelected ? 2.5 : 1,
+                      minHeight: 110,
+                    }
+                  ]}
+                >
+                  <View style={tw`z-10`}>
+                    <Text style={tw`text-[15px] font-black text-gray-900 tracking-tight leading-tight mb-0.5`}>{others.title}</Text>
+                    <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2`}>{others.sub}</Text>
+                    {others.badge ? (
+                      <View style={tw`self-start bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100`}>
+                        <Text style={tw`text-[9px] font-black text-purple-700`}>{others.badge}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Image source={others.img} style={tw`w-18 h-18 absolute bottom-1 right-1 rounded-xl`} resizeMode="contain" />
                 </TouchableOpacity>
               )
             })()}
