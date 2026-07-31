@@ -508,6 +508,24 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     }
   }
 
+  // Direct Manual Stock Quantity Typing Input in Supabase
+  const handleDirectStockQuantityChange = async (itemId: string, text: string) => {
+    const parsed = parseInt(text, 10)
+    const newQty = isNaN(parsed) ? 0 : Math.max(0, parsed)
+    const isAvail = newQty > 0
+
+    setMenuItems(prev => prev.map(i => i.id === itemId ? { ...i, stockQuantity: newQty, available: isAvail } : i))
+
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ stock_quantity: newQty, is_available: isAvail })
+      .eq('id', itemId)
+
+    if (error) {
+      console.error('[OwnerDashboard] Failed to set stock quantity in Supabase:', error)
+    }
+  }
+
   // Stock Toggle in Supabase
   const handleToggleStock = async (itemId: string, currentAvailable: boolean) => {
     triggerHaptic()
@@ -939,7 +957,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   <View style={tw`flex-row justify-between items-center bg-gray-50 p-2.5 rounded-xl border border-gray-200`}>
                     <Text style={tw`text-[13px] font-bold text-gray-700`}>Real-Time Stock Quantity:</Text>
 
-                    <View style={tw`flex-row items-center gap-2.5`}>
+                    <View style={tw`flex-row items-center gap-2`}>
                       <TouchableOpacity
                         onPress={() => handleUpdateStockQuantity(item.id, -1)}
                         style={tw`w-9 h-9 rounded-xl bg-red-500 items-center justify-center shadow-xs active:scale-95`}
@@ -947,9 +965,12 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         <Text style={tw`text-white font-black text-xl`}>-</Text>
                       </TouchableOpacity>
 
-                      <View style={tw`min-w-[36px] items-center`}>
-                        <Text style={tw`text-[16px] font-black text-gray-900`}>{item.stockQuantity ?? 10}</Text>
-                      </View>
+                      <TextInput
+                        keyboardType="number-pad"
+                        value={String(item.stockQuantity ?? 10)}
+                        onChangeText={(text) => handleDirectStockQuantityChange(item.id, text)}
+                        style={tw`w-14 h-9 bg-white border border-gray-300 rounded-xl text-center text-[15px] font-black text-gray-900 px-1`}
+                      />
 
                       <TouchableOpacity
                         onPress={() => handleUpdateStockQuantity(item.id, 1)}
@@ -1032,52 +1053,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
-
-            {/* Worker Staff Access (Backed by Supabase shop_workers) */}
-            <View style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 gap-3 shadow-sm`}>
-              <Text style={tw`text-[16px] font-black text-gray-900`}>{t.addWorker}</Text>
-              <Text style={tw`text-[13px] text-gray-500 font-medium`}>{t.workerHelp}</Text>
-
-              <TextInput
-                placeholder={t.workerName}
-                value={newWorkerName}
-                onChangeText={setNewWorkerName}
-                style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900`}
-              />
-
-              <TextInput
-                placeholder={t.workerPhone}
-                keyboardType="phone-pad"
-                value={newWorkerPhone}
-                onChangeText={setNewWorkerPhone}
-                style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900`}
-              />
-
-              <TouchableOpacity
-                onPress={handleAddWorker}
-                style={tw`w-full h-14 bg-green-600 rounded-2xl items-center justify-center mt-1 shadow-md`}
-              >
-                <Text style={tw`text-white font-black text-[16px]`}>{t.saveWorker}</Text>
-              </TouchableOpacity>
-
-              {workers.map(w => (
-                <View key={w.id} style={tw`flex-row justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-200`}>
-                  <View>
-                    <Text style={tw`font-bold text-gray-900 text-[14px]`}>{w.name}</Text>
-                    <Text style={tw`text-gray-500 text-[12px]`}>{w.phone}</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={async () => {
-                      setWorkers(prev => prev.filter(x => x.id !== w.id))
-                      await supabase.from('shop_workers').delete().eq('id', w.id)
-                    }}
-                    style={tw`bg-red-100 px-3 py-1.5 rounded-lg`}
-                  >
-                    <Text style={tw`text-red-700 font-bold text-[12px]`}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
             </View>
 
             <TouchableOpacity onPress={onSignOut} style={tw`w-full h-14 bg-red-100 rounded-2xl items-center justify-center mt-2`}>
