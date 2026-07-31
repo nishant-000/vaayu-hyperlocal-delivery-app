@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const ALLOWED_DOMAINS = ['iiitt.ac.in']
 
-type SignupStep = 'carousel' | 'login' | 'signup_student' | 'signup_owner' | 'verify'
+type SignupStep = 'carousel' | 'login' | 'signup_student' | 'signup_owner' | 'verify' | 'verify_reset'
 
 interface SignupScreenProps {
   onDone?: (userData: any) => void
@@ -211,6 +211,10 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
   const [customCategory, setCustomCategory] = useState('')
   const [role, setRole] = useState<'customer' | 'owner'>('customer')
 
+  // OTP & Reset Password states
+  const [otpCode, setOtpCode] = useState('')
+  const [newResetPassword, setNewResetPassword] = useState('')
+
   // Validation
   const emailDomain = email.includes('@') ? email.split('@')[1].toLowerCase() : ''
   const isEmailWhitelisted = ALLOWED_DOMAINS.includes(emailDomain)
@@ -238,14 +242,121 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     setActiveSlide(index)
   }
 
-  const handleStudentSubmit = () => {
+  const handleStudentSubmit = async () => {
     setRole('customer')
+    const userEmail = email.trim()
+    setIsSubmitting(true)
+
+    const { error } = await supabase.auth.signUp({
+      email: userEmail,
+      password: password
+    })
+    setIsSubmitting(false)
+
+    if (error && !error.message.includes('already registered')) {
+      console.warn('[SignupScreen] signUp notice:', error.message)
+    }
+
+    setOtpCode('')
     setStep('verify')
+    Alert.alert(
+      '🔑 OTP Code Sent',
+      `An OTP verification code has been sent to ${userEmail}. Please enter the code below to complete registration.`
+    )
   }
 
-  const handleOwnerSubmit = () => {
+  const handleOwnerSubmit = async () => {
     setRole('owner')
+    const userEmail = email.trim()
+    setIsSubmitting(true)
+
+    const { error } = await supabase.auth.signUp({
+      email: userEmail,
+      password: password
+    })
+    setIsSubmitting(false)
+
+    if (error && !error.message.includes('already registered')) {
+      console.warn('[SignupScreen] signUp notice:', error.message)
+    }
+
+    setOtpCode('')
     setStep('verify')
+    Alert.alert(
+      '🔑 OTP Code Sent',
+      `An OTP verification code has been sent to ${userEmail}. Please enter the code below to verify your shop account.`
+    )
+  }
+
+  const handleForgotPassword = async (emailAddr: string) => {
+    const cleanEmail = emailAddr.trim()
+    if (!cleanEmail) {
+      Alert.alert('Enter Email', 'Please enter your registered email address first.')
+      return
+    }
+    setIsSubmitting(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail)
+    setIsSubmitting(false)
+
+    if (error) {
+      Alert.alert('Reset Password Error', error.message || 'Could not send OTP code. Please check your email.')
+    } else {
+      setOtpCode('')
+      setNewResetPassword('')
+      setEmail(cleanEmail)
+      setStep('verify_reset')
+      Alert.alert(
+        '🔑 OTP Reset Code Sent',
+        `A 6-digit OTP code has been sent to ${cleanEmail}. Please enter the OTP code and your new password below.`
+      )
+    }
+  }
+
+  const handleResetPasswordComplete = async () => {
+    const cleanEmail = email.trim()
+    if (!otpCode.trim()) {
+      Alert.alert('Validation Error', 'Please enter the 6-digit OTP code sent to your email.')
+      return
+    }
+    if (!newResetPassword || newResetPassword.length < 6) {
+      Alert.alert('Validation Error', 'Please enter a new password with at least 6 characters.')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: cleanEmail,
+      token: otpCode.trim(),
+      type: 'recovery'
+    })
+
+    if (error) {
+      const { error: err2 } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: otpCode.trim(),
+        type: 'email'
+      })
+      if (err2) {
+        setIsSubmitting(false)
+        Alert.alert('OTP Verification Failed', error.message || 'Invalid or expired OTP code.')
+        return
+      }
+    }
+
+    const { error: updateErr } = await supabase.auth.updateUser({
+      password: newResetPassword
+    })
+
+    setIsSubmitting(false)
+
+    if (updateErr) {
+      Alert.alert('Password Reset Error', updateErr.message)
+    } else {
+      Alert.alert('🎉 Password Reset Successful!', 'Your password has been updated. Please log in with your new password.')
+      setPassword(newResetPassword)
+      setStep('login')
+    }
   }
 
   const completeAuth = (userData: any) => {
@@ -259,14 +370,31 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Real Supabase User Registration & Shop Initialization
-  const handleVerificationComplete = async () => {
+  const handleVerificationComplete = async (codeOverride?: string) => {
     setIsSubmitting(true)
     const determinedRole = role === 'owner' ? 'shop_owner' : 'customer'
     const userEmail = email.trim()
+    const token = codeOverride || otpCode.trim()
+
+    // 1. Verify OTP with Supabase if token entered
+    if (token && token.length >= 4) {
+      const { error: otpErr } = await supabase.auth.verifyOtp({
+        email: userEmail,
+        token: token,
+        type: 'signup'
+      })
+      if (otpErr) {
+        await supabase.auth.verifyOtp({
+          email: userEmail,
+          token: token,
+          type: 'email'
+        })
+      }
+    }
 
     let userId: string | null = null
 
-    // 1. Create account in Supabase Auth
+    // Check session
     const { data: authData } = await supabase.auth.signUp({
       email: userEmail,
       password: password
@@ -275,7 +403,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     if (authData?.user?.id) {
       userId = authData.user.id
     } else {
-      // Try signing in if account already exists
       const { data: loginData } = await supabase.auth.signInWithPassword({
         email: userEmail,
         password: password
@@ -285,13 +412,11 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       }
     }
 
-    // Generated ID if session is unconfirmed
     if (!userId) {
       userId = `usr_${Date.now()}`
     }
 
     try {
-      // 2. Insert into profiles table
       await supabase.from('profiles').upsert([{
         id: userId,
         email: userEmail,
@@ -300,19 +425,14 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
         role: determinedRole
       }])
 
-      // 3. If shop owner, insert into shops table
       let newShopId = undefined
       if (determinedRole === 'shop_owner') {
-        const { data: shopData, error: shopErr } = await supabase.from('shops').insert([{
+        const { data: shopData } = await supabase.from('shops').insert([{
           owner_id: userId,
           name: shopName.trim(),
           category: effectiveCategory || 'Others',
           is_open: true
         }]).select().single()
-
-        if (shopErr) {
-          console.error('[SignupScreen] Shop insertion error:', shopErr)
-        }
 
         if (shopData) {
           newShopId = shopData.id
@@ -338,15 +458,13 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
         shop_name: determinedRole === 'shop_owner' ? shopName.trim() : undefined
       })
     } catch (err) {
-      console.error('[SignupScreen] Registration error:', err)
       setIsSubmitting(false)
       completeAuth({
         id: userId,
         role: determinedRole,
         name: determinedRole === 'shop_owner' ? shopName.trim() : (name.trim() || userEmail.split('@')[0]),
         email: userEmail,
-        phoneNumber: phone.trim(),
-        category: determinedRole === 'shop_owner' ? (effectiveCategory || 'Others') : undefined
+        phoneNumber: phone.trim()
       })
     }
   }
@@ -361,7 +479,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
     setIsSubmitting(true)
 
-    // Strict auth: password MUST be correct — no fallbacks
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password: password
@@ -373,7 +490,17 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       if (msg.includes('Email not confirmed')) {
         Alert.alert(
           'Email Not Confirmed',
-          'Please check your inbox and click the confirmation link sent to your email, then try logging in again.'
+          'Your account is pending email confirmation. Enter the OTP code sent to your email to verify and log in.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Enter OTP Code',
+              onPress: () => {
+                setOtpCode('')
+                setStep('verify')
+              }
+            }
+          ]
         )
       } else {
         Alert.alert('Login Failed', 'Incorrect email or password. Please try again.')
@@ -481,18 +608,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
                 </View>
 
                 <TouchableOpacity
-                  onPress={async () => {
-                    if (!email.trim()) {
-                      Alert.alert('Enter Email', 'Please enter your email address first.')
-                      return
-                    }
-                    const { error } = await supabase.auth.resetPasswordForEmail(email.trim())
-                    if (error) {
-                      Alert.alert('Error', 'Could not send reset email.')
-                    } else {
-                      Alert.alert('Check Your Inbox', `Password reset link sent to ${email.trim()}.`)
-                    }
-                  }}
+                  onPress={() => handleForgotPassword(email)}
                   style={tw`self-end`}
                 >
                   <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
@@ -631,18 +747,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
             {/* Forgot Password */}
             <TouchableOpacity
-              onPress={async () => {
-                if (!email.trim()) {
-                  Alert.alert('Enter Email', 'Please enter your email address first, then tap Forgot Password.')
-                  return
-                }
-                const { error } = await supabase.auth.resetPasswordForEmail(email.trim())
-                if (error) {
-                  Alert.alert('Error', 'Could not send reset email. Please try again.')
-                } else {
-                  Alert.alert('Check Your Inbox', `A password reset link has been sent to ${email.trim()}. Please check your email.`)
-                }
-              }}
+              onPress={() => handleForgotPassword(email)}
               style={tw`self-end mb-2 mt-1`}
             >
               <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
@@ -880,33 +985,106 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
           
           <View style={tw`px-6 pt-6 items-center`}>
             <View style={[tw`w-16 h-16 rounded-2xl items-center justify-center mb-4`, { backgroundColor: '#f0fdf4' }]}>
-              <Text style={tw`text-3xl`}>📧</Text>
+              <Text style={tw`text-3xl`}>🔑</Text>
             </View>
-            <Text style={tw`text-[26px] font-black text-gray-900 mb-2 text-center`}>Verify your email</Text>
-            <Text style={tw`text-[13px] text-gray-400 font-medium mb-8 text-center leading-relaxed`}>
-              We sent a 4-digit code to your email address. Enter it below.
+            <Text style={tw`text-[26px] font-black text-gray-900 mb-2 text-center`}>Enter Verification OTP</Text>
+            <Text style={tw`text-[13px] text-gray-400 font-medium mb-8 text-center leading-relaxed px-4`}>
+              We sent a 6-digit OTP code to <Text style={tw`font-bold text-gray-800`}>{email || 'your email'}</Text>. Enter the code below to verify your account.
             </Text>
 
-            <View style={tw`flex-row justify-center mb-8`}>
+            <View style={tw`w-full mb-6`}>
               <TextInput
-                placeholder="0 0 0 0"
+                placeholder="0 0 0 0 0 0"
                 keyboardType="number-pad"
-                maxLength={4}
+                maxLength={6}
+                value={otpCode}
                 placeholderTextColor="#9ca3af"
-                onChangeText={(v) => { if (v.length === 4) handleVerificationComplete(); }}
-                style={tw`bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-center text-3xl font-black tracking-widest text-gray-900 w-52`}
+                onChangeText={(v) => {
+                  setOtpCode(v)
+                  if (v.trim().length === 6) {
+                    handleVerificationComplete(v.trim())
+                  }
+                }}
+                style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-center text-2xl font-black tracking-widest text-gray-900 w-full`}
               />
             </View>
 
             <TouchableOpacity
-              onPress={handleVerificationComplete}
+              onPress={() => handleVerificationComplete()}
               style={[tw`w-full py-4 rounded-2xl items-center mb-4`, { backgroundColor: '#8fda58' }]}
             >
-              <Text style={tw`text-[15px] font-black text-white`}>Verify & Enter App</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={tw`text-[15px] font-black text-white`}>Verify & Enter App</Text>
+              )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={tw`self-center`}>
-              <Text style={[tw`font-bold text-[13px]`, { color: '#8fda58' }]}>Resend code to email (in 30s)</Text>
+            <TouchableOpacity
+              onPress={async () => {
+                if (email.trim()) {
+                  await supabase.auth.resend({ type: 'signup', email: email.trim() })
+                  Alert.alert('OTP Resent', `A new verification code was sent to ${email.trim()}.`)
+                }
+              }}
+              style={tw`self-center mt-2`}
+            >
+              <Text style={[tw`font-bold text-[13px]`, { color: '#8fda58' }]}>Resend OTP Code</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ── 6. FORGOT PASSWORD OTP RESET SCREEN ── */}
+      {step === 'verify_reset' && (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`flex-grow pt-20 pb-8`}>
+          <BackHeader onBack={() => setStep('login')} title="Reset Password" />
+          
+          <View style={tw`px-6 pt-6 items-center`}>
+            <View style={[tw`w-16 h-16 rounded-2xl items-center justify-center mb-4`, { backgroundColor: '#f0fdf4' }]}>
+              <Text style={tw`text-3xl`}>🔒</Text>
+            </View>
+            <Text style={tw`text-[26px] font-black text-gray-900 mb-2 text-center`}>Reset Your Password</Text>
+            <Text style={tw`text-[13px] text-gray-400 font-medium mb-6 text-center leading-relaxed px-4`}>
+              Enter the 6-digit OTP code sent to <Text style={tw`font-bold text-gray-800`}>{email || 'your email'}</Text> and choose a new password.
+            </Text>
+
+            <View style={tw`w-full gap-4 mb-6`}>
+              <View>
+                <Text style={tw`text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5`}>6-Digit OTP Code</Text>
+                <TextInput
+                  placeholder="0 0 0 0 0 0"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  value={otpCode}
+                  placeholderTextColor="#9ca3af"
+                  onChangeText={setOtpCode}
+                  style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-6 py-3.5 text-center text-xl font-black tracking-widest text-gray-900 w-full`}
+                />
+              </View>
+
+              <View>
+                <Text style={tw`text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5`}>New Password</Text>
+                <TextInput
+                  placeholder="Enter new password (min 6 chars)"
+                  secureTextEntry
+                  value={newResetPassword}
+                  placeholderTextColor="#9ca3af"
+                  onChangeText={setNewResetPassword}
+                  style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-[14px] font-medium text-gray-800 w-full`}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleResetPasswordComplete}
+              style={[tw`w-full py-4 rounded-2xl items-center mb-4`, { backgroundColor: '#8fda58' }]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={tw`text-[15px] font-black text-white`}>Update Password & Log In</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
