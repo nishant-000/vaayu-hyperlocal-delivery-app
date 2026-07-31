@@ -1,7 +1,12 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Linking, Platform } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line } from 'react-native-svg'
+
+// Hosted PDF URL — served from web app's /public/ or GitHub raw
+const VAAYU_TERMS_PDF_URL = Platform.OS === 'web'
+  ? '/vaayu-support.pdf'
+  : 'https://raw.githubusercontent.com/nishant-000/vaayu-hyperlocal-delivery-app/main/vaayu%20support.pdf'
 
 const AVATAR_OPTIONS = [
   'https://images.unsplash.com/photo-1624918479892-3e5df2910410?w=200&h=200&fit=crop&auto=format',
@@ -455,7 +460,13 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
             {section.items.map((item, i) => (
               <TouchableOpacity
                 key={item.label}
-                onPress={() => setActiveModal(item.label)}
+                onPress={() => {
+                  if (item.label === 'Terms & privacy') {
+                    Linking.openURL(VAAYU_TERMS_PDF_URL)
+                  } else {
+                    setActiveModal(item.label)
+                  }
+                }}
                 style={tw`flex-row items-center gap-3 px-4 py-3 ${i < section.items.length - 1 ? 'border-b border-gray-50' : ''}`}
               >
                 <View style={tw`w-9 h-9 rounded-xl bg-gray-100 items-center justify-center text-lg`}>
