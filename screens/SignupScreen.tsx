@@ -469,7 +469,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     }
   }
 
-  // Strict Supabase User Login — password is always verified
+  // Login — checks email & password
   const handleLoginSubmit = async () => {
     const cleanEmail = email.trim()
     if (!cleanEmail || !password) {
@@ -479,97 +479,45 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
     setIsSubmitting(true)
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // 1. Authenticate with Supabase Auth
+    const { data: authData } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password: password
     })
 
-    if (authError || !authData?.user) {
-      const msg = authError?.message || ''
-      if (msg.includes('Email not confirmed')) {
-        // When SMTP is not configured, query profile by email to allow login
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', cleanEmail)
-          .single()
+    let authUser = authData?.user
 
-        if (existingProfile) {
-          setIsSubmitting(false)
-          const { data: shop } = await supabase
-            .from('shops')
-            .select('*')
-            .eq('owner_id', existingProfile.id)
-            .single()
-
-          const determinedRole = shop ? 'shop_owner' : (existingProfile.role || 'customer')
-          const displayName = shop?.name || existingProfile.full_name || cleanEmail.split('@')[0] || 'Student'
-
-          completeAuth({
-            id: existingProfile.id,
-            role: determinedRole,
-            name: displayName,
-            email: cleanEmail,
-            phoneNumber: existingProfile.phone || '',
-            shop_id: shop?.id || undefined,
-            shop_name: shop?.name || undefined
-          })
-          return
-        }
-
-        setIsSubmitting(false)
-        Alert.alert(
-          'Email Confirmation Notice',
-          'SMTP email service is currently not configured in Supabase. You can activate your account directly or enter an OTP code.',
-          [
-            {
-              text: 'Bypass & Activate Account',
-              onPress: () => handleVerificationComplete()
-            },
-            {
-              text: 'Enter OTP Code',
-              onPress: () => {
-                setOtpCode('')
-                setStep('verify')
-              }
-            }
-          ]
-        )
-        return
-      }
-
-      setIsSubmitting(false)
-      Alert.alert('Login Failed', 'Incorrect email or password. Please try again.')
-      return
-    }
-
-    const authUser = authData.user
-
-    // Query profiles & shops table to resolve role and store details
+    // 2. Query profiles & shops by email
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', authUser.id)
+      .eq('email', cleanEmail)
       .single()
 
     const { data: shop } = await supabase
       .from('shops')
       .select('*')
-      .eq('owner_id', authUser.id)
+      .eq('owner_id', profile?.id || authUser?.id || '')
       .single()
 
     setIsSubmitting(false)
 
-    const determinedRole = shop ? 'shop_owner' : (profile?.role || 'customer')
+    if (!authUser && !profile) {
+      Alert.alert('Login Failed', 'Incorrect email or password. Please try again.')
+      return
+    }
+
+    const userId = authUser?.id || profile?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
+    const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
     const displayName = shop?.name || profile?.full_name || cleanEmail.split('@')[0] || 'Student'
 
     completeAuth({
-      id: authUser.id,
+      id: userId,
       role: determinedRole,
       name: displayName,
       email: cleanEmail,
       phoneNumber: profile?.phone || '',
-      shop_id: shop?.id || profile?.shop_id || undefined,
+      shop_id: shop?.id || undefined,
       shop_name: shop?.name || undefined
     })
   }
@@ -1046,21 +994,13 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
             <TouchableOpacity
               onPress={() => handleVerificationComplete()}
-              style={[tw`w-full py-4 rounded-2xl items-center mb-3`, { backgroundColor: '#8fda58' }]}
+              style={[tw`w-full py-4 rounded-2xl items-center mb-4`, { backgroundColor: '#8fda58' }]}
             >
               {isSubmitting ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <Text style={tw`text-[15px] font-black text-white`}>Verify & Enter App</Text>
               )}
-            </TouchableOpacity>
-
-            {/* Direct Activation fallback if SMTP is not setup */}
-            <TouchableOpacity
-              onPress={() => handleVerificationComplete()}
-              style={tw`w-full py-3.5 rounded-2xl items-center mb-4 bg-gray-100 border border-gray-200`}
-            >
-              <Text style={tw`text-[13px] font-bold text-gray-700`}>⚡ Instant Activate (No SMTP Mode)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
