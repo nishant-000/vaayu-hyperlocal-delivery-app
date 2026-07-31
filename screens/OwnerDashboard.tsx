@@ -839,29 +839,33 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         <View style={tw`bg-gray-100 px-3 py-1.5 rounded-full`}>
                           <Text style={tw`text-2xl`}>{order.payment_mode === 'cod' ? '💵' : '📱'}</Text>
                         </View>
+                        {/* Status Badge */}
                         <View style={[tw`px-3 py-1 rounded-full`, 
-                          order.status === 'incoming' ? tw`bg-red-100` :
-                          order.status === 'preparing' || order.status === 'accepted' ? tw`bg-orange-100` :
-                          order.status === 'out_for_delivery' || order.status === 'delivering' ? tw`bg-purple-100` : tw`bg-green-100`
+                          order.status === 'incoming' ? tw`bg-blue-100` :
+                          order.status === 'out_for_delivery' || order.status === 'preparing' || order.status === 'accepted' ? tw`bg-orange-100` :
+                          order.status === 'ready_for_pickup' ? tw`bg-purple-100` :
+                          order.status === 'delivered' ? tw`bg-green-100` : tw`bg-red-100`
                         ]}>
                           <Text style={[tw`text-[12px] font-black uppercase`,
-                            order.status === 'incoming' ? tw`text-red-700` :
-                            order.status === 'preparing' || order.status === 'accepted' ? tw`text-orange-700` :
-                            order.status === 'out_for_delivery' || order.status === 'delivering' ? tw`text-purple-700` : tw`text-green-700`
+                            order.status === 'incoming' ? tw`text-blue-700` :
+                            order.status === 'out_for_delivery' || order.status === 'preparing' || order.status === 'accepted' ? tw`text-orange-700` :
+                            order.status === 'ready_for_pickup' ? tw`text-purple-700` :
+                            order.status === 'delivered' ? tw`text-green-700` : tw`text-red-700`
                           ]}>
-                            {order.status === 'incoming' ? '📥 NEW' :
-                             order.status === 'preparing' || order.status === 'accepted' ? '🍳 COOK' :
-                             order.status === 'out_for_delivery' || order.status === 'delivering' ? '🛵 ROAD' : '✅ DONE'}
+                            {order.status === 'incoming' ? '📥 NEW ORDER' :
+                             order.status === 'out_for_delivery' || order.status === 'preparing' || order.status === 'accepted' ? '🛵 OUT FOR DELIVERY' :
+                             order.status === 'ready_for_pickup' ? '📍 COLLECT YOUR ORDER' :
+                             order.status === 'delivered' ? '✅ DELIVERED' : '❌ CANCELLED'}
                           </Text>
                         </View>
                       </View>
                     </View>
 
-                    {/* Progress Timer */}
-                    {order.status === 'incoming' && (
+                    {/* Progress Timer — Shown ONLY for Instant Delivery while pending acceptance */}
+                    {order.status === 'incoming' && order.delivery_mode === 'instant' && (
                       <View style={[tw`rounded-2xl p-3 border flex-col gap-1.5`, tw`${timer.bgClass} ${timer.borderClass}`]}>
                         <View style={tw`flex-row justify-between items-center`}>
-                          <Text style={[tw`text-[13px] font-black`, tw`${timer.textClass}`]}>⏱️ {t.timeLeft}:</Text>
+                          <Text style={[tw`text-[13px] font-black`, tw`${timer.textClass}`]}>⏱️ {t.timeLeft} (15 Min Limit):</Text>
                           <Text style={[tw`text-[18px] font-black font-mono`, tw`${timer.textClass}`]}>{timer.timeStr}</Text>
                         </View>
                         <View style={tw`w-full h-3.5 bg-gray-200 rounded-full overflow-hidden`}>
@@ -874,10 +878,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                     {order.delivery_mode === 'instant' ? (
                       <View style={tw`bg-blue-50 border border-blue-200 rounded-2xl p-3 flex-row items-center justify-between shadow-xs`}>
                         <View style={tw`flex-1 mr-2`}>
-                          <Text style={tw`text-[12px] font-black text-blue-900 uppercase tracking-wide`}>⚡ INSTANT DELIVERY (ASAP)</Text>
-                          <Text style={tw`text-[11px] font-bold text-blue-700 mt-0.5`}>Deliver to Main Gate within 15–20 minutes</Text>
+                          <Text style={tw`text-[12px] font-black text-blue-900 uppercase tracking-wide`}>⚡ INSTANT DELIVERY</Text>
+                          <Text style={tw`text-[11px] font-bold text-blue-700 mt-0.5`}>Expected Delivery: 20 mins from order placement</Text>
                         </View>
-                        <Text style={tw`text-[13px] font-black text-blue-800`}>ASAP</Text>
+                        <Text style={tw`text-[13px] font-black text-blue-800`}>20 MINS</Text>
                       </View>
                     ) : (
                       <View style={tw`bg-purple-50 border-2 border-purple-300 rounded-2xl p-3.5 flex-col gap-1.5 shadow-xs`}>
