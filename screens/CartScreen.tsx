@@ -62,8 +62,8 @@ export default function CartScreen({
   }, [])
 
   const slots = [
-    { id: 'slot_1', label: '12:00 PM – 2:00 PM' },
-    { id: 'slot_2', label: '7:00 PM – 9:00 PM' }
+    { id: 'slot_1', label: '12:40 PM – 1:40 PM' },
+    { id: 'slot_2', label: '8:00 PM – 9:00 PM' }
   ]
 
   const freeDeliveryThreshold = config.free_delivery_threshold || 150
