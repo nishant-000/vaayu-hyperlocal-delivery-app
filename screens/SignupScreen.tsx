@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line, Circle, Rect } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
+import { supabase } from '../lib/supabase'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const ALLOWED_DOMAINS = ['iiitt.ac.in']
@@ -255,31 +256,129 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     }
   }
 
-  // Instant App Launch upon OTP entry (Post-verification screen removed)
-  const handleVerificationComplete = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Real Supabase User Registration & Shop Initialization
+  const handleVerificationComplete = async () => {
+    setIsSubmitting(true)
     const determinedRole = role === 'owner' ? 'shop_owner' : 'customer'
-    completeAuth({
-      role: determinedRole,
-      name: determinedRole === 'shop_owner' ? shopName.trim() : name.trim(),
-      email: email.trim(),
-      phoneNumber: phone.trim(),
-      category: determinedRole === 'shop_owner' ? effectiveCategory : undefined
+    const userEmail = email.trim()
+
+    // 1. Create account in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userEmail,
+      password: password
     })
+
+    if (authError && !authData.user) {
+      setIsSubmitting(false)
+      Alert.alert('Registration Failed', authError.message)
+      return
+    }
+
+    const userId = authData.user?.id
+
+    if (userId) {
+      // 2. Insert into profiles table
+      await supabase.from('profiles').upsert([{
+        id: userId,
+        email: userEmail,
+        full_name: name.trim() || shopName.trim(),
+        phone: phone.trim(),
+        role: determinedRole
+      }])
+
+      // 3. If shop owner, insert into shops table
+      let newShopId = undefined
+      if (determinedRole === 'shop_owner') {
+        const { data: shopData } = await supabase.from('shops').insert([{
+          owner_id: userId,
+          name: shopName.trim(),
+          category: effectiveCategory,
+          is_open: true
+        }]).select().single()
+
+        if (shopData) {
+          newShopId = shopData.id
+          await supabase.from('shop_workers').insert([{
+            shop_id: shopData.id,
+            user_id: userId,
+            worker_name: name.trim() || shopName.trim(),
+            worker_phone: phone.trim()
+          }])
+        }
+      }
+
+      setIsSubmitting(false)
+
+      completeAuth({
+        id: userId,
+        role: determinedRole,
+        name: determinedRole === 'shop_owner' ? shopName.trim() : name.trim(),
+        email: userEmail,
+        phoneNumber: phone.trim(),
+        category: determinedRole === 'shop_owner' ? effectiveCategory : undefined,
+        shop_id: newShopId,
+        shop_name: determinedRole === 'shop_owner' ? shopName.trim() : undefined
+      })
+    } else {
+      setIsSubmitting(false)
+      Alert.alert('Registration Failed', 'Could not create account.')
+    }
   }
 
-  const handleLoginSubmit = () => {
+  // Real Supabase User Login Authentication
+  const handleLoginSubmit = async () => {
     if (!email.trim() || !password) {
       Alert.alert('Validation Error', 'Please enter your registered email address and password.')
       return
     }
 
-    const isOwner = role === 'owner' || email.toLowerCase().includes('shop') || email.toLowerCase().includes('owner')
-    const determinedRole = isOwner ? 'shop_owner' : 'customer'
-    completeAuth({
-      role: determinedRole,
-      name: determinedRole === 'shop_owner' ? (shopName.trim() || email.split('@')[0]) : (name.trim() || email.split('@')[0]),
+    setIsSubmitting(true)
+
+    // Authenticate against Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
-      phoneNumber: phone.trim()
+      password: password
+    })
+
+    if (authError || !authData.session) {
+      setIsSubmitting(false)
+      Alert.alert(
+        'Login Failed',
+        'Invalid email address or password. Please check your credentials or create a new account.'
+      )
+      return
+    }
+
+    const authUser = authData.user
+
+    // Query profiles & shops table to resolve role and store details
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single()
+
+    const { data: shop } = await supabase
+      .from('shops')
+      .select('*')
+      .eq('owner_id', authUser.id)
+      .single()
+
+    setIsSubmitting(false)
+
+    const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
+    const displayName = shop?.name || profile?.full_name || authUser.email?.split('@')[0] || 'User'
+
+    completeAuth({
+      id: authUser.id,
+      role: determinedRole,
+      name: displayName,
+      email: authUser.email,
+      phoneNumber: profile?.phone || '',
+      shop_id: shop?.id || profile?.shop_id || undefined,
+      shop_name: shop?.name || undefined
     })
   }
 

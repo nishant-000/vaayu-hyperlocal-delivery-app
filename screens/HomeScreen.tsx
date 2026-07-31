@@ -102,17 +102,17 @@ export default function HomeScreen({
         .select('*, menu_items(*)')
         .order('created_at', { ascending: false })
 
-      if (!error && shopsData && shopsData.length > 0) {
+      if (!error && shopsData) {
         const formatted = shopsData.map(s => ({
           id: s.id,
           name: s.name,
-          category: s.category,
+          category: s.category || 'Others',
           rating: s.rating || 4.8,
           time: '15 min',
           discount: '20% off',
           img: s.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
-          badge: s.is_live_today ? 'OPEN TODAY' : 'OFFLINE',
-          isLiveToday: s.is_live_today,
+          badge: s.is_open ? 'OPEN TODAY' : 'OFFLINE',
+          isLiveToday: s.is_open,
           items: s.menu_items ? s.menu_items.map((m: any) => ({
             id: m.id,
             name: m.name,
@@ -124,24 +124,7 @@ export default function HomeScreen({
         }))
         setShops(formatted)
       } else {
-        // Fallback default shop
-        setShops([
-          {
-            id: 'c1111111-1111-1111-1111-111111111111',
-            name: 'Campus Bites Cafe',
-            category: 'Food',
-            rating: 4.8,
-            time: '15 min',
-            discount: '20% off',
-            img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
-            badge: 'OPEN TODAY',
-            isLiveToday: true,
-            items: [
-              { id: '11111111-1111-1111-1111-111111111111', name: 'Spicy Paneer Burger', desc: 'Crispy paneer patty with spicy cream.', price: 120, img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200' },
-              { id: '22222222-2222-2222-2222-222222222222', name: 'Salted French Fries', desc: 'Golden salted fries.', price: 80, img: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=200' }
-            ]
-          }
-        ])
+        setShops([])
       }
       setLoading(false)
     }

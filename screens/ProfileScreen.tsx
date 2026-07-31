@@ -79,46 +79,13 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
         <BackHeader title="Edit Profile" onBack={() => setActiveModal(null)} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`p-4 pb-20`}>
           <View style={tw`items-center my-4`}>
-            <TouchableOpacity onPress={() => setShowPhotoPicker(true)} activeOpacity={0.85} style={tw`relative`}>
-              <Image source={{ uri: avatarUrl }} style={tw`w-24 h-24 rounded-3xl mb-3`} />
-              <View style={tw`absolute bottom-2 right-0 w-7 h-7 rounded-full bg-green-500 items-center justify-center border-2 border-white shadow`}>
-                <Svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </Svg>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setShowPhotoPicker(true)} style={tw`bg-green-50 px-4 py-2 rounded-full border border-green-200`}>
-              <Text style={tw`text-[12px] font-bold text-green-700`}>Change Photo</Text>
-            </TouchableOpacity>
-
-            {/* Avatar Selection Drawer */}
-            {showPhotoPicker && (
-              <View style={tw`w-full bg-white rounded-2xl p-4 mt-4 border border-green-100 shadow-sm items-center`}>
-                <Text style={tw`text-[12px] font-bold text-gray-700 mb-3`}>Choose an Avatar</Text>
-                <View style={tw`flex-row gap-3`}>
-                  {AVATAR_OPTIONS.map((img, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      onPress={() => {
-                        setAvatarUrl(img)
-                        setShowPhotoPicker(false)
-                        showToast("Profile photo updated!")
-                      }}
-                    >
-                      <Image
-                        source={{ uri: img }}
-                        style={[
-                          tw`w-12 h-12 rounded-2xl border-2`,
-                          { borderColor: avatarUrl === img ? '#8fda58' : '#f3f4f6' }
-                        ]}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
+            <View style={tw`w-24 h-24 rounded-3xl bg-emerald-700 items-center justify-center mb-2 shadow-sm`}>
+              <Text style={tw`text-3xl font-black text-white`}>
+                {(user?.name || name || 'U').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <Text style={tw`text-[16px] font-black text-gray-900`}>{user?.name || name}</Text>
+            <Text style={tw`text-[12px] text-gray-400 font-medium`}>{user?.email || email}</Text>
           </View>
 
           <View style={tw`bg-white rounded-3xl p-5 gap-4 shadow-sm mb-6`}>
@@ -346,8 +313,7 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
     <View style={tw`flex-1 bg-gray-50`}>
       {/* Toast Alert */}
       {toast && (
-        <View style={[tw`absolute top-4 left-4 right-4 z-50 rounded-full px-4 py-3 shadow-lg justify-center items-center`, { backgroundColor: '#8fda58' }]}>
-          <Text style={tw`text-white text-xs font-bold text-center`}>{toast}</Text>
+                  <Text style={tw`text-white text-xs font-bold text-center`}>{toast}</Text>
         </View>
       )}
 
@@ -360,26 +326,10 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
         {/* Profile card */}
         <View style={tw`mx-4 mt-4 bg-white rounded-3xl p-4 shadow-sm`}>
           <View style={tw`flex-row items-center gap-4`}>
-            <View style={tw`relative`}>
-              <TouchableOpacity onPress={() => setShowPhotoPicker(true)} activeOpacity={0.85}>
-                <Image
-                  source={{ uri: avatarUrl }}
-                  style={tw`w-20 h-20 rounded-2xl`}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setActiveModal('Edit profile')
-                  setShowPhotoPicker(true)
-                }}
-                style={tw`absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500 items-center justify-center shadow`}
-              >
-                <Svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </Svg>
-              </TouchableOpacity>
+            <View style={tw`w-16 h-16 rounded-2xl bg-emerald-700 items-center justify-center shadow-xs`}>
+              <Text style={tw`text-2xl font-black text-white`}>
+                {(user?.name || name || 'U').charAt(0).toUpperCase()}
+              </Text>
             </View>
             <View style={tw`flex-1 min-w-0`}>
               <Text style={tw`text-[18px] font-black text-gray-900`}>{user?.name || name}</Text>
