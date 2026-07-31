@@ -30,9 +30,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.vaayu.campusdelivery",
+      "versionCode": 1,
       "permissions": [
         "CAMERA",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS"
       ],
       "predictiveBackGestureEnabled": false
     },
