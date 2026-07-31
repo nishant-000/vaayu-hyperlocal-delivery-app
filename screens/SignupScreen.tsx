@@ -485,14 +485,47 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     })
 
     if (authError || !authData?.user) {
-      setIsSubmitting(false)
       const msg = authError?.message || ''
       if (msg.includes('Email not confirmed')) {
+        // When SMTP is not configured, query profile by email to allow login
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', cleanEmail)
+          .single()
+
+        if (existingProfile) {
+          setIsSubmitting(false)
+          const { data: shop } = await supabase
+            .from('shops')
+            .select('*')
+            .eq('owner_id', existingProfile.id)
+            .single()
+
+          const determinedRole = shop ? 'shop_owner' : (existingProfile.role || 'customer')
+          const displayName = shop?.name || existingProfile.full_name || cleanEmail.split('@')[0] || 'Student'
+
+          completeAuth({
+            id: existingProfile.id,
+            role: determinedRole,
+            name: displayName,
+            email: cleanEmail,
+            phoneNumber: existingProfile.phone || '',
+            shop_id: shop?.id || undefined,
+            shop_name: shop?.name || undefined
+          })
+          return
+        }
+
+        setIsSubmitting(false)
         Alert.alert(
-          'Email Not Confirmed',
-          'Your account is pending email confirmation. Enter the OTP code sent to your email to verify and log in.',
+          'Email Confirmation Notice',
+          'SMTP email service is currently not configured in Supabase. You can activate your account directly or enter an OTP code.',
           [
-            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Bypass & Activate Account',
+              onPress: () => handleVerificationComplete()
+            },
             {
               text: 'Enter OTP Code',
               onPress: () => {
@@ -502,9 +535,11 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
             }
           ]
         )
-      } else {
-        Alert.alert('Login Failed', 'Incorrect email or password. Please try again.')
+        return
       }
+
+      setIsSubmitting(false)
+      Alert.alert('Login Failed', 'Incorrect email or password. Please try again.')
       return
     }
 
@@ -1011,13 +1046,21 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
             <TouchableOpacity
               onPress={() => handleVerificationComplete()}
-              style={[tw`w-full py-4 rounded-2xl items-center mb-4`, { backgroundColor: '#8fda58' }]}
+              style={[tw`w-full py-4 rounded-2xl items-center mb-3`, { backgroundColor: '#8fda58' }]}
             >
               {isSubmitting ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <Text style={tw`text-[15px] font-black text-white`}>Verify & Enter App</Text>
               )}
+            </TouchableOpacity>
+
+            {/* Direct Activation fallback if SMTP is not setup */}
+            <TouchableOpacity
+              onPress={() => handleVerificationComplete()}
+              style={tw`w-full py-3.5 rounded-2xl items-center mb-4 bg-gray-100 border border-gray-200`}
+            >
+              <Text style={tw`text-[13px] font-bold text-gray-700`}>⚡ Instant Activate (No SMTP Mode)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
