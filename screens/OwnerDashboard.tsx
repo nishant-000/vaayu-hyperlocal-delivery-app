@@ -969,7 +969,11 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         keyboardType="number-pad"
                         value={String(item.stockQuantity ?? 10)}
                         onChangeText={(text) => handleDirectStockQuantityChange(item.id, text)}
-                        style={tw`w-14 h-9 bg-white border border-gray-300 rounded-xl text-center text-[15px] font-black text-gray-900 px-1`}
+                        scrollEnabled={false}
+                        multiline={false}
+                        textAlign="center"
+                        maxLength={4}
+                        style={tw`w-14 h-9 bg-white border border-gray-300 rounded-xl text-center text-[15px] font-black text-gray-900 p-0 items-center justify-center`}
                       />
 
                       <TouchableOpacity
