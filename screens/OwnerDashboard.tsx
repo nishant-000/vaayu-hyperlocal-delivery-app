@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase'
 const i18n: Record<string, Record<string, string>> = {
   en: {
     orders: "Orders",
-    menu: "Food Stock",
+    menu: "Item Stock",
     settings: "Settings",
     shopOpen: "🟢 SHOP IS OPEN FOR ORDERS",
     shopClosed: "🔴 SHOP IS CLOSED FOR TODAY",
@@ -26,10 +26,10 @@ const i18n: Record<string, Record<string, string>> = {
     rejected: "✕ REJECTED",
     inStock: "🟢 IN STOCK",
     soldOut: "🔴 SOLD OUT",
-    addFood: "➕ ADD NEW FOOD ITEM",
-    photoButton: "📷 TAP TO UPLOAD FOOD PHOTO",
-    saveFood: "SAVE FOOD ITEM",
-    namePlaceholder: "Food Name (e.g. Samosa)",
+    addFood: "➕ ADD NEW ITEM",
+    photoButton: "📷 TAP TO UPLOAD ITEM PHOTO",
+    saveFood: "SAVE ITEM",
+    namePlaceholder: "Item Name (e.g. Samosa, Notebook, Soda)",
     pricePlaceholder: "Price in ₹ (e.g. 20)",
     addWorker: "👥 ADD SHOP WORKER STAFF",
     workerHelp: "Add helper phone numbers to grant them access to this app.",
@@ -41,7 +41,7 @@ const i18n: Record<string, Record<string, string>> = {
     timeLeft: "TIME LEFT TO ACCEPT",
     scheduled: "🟢 SCHEDULED ORDER",
     instant: "⚡ INSTANT DELIVERY",
-    subtotal: "Food Items Subtotal",
+    subtotal: "Items Subtotal",
     deliveryFee: "Delivery Fee",
     platformFee: "Platform Fee (Vaayu)",
     grandTotal: "TOTAL FROM CUSTOMER",
@@ -50,11 +50,11 @@ const i18n: Record<string, Record<string, string>> = {
     scheduledDeliveryTag: "🟢 Scheduled Delivery Fees (₹5/order)",
     platformFeeTag: "🛵 Platform Fees Owed to Vaayu (₹5/order)",
     totalOwedToVaayu: "💸 CASH TO RETURN TO VAAYU",
-    shopNetEarnings: "💰 SHOP NET FOOD EARNINGS",
+    shopNetEarnings: "💰 SHOP NET ITEM EARNINGS",
   },
   hi: {
     orders: "आर्डर",
-    menu: "खाना स्टॉक",
+    menu: "सामान स्टॉक",
     settings: "सेटिंग्स",
     shopOpen: "🟢 दुकान चालू है (आर्डर आ रहे हैं)",
     shopClosed: "🔴 दुकान आज बंद है",
@@ -70,10 +70,10 @@ const i18n: Record<string, Record<string, string>> = {
     rejected: "✕ आर्डर रद्द",
     inStock: "🟢 उपलब्ध है",
     soldOut: "🔴 खत्म हो गया",
-    addFood: "➕ नया खाना जोड़ें",
-    photoButton: "📷 फोटो जोड़ने के लिए दबाएं",
-    saveFood: "खाना सेव करें",
-    namePlaceholder: "खाने का नाम (जैसे समोसा)",
+    addFood: "➕ नया सामान जोड़ें",
+    photoButton: "📷 आइटम फोटो अपलोड करें",
+    saveFood: "सामान सेव करें",
+    namePlaceholder: "सामान का नाम (जैसे समोसा, कॉपी, सोडा)",
     pricePlaceholder: "कीमत ₹ (जैसे 20)",
     addWorker: "👥 हेल्पर / वर्कर जोड़ें",
     workerHelp: "अपने हेल्पर का मोबाइल नंबर जोड़ें ताकि वे आर्डर ले सकें।",
@@ -85,7 +85,7 @@ const i18n: Record<string, Record<string, string>> = {
     timeLeft: "स्वीकार करने का समय",
     scheduled: "🟢 निर्धारित आर्डर",
     instant: "⚡ तुरंत डिलिवरी",
-    subtotal: "खाद्य सामग्री कुल",
+    subtotal: "सामग्री कुल",
     deliveryFee: "डिलिवरी शुल्क",
     platformFee: "वायु प्लेटफॉर्म शुल्क",
     grandTotal: "ग्राहक से कुल प्राप्त राशि",
@@ -94,11 +94,11 @@ const i18n: Record<string, Record<string, string>> = {
     scheduledDeliveryTag: "🟢 निर्धारित डिलिवरी शुल्क (₹5/आर्डर)",
     platformFeeTag: "🛵 वायु प्लेटफॉर्म शुल्क (₹5/आर्डर)",
     totalOwedToVaayu: "💸 वायु को लौटाई जाने वाली कुल राशि",
-    shopNetEarnings: "💰 दुकानदार की शुद्ध खाद्य कमाई",
+    shopNetEarnings: "💰 दुकानदार की शुद्ध कमाई",
   },
   ta: {
     orders: "ஆர்டர்கள்",
-    menu: "உணவு இருப்பு",
+    menu: "பொருட்கள் இருப்பு",
     settings: "அமைப்புகள்",
     shopOpen: "🟢 கடை திறக்கப்பட்டுள்ளது",
     shopClosed: "🔴 கடை இன்று மூடப்பட்டுள்ளது",
@@ -114,10 +114,10 @@ const i18n: Record<string, Record<string, string>> = {
     rejected: "✕ நிராகரிக்கப்பட்டது",
     inStock: "🟢 இருப்பில் உள்ளது",
     soldOut: "🔴 முடிந்தது",
-    addFood: "➕ புதிய உணவு சேர்க்க",
-    photoButton: "📷 படம் சேர்க்க தட்டவும்",
-    saveFood: "சேமிக்க",
-    namePlaceholder: "உணவு பெயர் (எ.கா சமோசா)",
+    addFood: "➕ புதிய பொருள் சேர்க்க",
+    photoButton: "📷 பொருள் படம் சேர்க்க",
+    saveFood: "பொருள் சேமிக்க",
+    namePlaceholder: "பொருள் பெயர் (எ.கா சமோசா, நோட்டு)",
     pricePlaceholder: "விலை ₹ (எ.கா 20)",
     addWorker: "👥 பணியாளரைச் சேர்க்க",
     workerHelp: "பணியாளர் மொபைல் எண்ணைச் சேர்க்கவும்.",
@@ -480,6 +480,34 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     }
   }
 
+  // Real-Time Manual Stock Quantity Increment/Decrement (+ / -) in Supabase
+  const handleUpdateStockQuantity = async (itemId: string, delta: number) => {
+    triggerHaptic()
+    setMenuItems(prev => prev.map(i => {
+      if (i.id === itemId) {
+        const currentQty = i.stockQuantity ?? 10
+        const newQty = Math.max(0, currentQty + delta)
+        const isAvail = newQty > 0
+        return { ...i, stockQuantity: newQty, available: isAvail }
+      }
+      return i
+    }))
+
+    const item = menuItems.find(i => i.id === itemId)
+    const currentQty = item?.stockQuantity ?? 10
+    const newQty = Math.max(0, currentQty + delta)
+    const isAvail = newQty > 0
+
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ stock_quantity: newQty, is_available: isAvail })
+      .eq('id', itemId)
+
+    if (error) {
+      console.error('[OwnerDashboard] Failed to update stock quantity in Supabase:', error)
+    }
+  }
+
   // Stock Toggle in Supabase
   const handleToggleStock = async (itemId: string, currentAvailable: boolean) => {
     triggerHaptic()
@@ -504,7 +532,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     }
 
     if (!newItemName.trim() || !newItemPrice.trim()) {
-      showToast('Enter food name & price')
+      showToast('Enter item name & price')
       return
     }
 
@@ -514,15 +542,16 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       name: newItemName.trim(),
       price: itemPrice,
       is_available: true,
+      stock_quantity: 10,
       image_url: newItemImg
     }]).select()
 
     if (!error && data && data.length > 0) {
       const created = data[0]
-      setMenuItems(prev => [{ id: created.id, name: created.name, price: created.price, available: true, img: created.image_url }, ...prev])
+      setMenuItems(prev => [{ id: created.id, name: created.name, price: created.price, available: true, stockQuantity: 10, img: created.image_url }, ...prev])
       setNewItemName('')
       setNewItemPrice('')
-      showToast('Food Added to Menu!')
+      showToast('Item Added to Menu!')
     }
   }
 
@@ -633,6 +662,19 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         <View style={tw`flex-1 bg-white rounded-2xl p-4 border border-gray-200`}>
           <Text style={tw`text-[12px] font-black uppercase text-gray-500`}>{t.todayCash}</Text>
           <Text style={tw`text-[32px] font-black text-gray-900 mt-0.5`}>₹{todayTotalCashCollected}</Text>
+        </View>
+      {/* Delivery Fee Policy Banner */}
+      <View style={tw`px-4 pt-3`}>
+        <View style={tw`bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3.5 flex-row items-center gap-3 shadow-xs`}>
+          <Text style={tw`text-2xl`}>🛵</Text>
+          <View style={tw`flex-1`}>
+            <Text style={tw`text-[12px] font-black text-emerald-950 uppercase tracking-wide`}>
+              DELIVERY FEE POLICY NOTE
+            </Text>
+            <Text style={tw`text-[11px] font-bold text-emerald-900 leading-tight mt-0.5`}>
+              Free delivery on orders ≥ ₹150 applies <Text style={tw`font-black text-emerald-950 underline`}>ONLY to Scheduled Delivery</Text>. Instant Delivery carries standard fee regardless of order total.
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -868,26 +910,53 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             <Text style={tw`text-[18px] font-black text-gray-900 mt-2`}>{t.menu} ({menuItems.length})</Text>
             <View style={tw`gap-3`}>
               {menuItems.map(item => (
-                <View key={item.id} style={tw`bg-white rounded-2xl p-4 border-2 border-gray-200 flex-row justify-between items-center gap-3 shadow-xs`}>
-                  <Image source={{ uri: item.img }} style={tw`w-16 h-16 rounded-xl`} resizeMode="cover" />
+                <View key={item.id} style={tw`bg-white rounded-2xl p-4 border-2 border-gray-200 gap-3 shadow-xs`}>
+                  <View style={tw`flex-row justify-between items-center gap-3`}>
+                    <Image source={{ uri: item.img }} style={tw`w-16 h-16 rounded-xl`} resizeMode="cover" />
 
-                  <View style={tw`flex-1 min-w-0`}>
-                    <Text style={tw`text-[16px] font-black text-gray-900`}>{item.name}</Text>
-                    <Text style={tw`text-[15px] font-black text-green-700 mt-0.5`}>₹{item.price}</Text>
+                    <View style={tw`flex-1 min-w-0`}>
+                      <Text style={tw`text-[16px] font-black text-gray-900`}>{item.name}</Text>
+                      <Text style={tw`text-[15px] font-black text-green-700 mt-0.5`}>₹{item.price}</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => handleToggleStock(item.id, item.available)}
+                      activeOpacity={0.8}
+                      style={[
+                        tw`px-4 h-11 rounded-2xl items-center justify-center border-2 shadow-sm`,
+                        item.available ? tw`bg-green-600 border-green-700` : tw`bg-red-600 border-red-700`
+                      ]}
+                    >
+                      <Text style={tw`text-white font-black text-[13px] uppercase`}>
+                        {item.available ? t.inStock : t.soldOut}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() => handleToggleStock(item.id, item.available)}
-                    activeOpacity={0.8}
-                    style={[
-                      tw`px-5 h-12 rounded-2xl items-center justify-center border-2 shadow-sm`,
-                      item.available ? tw`bg-green-600 border-green-700` : tw`bg-red-600 border-red-700`
-                    ]}
-                  >
-                    <Text style={tw`text-white font-black text-[14px] uppercase`}>
-                      {item.available ? t.inStock : t.soldOut}
-                    </Text>
-                  </TouchableOpacity>
+                  {/* Manual Real-Time Stock Increment/Decrement Controls (+ and -) */}
+                  <View style={tw`flex-row justify-between items-center bg-gray-50 p-2.5 rounded-xl border border-gray-200`}>
+                    <Text style={tw`text-[13px] font-bold text-gray-700`}>Real-Time Stock Quantity:</Text>
+
+                    <View style={tw`flex-row items-center gap-2.5`}>
+                      <TouchableOpacity
+                        onPress={() => handleUpdateStockQuantity(item.id, -1)}
+                        style={tw`w-9 h-9 rounded-xl bg-red-500 items-center justify-center shadow-xs active:scale-95`}
+                      >
+                        <Text style={tw`text-white font-black text-xl`}>-</Text>
+                      </TouchableOpacity>
+
+                      <View style={tw`min-w-[36px] items-center`}>
+                        <Text style={tw`text-[16px] font-black text-gray-900`}>{item.stockQuantity ?? 10}</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => handleUpdateStockQuantity(item.id, 1)}
+                        style={tw`w-9 h-9 rounded-xl bg-green-600 items-center justify-center shadow-xs active:scale-95`}
+                      >
+                        <Text style={tw`text-white font-black text-xl`}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
               ))}
             </View>
@@ -1045,6 +1114,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 </TouchableOpacity>
               )
             })}
+          </View>
+        </View>
+      </View>
+
       {/* Photo Source Action Sheet / Modal */}
       <Modal
         visible={showImagePickerModal}
