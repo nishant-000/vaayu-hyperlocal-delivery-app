@@ -146,15 +146,24 @@ export default function HomeScreen({
     })
   }
 
+  const MAIN_CATEGORIES = ['food', 'grocery', 'pharmacy', 'stationery']
+
   const filteredShops = shops.filter(shop => {
     const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       shop.items?.some((i: any) => i.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    
+
     if (!matchesSearch) return false
     if (!selectedCategory) return true
 
-    const catName = categories.find(c => c.id === selectedCategory)?.name
-    return catName ? shop.category?.toLowerCase() === catName.toLowerCase() : true
+    const catName = categories.find(c => c.id === selectedCategory)?.name?.toLowerCase()
+
+    if (catName === 'others') {
+      // Match shops whose category is 'Others' OR any custom/unknown category
+      const shopCat = (shop.category || '').toLowerCase()
+      return shopCat === 'others' || !MAIN_CATEGORIES.includes(shopCat)
+    }
+
+    return catName ? shop.category?.toLowerCase() === catName : true
   })
 
   // Banners from live Remote Config
