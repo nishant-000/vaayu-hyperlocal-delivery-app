@@ -576,6 +576,38 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     )
   }
 
+  // Delete Entire Shop from Supabase & Sign Out
+  const handleDeleteShop = () => {
+    triggerHaptic()
+    Alert.alert(
+      "⚠️ DANGER: DELETE STORE PERMANENTLY",
+      `Are you sure you want to permanently delete "${shopName}"? All menu items, active orders, and store listings will be permanently removed. This action CANNOT be undone!`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "PERMANENTLY DELETE STORE",
+          style: "destructive",
+          onPress: async () => {
+            if (activeShopId) {
+              await supabase.from('menu_items').delete().eq('shop_id', activeShopId)
+              await supabase.from('shop_workers').delete().eq('shop_id', activeShopId)
+              const { error } = await supabase.from('shops').delete().eq('id', activeShopId)
+              if (error) {
+                console.error('[OwnerDashboard] Error deleting shop:', error)
+                showToast('Failed to delete store')
+              } else {
+                showToast('Store permanently deleted')
+                setTimeout(() => onSignOut(), 1200)
+              }
+            } else {
+              onSignOut()
+            }
+          }
+        }
+      ]
+    )
+  }
+
   // Add Item to Supabase
   const handleAddItem = async () => {
     if (!activeShopId) {
@@ -1102,6 +1134,20 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   </TouchableOpacity>
                 ))}
               </View>
+            </View>
+
+            {/* Danger Zone: Permanent Store Deletion */}
+            <View style={tw`bg-red-50 rounded-3xl p-5 border-2 border-red-300 gap-3 shadow-xs mt-2`}>
+              <Text style={tw`text-[16px] font-black text-red-900 uppercase`}>⚠️ Danger Zone</Text>
+              <Text style={tw`text-[12px] font-bold text-red-800 leading-tight`}>
+                Permanently delete your shop listing, menu items, and store data from Vaayu.
+              </Text>
+              <TouchableOpacity
+                onPress={handleDeleteShop}
+                style={tw`w-full h-14 bg-red-600 rounded-2xl items-center justify-center shadow-md active:scale-95 mt-1`}
+              >
+                <Text style={tw`text-white font-black text-[15px]`}>Delete Shop Permanently</Text>
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity onPress={onSignOut} style={tw`w-full h-14 bg-red-100 rounded-2xl items-center justify-center mt-2`}>
