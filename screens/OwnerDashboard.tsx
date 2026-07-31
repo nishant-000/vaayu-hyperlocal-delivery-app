@@ -350,15 +350,21 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       // Fetch Active Shop Details
       const targetShopId = activeShopId || user?.shop_id
       if (targetShopId) {
-        const { data: currentShop } = await supabase.from('shops').select('id, name').eq('id', targetShopId).single()
-        if (currentShop && currentShop.name) {
-          setShopName(currentShop.name)
+        const { data: currentShop } = await supabase.from('shops').select('id, name, is_open').eq('id', targetShopId).single()
+        if (currentShop) {
+          if (currentShop.name) setShopName(currentShop.name)
+          if (currentShop.is_open !== undefined && currentShop.is_open !== null) {
+            setIsLiveToday(currentShop.is_open)
+          }
         }
       } else {
-        const { data: shopsData } = await supabase.from('shops').select('id, name').limit(1)
+        const { data: shopsData } = await supabase.from('shops').select('id, name, is_open').limit(1)
         if (shopsData && shopsData.length > 0) {
           setActiveShopId(shopsData[0].id)
           setShopName(shopsData[0].name)
+          if (shopsData[0].is_open !== undefined && shopsData[0].is_open !== null) {
+            setIsLiveToday(shopsData[0].is_open)
+          }
         }
       }
 
@@ -577,6 +583,25 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     )
   }
 
+  // Toggle Store Live/Closed in Supabase database
+  const handleToggleStoreLive = async () => {
+    triggerHaptic()
+    const next = !isLiveToday
+    setIsLiveToday(next)
+    showToast(next ? t.shopOpen : t.shopClosed)
+
+    if (activeShopId) {
+      const { error } = await supabase
+        .from('shops')
+        .update({ is_open: next })
+        .eq('id', activeShopId)
+
+      if (error) {
+        console.error('[OwnerDashboard] Failed to update store open status in Supabase:', error)
+      }
+    }
+  }
+
   // Delete Entire Shop from Supabase & Sign Out
   const handleDeleteShop = () => {
     triggerHaptic()
@@ -718,11 +743,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
         {/* GIANT ZOMATO-STYLE DAILY GO-LIVE BUTTON */}
         <TouchableOpacity
-          onPress={() => {
-            const next = !isLiveToday
-            setIsLiveToday(next)
-            showToast(next ? t.shopOpen : t.shopClosed)
-          }}
+          onPress={handleToggleStoreLive}
           activeOpacity={0.8}
           style={[
             tw`mt-3 w-full py-4 rounded-2xl items-center justify-center shadow-md border-2`,
