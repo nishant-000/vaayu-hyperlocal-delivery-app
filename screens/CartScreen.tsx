@@ -61,10 +61,46 @@ export default function CartScreen({
     return () => unsubscribe()
   }, [])
 
-  const slots = [
-    { id: 'slot_1', label: '12:40 PM – 1:40 PM' },
-    { id: 'slot_2', label: '8:00 PM – 9:00 PM' }
-  ]
+  // Live slot filtering: slot is only selectable if current time is > 30 minutes BEFORE slot start time
+  const getAvailableSlots = (nowDate?: Date) => {
+    const now = nowDate || new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+    const ALL_SLOTS = [
+      {
+        id: 'slot_1',
+        name: 'Lunch Slot',
+        label: '12:40 PM – 1:40 PM',
+        startHour: 12,
+        startMinute: 40,
+        cutoffMinutes: 12 * 60 + 10 // 12:10 PM (30 mins before 12:40 PM)
+      },
+      {
+        id: 'slot_2',
+        name: 'Night Slot',
+        label: '7:00 PM – 9:00 PM',
+        startHour: 19,
+        startMinute: 0,
+        cutoffMinutes: 18 * 60 + 30 // 6:30 PM (30 mins before 7:00 PM)
+      }
+    ]
+
+    return ALL_SLOTS.filter(s => currentMinutes < s.cutoffMinutes)
+  }
+
+  const availableSlots = getAvailableSlots()
+
+  // Ensure selectedSlotId points to a valid available slot
+  useEffect(() => {
+    if (availableSlots.length > 0) {
+      if (!availableSlots.some(s => s.id === selectedSlotId)) {
+        setSelectedSlotId(availableSlots[0].id)
+      }
+    } else if (deliveryMode === 'regular') {
+      // Auto-switch to instant if no slots remain available
+      setDeliveryMode('instant')
+    }
+  }, [deliveryMode])
 
   const freeDeliveryThreshold = config.free_delivery_threshold || 150
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * (i.quantity || i.qty), 0)
@@ -98,7 +134,13 @@ export default function CartScreen({
   // Real order placement writing to Supabase orders table
   const handlePlaceOrder = async () => {
     if (!address.area.trim() || !address.room.trim()) {
-      alert('Please enter your Hostel / Block and Room Number.')
+      alert('Please enter your Hostel/Area and Room number.')
+      return
+    }
+
+    if (deliveryMode === 'regular' && availableSlots.length === 0) {
+      alert('Scheduled slots for today are closed (must book 30+ mins before slot start). Switched to Instant ASAP delivery.')
+      setDeliveryMode('instant')
       return
     }
 
@@ -305,24 +347,38 @@ export default function CartScreen({
           {deliveryMode === 'regular' && (
             <View style={tw`mt-2`}>
               <Text style={tw`text-[10px] font-bold text-gray-400 uppercase mb-1.5`}>Select Delivery Slot</Text>
-              <View style={tw`flex-col gap-2`}>
-                {slots.map(s => {
-                  const isSelected = selectedSlotId === s.id
-                  return (
-                    <TouchableOpacity
-                      key={s.id}
-                      onPress={() => setSelectedSlotId(s.id)}
-                      style={[
-                        tw`w-full p-2.5 rounded-xl border flex-row items-center justify-between px-4`,
-                        { borderColor: isSelected ? '#8fda58' : '#e5e7eb', backgroundColor: isSelected ? '#eeeff5' : '#f9fafb' }
-                      ]}
-                    >
-                      <Text style={tw`text-xs font-bold text-gray-700`}>{s.label}</Text>
-                      {isSelected && <View style={tw`w-2 h-2 rounded-full bg-[#8fda58]`} />}
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
+              {availableSlots.length === 0 ? (
+                <View style={tw`bg-amber-50 border border-amber-200 rounded-2xl p-3.5 items-center justify-center`}>
+                  <Text style={tw`text-[12px] font-bold text-amber-900 text-center`}>
+                    ⚠️ No delivery slots available right now
+                  </Text>
+                  <Text style={tw`text-[11px] text-amber-800 text-center mt-1 font-medium leading-relaxed`}>
+                    Scheduled slots for today are closed (must book 30+ mins before slot start). Please select Instant ASAP delivery above.
+                  </Text>
+                </View>
+              ) : (
+                <View style={tw`flex-col gap-2`}>
+                  {availableSlots.map(s => {
+                    const isSelected = selectedSlotId === s.id
+                    return (
+                      <TouchableOpacity
+                        key={s.id}
+                        onPress={() => setSelectedSlotId(s.id)}
+                        style={[
+                          tw`w-full p-3 rounded-xl border flex-row items-center justify-between px-4`,
+                          { borderColor: isSelected ? '#8fda58' : '#e5e7eb', backgroundColor: isSelected ? '#eeeff5' : '#f9fafb' }
+                        ]}
+                      >
+                        <View style={tw`flex-row items-center gap-2`}>
+                          <Text style={tw`text-xs font-bold text-gray-900`}>{s.name}:</Text>
+                          <Text style={tw`text-xs font-semibold text-gray-600`}>{s.label}</Text>
+                        </View>
+                        {isSelected && <View style={tw`w-2 h-2 rounded-full bg-[#8fda58]`} />}
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              )}
             </View>
           )}
         </View>
