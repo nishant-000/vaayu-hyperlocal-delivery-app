@@ -182,46 +182,27 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
     return (
       <View style={tw`flex-1 bg-gray-50`}>
         <BackHeader title="Help & Support" onBack={() => setActiveModal(null)} />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`p-4 pb-20`}>
-          <Text style={tw`text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-1`}>Contact Us</Text>
-          <View style={tw`flex-row gap-3 mb-6`}>
-            <TouchableOpacity
-              onPress={() => showToast("Starting live chat with support...")}
-              style={[tw`flex-1 bg-white p-4 rounded-2xl items-center border border-gray-100 shadow-sm`]}
-            >
-              <Text style={tw`text-3xl mb-1`}>💬</Text>
-              <Text style={tw`text-[13px] font-bold text-gray-900`}>Live Chat</Text>
-              <Text style={tw`text-[10px] text-gray-400 font-medium`}>24/7 Available</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => showToast("Email copied: support@iiitt.ac.in")}
-              style={[tw`flex-1 bg-white p-4 rounded-2xl items-center border border-gray-100 shadow-sm`]}
-            >
-              <Text style={tw`text-3xl mb-1`}>✉️</Text>
-              <Text style={tw`text-[13px] font-bold text-gray-900`}>Email Support</Text>
-              <Text style={tw`text-[10px] text-gray-400 font-medium`}>Response in 1 hr</Text>
-            </TouchableOpacity>
+        <View style={tw`flex-1 p-6 items-center justify-center`}>
+          <View style={tw`w-20 h-20 rounded-3xl bg-emerald-50 items-center justify-center mb-5 border border-emerald-100`}>
+            <Text style={tw`text-4xl`}>✉️</Text>
           </View>
+          <Text style={tw`text-[22px] font-black text-gray-900 mb-2 text-center`}>Help & Support</Text>
+          <Text style={tw`text-[13px] text-gray-400 font-medium text-center mb-6 px-4`}>
+            Have questions, feedback, or need assistance with an order? Contact us directly via email:
+          </Text>
 
-          <Text style={tw`text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-1`}>Frequently Asked Questions</Text>
-          <View style={tw`bg-white rounded-3xl p-4 gap-3 shadow-sm`}>
-            <View style={tw`border-b border-gray-50 pb-3`}>
-              <Text style={tw`text-[13px] font-bold text-gray-900 mb-1`}>Where does delivery arrive?</Text>
-              <Text style={tw`text-[12px] text-gray-500 font-medium`}>All orders deliver directly to IIIT Tiruchirappalli Gate 1 or designated hostel drops.</Text>
-            </View>
-
-            <View style={tw`border-b border-gray-50 pb-3`}>
-              <Text style={tw`text-[13px] font-bold text-gray-900 mb-1`}>What payment options are available?</Text>
-              <Text style={tw`text-[12px] text-gray-500 font-medium`}>Cash on Delivery (COD) and Online UPI payments are supported.</Text>
-            </View>
-
-            <View style={tw`pb-1`}>
-              <Text style={tw`text-[13px] font-bold text-gray-900 mb-1`}>How do I report an issue with my order?</Text>
-              <Text style={tw`text-[12px] text-gray-500 font-medium`}>You can tap on Live Chat or track your active order under the Orders tab.</Text>
-            </View>
-          </View>
-        </ScrollView>
+          <TouchableOpacity
+            onPress={() => {
+              Linking.openURL('mailto:vaayu.support@gmail.com')
+              showToast("Opening mail app...")
+            }}
+            activeOpacity={0.85}
+            style={tw`w-full bg-white border border-gray-200 rounded-3xl p-5 items-center justify-center shadow-xs flex-row gap-3`}
+          >
+            <Text style={tw`text-2xl`}>📧</Text>
+            <Text style={tw`text-[16px] font-black text-gray-900`}>vaayu.support@gmail.com</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     )
   }
@@ -411,7 +392,7 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
     {
       title: 'Support & Feedback',
       items: [
-        { icon: '💬', label: 'Help & support', sub: 'FAQs & live chat' },
+        { icon: '💬', label: 'Help & support', sub: 'vaayu.support@gmail.com' },
         { icon: '⭐', label: 'Rate the app', sub: 'Share your feedback' },
         { icon: '📄', label: 'Terms & privacy', sub: 'Official terms' },
       ],

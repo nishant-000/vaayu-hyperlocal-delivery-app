@@ -194,45 +194,22 @@ export default function ProfileScreen({ user, onSignOut }: { user: any; onSignOu
     return (
       <div className="flex flex-col min-h-full bg-gray-50">
         <BackHeader title="Help & Support" onBack={() => setActiveModal(null)} />
-        <div className="flex-1 p-4 pb-20 overflow-y-auto hide-scrollbar">
-          <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">Contact Us</p>
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={() => showToast("Starting live chat with support...")}
-              className="flex-1 bg-white p-4 rounded-2xl flex flex-col items-center border border-gray-100 shadow-xs hover:border-gray-200 transition-all cursor-pointer"
-            >
-              <span className="text-3xl mb-1">💬</span>
-              <span className="text-[13px] font-bold text-gray-900">Live Chat</span>
-              <span className="text-[10px] text-gray-400 font-medium">24/7 Available</span>
-            </button>
-
-            <button
-              onClick={() => showToast("Email copied: support@iiitt.ac.in")}
-              className="flex-1 bg-white p-4 rounded-2xl flex flex-col items-center border border-gray-100 shadow-xs hover:border-gray-200 transition-all cursor-pointer"
-            >
-              <span className="text-3xl mb-1">✉️</span>
-              <span className="text-[13px] font-bold text-gray-900">Email Support</span>
-              <span className="text-[10px] text-gray-400 font-medium">Response in 1 hr</span>
-            </button>
+        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
+          <div className="w-20 h-20 rounded-3xl bg-green-50 flex items-center justify-center mb-5 border border-green-100">
+            <span className="text-4xl">✉️</span>
           </div>
+          <h3 className="text-[22px] font-black text-gray-900 mb-2">Help & Support</h3>
+          <p className="text-[13px] text-gray-400 font-medium mb-6 max-w-xs">
+            Have questions, feedback, or need assistance with an order? Contact us directly via email:
+          </p>
 
-          <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">Frequently Asked Questions</p>
-          <div className="bg-white rounded-3xl p-4 flex flex-col gap-3 shadow-xs">
-            <div className="border-b border-gray-50 pb-3">
-              <h4 className="text-[13px] font-bold text-gray-900 mb-1">Where does delivery arrive?</h4>
-              <p className="text-[12px] text-gray-500 font-medium">All orders deliver directly to IIIT Tiruchirappalli Gate 1 or designated hostel drops.</p>
-            </div>
-
-            <div className="border-b border-gray-50 pb-3">
-              <h4 className="text-[13px] font-bold text-gray-900 mb-1">What payment options are available?</h4>
-              <p className="text-[12px] text-gray-500 font-medium">Cash on Delivery (COD) and Online UPI payments are supported.</p>
-            </div>
-
-            <div className="pb-1">
-              <h4 className="text-[13px] font-bold text-gray-900 mb-1">How do I report an issue with my order?</h4>
-              <p className="text-[12px] text-gray-500 font-medium">You can tap on Live Chat or track your active order under the Orders tab.</p>
-            </div>
-          </div>
+          <a
+            href="mailto:vaayu.support@gmail.com"
+            className="w-full bg-white border border-gray-200 rounded-3xl p-5 flex items-center justify-center gap-3 shadow-xs hover:border-green-500 transition-colors cursor-pointer text-decoration-none"
+          >
+            <span className="text-2xl">📧</span>
+            <span className="text-[16px] font-black text-gray-900">vaayu.support@gmail.com</span>
+          </a>
         </div>
       </div>
     )
