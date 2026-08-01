@@ -194,7 +194,7 @@ const categories = [
     name: "Others",
     title: "OTHERS",
     sub: "SERVICES & MORE",
-    badge: "CAMPUS PICKUP",
+    badge: "",
     img: "/assets/categories/others.jpg",
     isLarge: false,
   },

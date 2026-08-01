@@ -36,7 +36,7 @@ export const categories = [
     name: "Others",
     title: "OTHERS",
     sub: "SERVICES & MORE",
-    badge: "CAMPUS PICKUP",
+    badge: "",
     img: require('../assets/categories/others.jpg'),
     isLarge: true,
   },
