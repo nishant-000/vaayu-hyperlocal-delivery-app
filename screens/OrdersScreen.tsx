@@ -49,12 +49,20 @@ export function isOrderLate(order: any): boolean {
 
   const now = new Date()
 
+  // 1. If explicit slot_end_time timestamp is stored, use it
+  if (order.slot_end_time) {
+    const slotEnd = new Date(order.slot_end_time)
+    return now > slotEnd
+  }
+
+  // 2. Instant delivery: late if current time > created_at + 20 minutes
   if (order.delivery_mode === 'instant' || !order.selected_slot_label) {
     const createdAt = new Date(order.created_at || Date.now())
     const expectedTime = new Date(createdAt.getTime() + 20 * 60 * 1000)
     return now > expectedTime
   }
 
+  // 3. Parse selected_slot_label
   if (order.selected_slot_label) {
     const slotEndTime = getSlotEndTimeDate(order.selected_slot_label, order.created_at)
     if (slotEndTime) {
