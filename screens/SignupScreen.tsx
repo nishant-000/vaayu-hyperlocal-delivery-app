@@ -4,7 +4,6 @@ import tw from 'twrnc'
 import Svg, { Path, Polyline, Line, Circle, Rect } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../lib/supabase'
-import { LoadingOverlay } from '../components/LoadingOverlay'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const ALLOWED_DOMAINS = ['iiitt.ac.in']
@@ -32,8 +31,8 @@ function IconBack({ color = "#374151", size = 20 }) {
 function IconEmail({ color = "#9ca3af", size = 18 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <Rect x="2" y="4" width="20" height="16" rx="2" />
-      <Path d="M22 6l-10 7L2 6" />
+      <Path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+      <Polyline points="22,6 12,13 2,6" />
     </Svg>
   )
 }
@@ -83,26 +82,10 @@ function IconCategory({ color = "#9ca3af", size = 18 }) {
   )
 }
 
-function ChevronRightIcon({ color = "#9ca3af", size = 16 }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <Polyline points="9 18 15 12 9 6" />
-    </Svg>
-  )
-}
-
-function ChevronLeftIcon({ color = "#9ca3af", size = 16 }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <Polyline points="15 18 9 12 15 6" />
-    </Svg>
-  )
-}
-
 function VaayuIcon() {
   return (
-    <Svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-      <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#8fda58" stroke="#7fc448" strokeWidth="1.5" strokeLinejoin="round"/>
+    <Svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#8fda58" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
     </Svg>
   )
 }
@@ -116,13 +99,21 @@ function ShopIcon() {
   )
 }
 
+function ChevronLeftIcon() {
+  return (
+    <Svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <Polyline points="15 18 9 12 15 6" />
+    </Svg>
+  )
+}
+
 function SlideDots({ active, onDotClick }: { active: number; onDotClick: (idx: 0 | 1) => void }) {
   return (
     <View style={tw`flex-row items-center gap-2 mt-2`}>
-      <TouchableOpacity onPress={() => onDotClick(0)} activeOpacity={0.6}>
+      <TouchableOpacity onPress={() => onDotClick(0)}>
         <View style={[tw`h-2 rounded-full`, { width: active === 0 ? 24 : 8, backgroundColor: active === 0 ? '#8fda58' : '#d1d5db' }]} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => onDotClick(1)} activeOpacity={0.6}>
+      <TouchableOpacity onPress={() => onDotClick(1)}>
         <View style={[tw`h-2 rounded-full`, { width: active === 1 ? 24 : 8, backgroundColor: active === 1 ? '#8fda58' : '#d1d5db' }]} />
       </TouchableOpacity>
     </View>
@@ -131,87 +122,71 @@ function SlideDots({ active, onDotClick }: { active: number; onDotClick: (idx: 0
 
 // ── Shared UI Components ─────────────────────────────────────────────────────
 
-function CustomInput({
-  label,
-  placeholder,
-  value,
-  onChange,
-  secure = false,
-  type = 'default',
-  Icon,
-  hint
-}: {
-  label: string
-  placeholder: string
-  value: string
-  onChange: (text: string) => void
-  secure?: boolean
-  type?: any
-  Icon?: React.FC<{ color: string; size: number }>
-  hint?: string
-}) {
-  return (
-    <View style={tw`mb-4`}>
-      <Text style={tw`text-[12px] font-bold text-gray-700 uppercase tracking-wider mb-1.5`}>{label}</Text>
-      <View style={[tw`flex-row items-center border rounded-2xl px-4 h-13 bg-gray-50/80`, { borderColor: '#e5e7eb' }]}>
-        {Icon && <Icon color="#9ca3af" size={18} />}
-        <TextInput
-          placeholder={placeholder}
-          value={value}
-          onChangeText={onChange}
-          secureTextEntry={secure}
-          keyboardType={type}
-          autoCapitalize="none"
-          placeholderTextColor="#9ca3af"
-          style={tw`flex-1 ml-3 text-[14px] font-medium text-gray-900 h-full`}
-        />
-      </View>
-      {hint && <Text style={tw`text-[11px] text-gray-400 mt-1 font-medium`}>{hint}</Text>}
-    </View>
-  )
-}
-
 function BackHeader({ onBack, title }: { onBack: () => void; title: string }) {
   return (
-    <View style={tw`flex-row items-center px-4 py-3 border-b border-gray-100 bg-white`}>
-      <TouchableOpacity
-        activeOpacity={0.6}
-        onPress={onBack}
-        style={tw`w-10 h-10 rounded-full bg-gray-50 border border-gray-100 items-center justify-center mr-3`}
-      >
-        <IconBack color="#374151" size={18} />
+    <View style={tw`flex-row items-center px-6 pt-4 pb-2 bg-white`}>
+      <TouchableOpacity onPress={onBack} style={tw`p-2 -ml-2 rounded-full bg-gray-100 mr-4`}>
+        <IconBack size={18} />
       </TouchableOpacity>
       <Text style={tw`text-[18px] font-black text-gray-900`}>{title}</Text>
     </View>
   )
 }
 
-function PremiumInputField({
-  placeholder,
-  value,
-  onChange,
-  secure = false,
-  type = 'default'
+function CustomInput({
+  label, placeholder, value, onChange, type = 'default', Icon, secure = false, hint, error
 }: {
-  placeholder: string
-  value: string
-  onChange: (text: string) => void
-  secure?: boolean
-  type?: any
+  label: string; placeholder: string; value: string; onChange: (v: string) => void
+  type?: any; Icon?: React.ComponentType<any>; secure?: boolean; hint?: string; error?: string
+}) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <View style={tw`flex-col mb-4 mx-6`}>
+      <Text style={tw`text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5`}>{label}</Text>
+      <View
+        style={[
+          tw`flex-row items-center bg-gray-50 border rounded-2xl px-4 py-3.5`,
+          { borderColor: error ? '#ef4444' : focused ? '#8fda58' : '#f3f4f6' }
+        ]}
+      >
+        {Icon && <View style={tw`mr-3`}><Icon color={focused ? '#8fda58' : '#9ca3af'} size={18} /></View>}
+        <TextInput
+          placeholder={placeholder}
+          placeholderTextColor="#9ca3af"
+          value={value}
+          onChangeText={onChange}
+          keyboardType={type}
+          secureTextEntry={secure}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={tw`flex-1 text-[14px] font-medium text-gray-800 p-0`}
+        />
+      </View>
+      {error ? (
+        <Text style={tw`text-[11px] text-red-500 font-semibold mt-1 px-1`}>{error}</Text>
+      ) : hint ? (
+        <Text style={tw`text-[11px] text-gray-400 font-medium mt-1 px-1`}>{hint}</Text>
+      ) : null}
+    </View>
+  )
+}
+
+function PremiumInputField({
+  placeholder, value, onChange, type = 'default', secure = false
+}: {
+  placeholder: string; value: string; onChange: (v: string) => void
+  type?: any; secure?: boolean
 }) {
   return (
-    <View style={[tw`w-full h-[50px] rounded-[14px] px-4 justify-center border`, { backgroundColor: '#f9fafb', borderColor: '#f3f4f6' }]}>
-      <TextInput
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChange}
-        secureTextEntry={secure}
-        keyboardType={type}
-        autoCapitalize="none"
-        placeholderTextColor="#9ca3af"
-        style={tw`text-[14px] font-medium text-gray-900 w-full h-full`}
-      />
-    </View>
+    <TextInput
+      placeholder={placeholder}
+      placeholderTextColor="#9ca3af"
+      value={value}
+      onChangeText={onChange}
+      keyboardType={type}
+      secureTextEntry={secure}
+      style={tw`w-full h-[52px] bg-gray-50 border border-gray-200 rounded-[14px] px-4 text-[14px] font-medium text-gray-800`}
+    />
   )
 }
 
@@ -267,31 +242,50 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     setActiveSlide(index)
   }
 
-  // Instant 0ms transition on button touch
-  const handleStudentSubmit = () => {
+  const handleStudentSubmit = async () => {
     setRole('customer')
     const userEmail = email.trim()
+    setIsSubmitting(true)
+
+    const { error } = await supabase.auth.signUp({
+      email: userEmail,
+      password: password
+    })
+    setIsSubmitting(false)
+
+    if (error && !error.message.includes('already registered')) {
+      console.warn('[SignupScreen] signUp notice:', error.message)
+    }
 
     setOtpCode('')
     setStep('verify')
-
-    supabase.auth.signUp({
-      email: userEmail,
-      password: password
-    }).catch(err => console.warn('[SignupScreen] signUp notice:', err))
+    Alert.alert(
+      '🔑 OTP Code Sent',
+      `An OTP verification code has been sent to ${userEmail}. Please enter the code below to complete registration.`
+    )
   }
 
-  const handleOwnerSubmit = () => {
+  const handleOwnerSubmit = async () => {
     setRole('owner')
     const userEmail = email.trim()
+    setIsSubmitting(true)
+
+    const { error } = await supabase.auth.signUp({
+      email: userEmail,
+      password: password
+    })
+    setIsSubmitting(false)
+
+    if (error && !error.message.includes('already registered')) {
+      console.warn('[SignupScreen] signUp notice:', error.message)
+    }
 
     setOtpCode('')
     setStep('verify')
-
-    supabase.auth.signUp({
-      email: userEmail,
-      password: password
-    }).catch(err => console.warn('[SignupScreen] signUp notice:', err))
+    Alert.alert(
+      '🔑 OTP Code Sent',
+      `An OTP verification code has been sent to ${userEmail}. Please enter the code below to verify your shop account.`
+    )
   }
 
   const handleForgotPassword = async (emailAddr: string) => {
@@ -509,18 +503,18 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       } as any
     }
 
-    // 2. Query profiles & shops by email strictly
+    // 2. Query profiles & shops by email
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .ilike('email', cleanEmail)
-      .maybeSingle()
+      .single()
 
     const { data: shop } = await supabase
       .from('shops')
       .select('*')
       .eq('owner_id', profile?.id || authUser?.id || '')
-      .maybeSingle()
+      .single()
 
     setIsSubmitting(false)
 
@@ -530,31 +524,15 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     }
 
     const userId = authUser?.id || profile?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
-    
-    // STRICT ROLE DETERMINATION (DATABASE PROFILES RECORD FIRST, NO UI MEMORY FALLBACK!)
-    let determinedRole = 'customer'
-    if (profile?.role) {
-      const dbRole = profile.role.toLowerCase()
-      if (dbRole === 'shop_owner' || dbRole === 'owner' || dbRole === 'worker') {
-        determinedRole = 'shop_owner'
-      } else if (dbRole === 'customer') {
-        determinedRole = 'customer'
-      }
-    } else if (shop) {
-      determinedRole = 'shop_owner'
-    } else {
-      // Fallback if profile role is unassigned
-      determinedRole = 'customer'
-    }
-
-    const displayName = shop?.name || profile?.full_name || cleanEmail.split('@')[0] || 'User'
+    const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
+    const displayName = shop?.name || profile?.full_name || cleanEmail.split('@')[0] || 'Student'
 
     completeAuth({
       id: userId,
       role: determinedRole,
       name: displayName,
       email: cleanEmail,
-      phoneNumber: profile?.phone || profile?.phone_number || '',
+      phoneNumber: profile?.phone || '',
       shop_id: shop?.id || undefined,
       shop_name: shop?.name || undefined
     })
@@ -1117,9 +1095,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
           </View>
         </ScrollView>
       )}
-
-      {/* Full App Loading Overlay during auth submission */}
-      <LoadingOverlay visible={isSubmitting} message="Processing Authentication..." />
     </SafeAreaView>
   )
 }

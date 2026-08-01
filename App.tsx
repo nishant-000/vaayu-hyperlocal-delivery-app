@@ -16,7 +16,6 @@ import { BACKEND_URL } from './screens/apiConfig'
 import { registerForPushNotifications, checkNotificationPermissionStatus, setupNotificationListeners } from './lib/notifications'
 import { PermissionPrePromptModal } from './components/PermissionPrePromptModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { LoadingOverlay } from './components/LoadingOverlay'
 
 type TabId = "home" | "orders" | "cart" | "profile"
 
@@ -162,59 +161,11 @@ export default function App() {
 
   // Toast / Alert State
   const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const [roleError, setRoleError] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 2500)
   }
-
-  // Session Logout & Full Navigation State Cleanup
-  const handleLogout = () => {
-    setUser(null)
-    setCartItems([])
-    setCartShop(null)
-    setSelectedShop(null)
-    setActiveTab('home')
-    setRoleError(null)
-  }
-
-  // Fail-Safe Role Verification from Database
-  useEffect(() => {
-    async function verifyUserRole() {
-      if (!user) {
-        setRoleError(null)
-        return
-      }
-
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, full_name, email')
-          .or(`id.eq.${user.id},email.ilike.${user.email}`)
-          .maybeSingle()
-
-        if (profile?.role) {
-          const normRole = profile.role.toLowerCase()
-          const isOwner = normRole === 'shop_owner' || normRole === 'owner' || normRole === 'worker'
-          const isCustomer = normRole === 'customer'
-
-          if (isOwner && user.role !== 'shop_owner') {
-            setUser((prev: any) => ({ ...prev, role: 'shop_owner' }))
-          } else if (isCustomer && user.role !== 'customer') {
-            setUser((prev: any) => ({ ...prev, role: 'customer' }))
-          }
-          setRoleError(null)
-        } else if (!user.role) {
-          setRoleError(`Account role could not be verified for ${user.email}. Please contact support.`)
-        }
-      } catch (err) {
-        console.warn('[App] Role verification error:', err)
-      }
-    }
-
-    verifyUserRole()
-  }, [user?.id, user?.email])
 
   // Push Notifications Setup & Permission Check
   useEffect(() => {
@@ -310,157 +261,151 @@ export default function App() {
     showToast("Order placed successfully via Cash on Delivery!")
   }
 
-  // 0. If Role Error occurs, render explicit fail-safe error view
-  if (roleError) {
-    return (
-      <View style={tw`flex-1 bg-white items-center justify-center p-6 text-center`}>
-        <View style={tw`w-20 h-20 rounded-full bg-red-50 items-center justify-center mb-4 border border-red-100`}>
-          <Text style={tw`text-4xl`}>⚠️</Text>
-        </View>
-        <Text style={tw`text-[20px] font-black text-gray-900 mb-2 text-center`}>Account Role Unverified</Text>
-        <Text style={tw`text-[13px] text-gray-500 font-medium text-center mb-6 leading-relaxed px-4`}>
-          {roleError}
-        </Text>
-        <TouchableOpacity
-          onPress={handleLogout}
-          style={[tw`w-full max-w-[240px] py-4 rounded-2xl items-center shadow-md`, { backgroundColor: '#8fda58' }]}
-        >
-          <Text style={tw`text-white font-black text-[15px]`}>Log Out & Retry</Text>
-        </TouchableOpacity>
-      </View>
-    )
-  }
-
-  // 1. If user is not logged in, show Signup / Login Screen
+  // If user is not logged in, show Signup / Login Screen
   if (!user) {
-    return (
-      <ErrorBoundary>
-        <SignupScreen onDone={handleRegisterUser} onRegister={handleRegisterUser} />
-      </ErrorBoundary>
-    )
+    return <SignupScreen onDone={handleRegisterUser} onRegister={handleRegisterUser} />
   }
 
-  // 2. If user role is shop_owner or owner or worker, render low-literacy Zomato-partner OwnerDashboard
+  // If user role is shop_owner or owner or worker, render low-literacy Zomato-partner OwnerDashboard
   if (user?.role === 'shop_owner' || user?.role === 'owner' || user?.role === 'worker') {
     return (
-      <ErrorBoundary>
-        <View style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
-          <StatusBar style="dark" />
-          <OwnerDashboard user={user} onSignOut={handleLogout} />
-        </View>
-      </ErrorBoundary>
+      <View style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
+        <StatusBar style="dark" />
+        <OwnerDashboard user={user} onSignOut={() => setUser(null)} />
+      </View>
     )
   }
 
-  // 3. If user role is customer, render Customer App Layout ONLY
-  if (user?.role === 'customer') {
-    return (
-      <ErrorBoundary>
-        <View style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
-          <StatusBar style="dark" />
+  // Customer App Layout
+  return (
+    <ErrorBoundary>
+      <View style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
+      <StatusBar style="dark" />
 
-          {/* Permission Pre-Prompt Modal */}
-          <PermissionPrePromptModal
-            visible={showPermissionPrePrompt}
-            onAllow={handleAllowNotifications}
-            onSkip={handleSkipNotifications}
-          />
+      {/* Permission Pre-Prompt Modal */}
+      <PermissionPrePromptModal
+        visible={showPermissionPrePrompt}
+        onAllow={handleAllowNotifications}
+        onSkip={handleSkipNotifications}
+      />
 
-          {/* Toast Banner */}
-          {toastMessage && (
-            <View style={tw`absolute top-12 left-4 right-4 z-50 bg-black rounded-2xl p-4 items-center shadow-xl`}>
-              <Text style={tw`text-white font-black text-xs text-center`}>✨ {toastMessage}</Text>
-            </View>
+      {/* Toast Banner */}
+      {toastMessage && (
+        <View style={tw`absolute top-12 left-4 right-4 z-50 bg-black rounded-2xl p-4 items-center shadow-xl`}>
+          <Text style={tw`text-white font-black text-xs text-center`}>✨ {toastMessage}</Text>
+        </View>
+      )}
+
+      {/* Main Screen Switcher */}
+      {selectedShop ? (
+        <ShopDetailsScreen
+          shop={selectedShop}
+          cartItems={cartItems}
+          onBack={() => setSelectedShop(null)}
+          onAddToCart={addToCart}
+          onChangeQuantity={changeQuantity}
+          onViewCart={() => {
+            setSelectedShop(null)
+            setActiveTab('cart')
+          }}
+        />
+      ) : (
+        <>
+          {activeTab === 'home' && (
+            <HomeScreen
+              onSelectShop={setSelectedShop}
+              cartItems={cartItems}
+              onOpenCart={() => setActiveTab('cart')}
+              onOpenNotifications={() => setShowNotifications(true)}
+              address={address}
+              onOpenAddressPicker={() => setActiveTab('profile')}
+            />
           )}
 
-          {/* Main Screen Switcher */}
-          {selectedShop ? (
-            <ShopDetailsScreen
-              shop={selectedShop}
-              onBack={() => setSelectedShop(null)}
-              cartItems={cartItems}
-              onAddToCart={(item) => addToCart(item, selectedShop)}
-              onChangeQuantity={changeQuantity}
-              onGoToCart={() => {
-                setSelectedShop(null)
+          {activeTab === 'orders' && (
+            <OrdersScreen
+              orders={orders}
+              onReorder={(order) => {
+                showToast("Items added from previous order!")
                 setActiveTab('cart')
               }}
+              onTrackOrder={(order) => {
+                showToast(`Tracking #${order.id}`)
+              }}
+              user={user}
             />
-          ) : (
-            <>
-              {activeTab === 'home' && (
-                <HomeScreen
-                  onSelectShop={(shop) => setSelectedShop(shop)}
-                  cartItems={cartItems}
-                  onOpenCart={() => setActiveTab('cart')}
-                  onOpenNotifications={() => setShowNotifications(true)}
-                  address={address}
-                  onOpenAddressPicker={() => {}}
-                />
-              )}
-              {activeTab === 'orders' && (
-                <OrdersScreen onStartShopping={() => setActiveTab('home')} />
-              )}
-              {activeTab === 'cart' && (
-                <CartScreen
-                  cartItems={cartItems}
-                  cartShop={cartShop}
-                  onChangeQuantity={changeQuantity}
-                  onPlaceOrder={handlePlaceOrder}
-                  onBrowseShops={() => setActiveTab('home')}
-                />
-              )}
-              {activeTab === 'profile' && (
-                <ProfileScreen
-                  user={user}
-                  onLogout={handleLogout}
-                  onOpenOrders={() => setActiveTab('orders')}
-                />
-              )}
-            </>
           )}
 
-          {/* Bottom Floating Navigation Bar */}
-          {!selectedShop && (
-            <View style={styles.navWrapper} pointerEvents="box-none">
-              <View style={styles.bar}>
-                {NAV_ITEMS.map((item) => (
-                  <NavTab
-                    key={item.id}
-                    id={item.id}
-                    label={item.label}
-                    Icon={item.Icon}
-                    isActive={activeTab === item.id}
-                    onPress={() => setActiveTab(item.id)}
-                    maxWidth={item.maxWidth}
-                  />
-                ))}
-              </View>
+          {activeTab === 'cart' && (
+            <CartScreen
+              cartItems={cartItems}
+              cartShop={cartShop}
+              changeQuantity={changeQuantity}
+              placeOrder={handlePlaceOrder}
+              address={address}
+              setAddress={setAddress}
+              onContinueShopping={() => setActiveTab('home')}
+              user={user}
+            />
+          )}
+
+          {activeTab === 'profile' && (
+            <ProfileScreen
+              user={user}
+              address={address}
+              setAddress={setAddress}
+              savedShops={savedShops}
+              onSignOut={() => setUser(null)}
+            />
+          )}
+
+          {/* Bottom Floating Navigation Capsule */}
+          <View style={styles.wrapper}>
+            <View style={styles.bar}>
+              {NAV_ITEMS.map((item) => (
+                <NavTab
+                  key={item.id}
+                  {...item}
+                  isActive={activeTab === item.id}
+                  onPress={() => setActiveTab(item.id)}
+                />
+              ))}
             </View>
-          )}
-        </View>
-      </ErrorBoundary>
-    )
-  }
+          </View>
+        </>
+      )}
 
-  // 4. Fallback for unverified or missing role -> Show unverified screen
-  return (
-    <View style={tw`flex-1 bg-white items-center justify-center p-6 text-center`}>
-      <View style={tw`w-20 h-20 rounded-full bg-red-50 items-center justify-center mb-4 border border-red-100`}>
-        <Text style={tw`text-4xl`}>⚠️</Text>
-      </View>
-      <Text style={tw`text-[20px] font-black text-gray-900 mb-2 text-center`}>Account Role Unverified</Text>
-      <Text style={tw`text-[13px] text-gray-500 font-medium text-center mb-6 leading-relaxed px-4`}>
-        Account role could not be verified. Please contact support.
-      </Text>
-      <TouchableOpacity
-        onPress={handleLogout}
-        style={[tw`w-full max-w-[240px] py-4 rounded-2xl items-center shadow-md`, { backgroundColor: '#8fda58' }]}
-      >
-        <Text style={tw`text-white font-black text-[15px]`}>Log Out & Retry</Text>
-      </TouchableOpacity>
+      {/* Campus Notifications Drawer */}
+      {showNotifications && (
+        <View style={tw`absolute inset-0 z-50 bg-black/60 justify-end`}>
+          <View style={tw`bg-white rounded-t-3xl p-6 pb-28 gap-4 shadow-2xl`}>
+            <View style={tw`flex-row justify-between items-center pb-3 border-b border-gray-100`}>
+              <View style={tw`flex-row items-center gap-2`}>
+                <Text style={tw`text-2xl`}>🔔</Text>
+                <Text style={tw`text-[20px] font-black text-gray-900`}>Notifications</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowNotifications(false)}
+                style={tw`w-8 h-8 rounded-full bg-gray-100 items-center justify-center`}
+              >
+                <Text style={tw`text-gray-500 font-bold text-base`}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Empty state — no real notifications yet */}
+            <View style={tw`py-12 items-center justify-center gap-3`}>
+              <Text style={tw`text-5xl`}>🔕</Text>
+              <Text style={tw`text-[16px] font-black text-gray-800 mt-2`}>No notifications yet</Text>
+              <Text style={tw`text-[12px] text-gray-400 font-medium text-center px-6`}>
+                Order updates and alerts will appear here when available.
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
-  )
+  </ErrorBoundary>
+)
 }
 
 const styles = StyleSheet.create({
@@ -469,10 +414,11 @@ const styles = StyleSheet.create({
   },
   wrapper: {
     position: "absolute",
-    bottom: 16,
+    bottom: 28,
     left: 0,
     right: 0,
     alignItems: "center",
+    zIndex: 40,
   },
   bar: {
     flexDirection: "row",
