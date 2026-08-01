@@ -104,13 +104,16 @@ function LiveTracker({ activeOrder }: { activeOrder: any }) {
 }
 
 interface OrdersScreenProps {
-  orders: any[]
-  onReorder: (order: any) => void
-  onTrackOrder: (order: any) => void
-  user: any
+  orders?: any[]
+  onReorder?: (order: any) => void
+  onTrackOrder?: (order: any) => void
+  onStartShopping?: () => void
+  user?: any
 }
 
-export default function OrdersScreen({ orders: initialOrders, onReorder, onTrackOrder, user }: OrdersScreenProps) {
+const tabs = ['All', 'Active', 'Past']
+
+export default function OrdersScreen({ orders: initialOrders, onReorder, onTrackOrder, onStartShopping, user }: OrdersScreenProps) {
   const [activeTab, setActiveTab] = useState('All')
   const [orders, setOrders] = useState<any[]>(initialOrders || [])
   const [loading, setLoading] = useState(false)
