@@ -16,6 +16,7 @@ import { BACKEND_URL } from './screens/apiConfig'
 import { registerForPushNotifications, checkNotificationPermissionStatus, setupNotificationListeners } from './lib/notifications'
 import { PermissionPrePromptModal } from './components/PermissionPrePromptModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { LoadingOverlay } from './components/LoadingOverlay'
 
 type TabId = "home" | "orders" | "cart" | "profile"
 
@@ -261,22 +262,28 @@ export default function App() {
     showToast("Order placed successfully via Cash on Delivery!")
   }
 
-  // If user is not logged in, show Signup / Login Screen
+  // 1. If user is not logged in, show Signup / Login Screen
   if (!user) {
-    return <SignupScreen onDone={handleRegisterUser} onRegister={handleRegisterUser} />
-  }
-
-  // If user role is shop_owner or owner or worker, render low-literacy Zomato-partner OwnerDashboard
-  if (user?.role === 'shop_owner' || user?.role === 'owner' || user?.role === 'worker') {
     return (
-      <View style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
-        <StatusBar style="dark" />
-        <OwnerDashboard user={user} onSignOut={() => setUser(null)} />
-      </View>
+      <ErrorBoundary>
+        <SignupScreen onDone={handleRegisterUser} onRegister={handleRegisterUser} />
+      </ErrorBoundary>
     )
   }
 
-  // Customer App Layout
+  // 2. If user role is shop_owner or owner or worker, render low-literacy Zomato-partner OwnerDashboard
+  if (user?.role === 'shop_owner' || user?.role === 'owner' || user?.role === 'worker') {
+    return (
+      <ErrorBoundary>
+        <View style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
+          <StatusBar style="dark" />
+          <OwnerDashboard user={user} onSignOut={() => setUser(null)} />
+        </View>
+      </ErrorBoundary>
+    )
+  }
+
+  // 3. Customer App Layout
   return (
     <ErrorBoundary>
       <View style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
