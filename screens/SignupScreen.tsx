@@ -509,18 +509,18 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       } as any
     }
 
-    // 2. Query profiles & shops by email
+    // 2. Query profiles & shops by email strictly
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .ilike('email', cleanEmail)
-      .single()
+      .maybeSingle()
 
     const { data: shop } = await supabase
       .from('shops')
       .select('*')
       .eq('owner_id', profile?.id || authUser?.id || '')
-      .single()
+      .maybeSingle()
 
     setIsSubmitting(false)
 
@@ -530,15 +530,31 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     }
 
     const userId = authUser?.id || profile?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
-    const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
-    const displayName = shop?.name || profile?.full_name || cleanEmail.split('@')[0] || 'Student'
+    
+    // STRICT ROLE DETERMINATION (DATABASE PROFILES RECORD FIRST, NO UI MEMORY FALLBACK!)
+    let determinedRole = 'customer'
+    if (profile?.role) {
+      const dbRole = profile.role.toLowerCase()
+      if (dbRole === 'shop_owner' || dbRole === 'owner' || dbRole === 'worker') {
+        determinedRole = 'shop_owner'
+      } else if (dbRole === 'customer') {
+        determinedRole = 'customer'
+      }
+    } else if (shop) {
+      determinedRole = 'shop_owner'
+    } else {
+      // Fallback if profile role is unassigned
+      determinedRole = 'customer'
+    }
+
+    const displayName = shop?.name || profile?.full_name || cleanEmail.split('@')[0] || 'User'
 
     completeAuth({
       id: userId,
       role: determinedRole,
       name: displayName,
       email: cleanEmail,
-      phoneNumber: profile?.phone || '',
+      phoneNumber: profile?.phone || profile?.phone_number || '',
       shop_id: shop?.id || undefined,
       shop_name: shop?.name || undefined
     })
