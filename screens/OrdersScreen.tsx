@@ -199,9 +199,8 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
 
         <View style={tw`flex-col gap-3 px-4`}>
           {loading ? (
-            <View style={tw`py-10 items-center justify-center`}>
+            <View style={tw`py-12 items-center justify-center`}>
               <ActivityIndicator size="large" color="#8fda58" />
-              <Text style={tw`text-xs text-gray-400 font-medium mt-2`}>Syncing live orders...</Text>
             </View>
           ) : filtered.length === 0 ? (
             <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-100`}>

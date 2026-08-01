@@ -374,9 +374,8 @@ export default function HomeScreen({
           <Text style={tw`text-[18px] font-black text-gray-900 mb-3`}>Campus Shops & Canteens</Text>
 
           {loading ? (
-            <View style={tw`py-10 items-center justify-center`}>
-              <ActivityIndicator size="large" color="#1a3a2a" />
-              <Text style={tw`text-xs text-gray-400 font-medium mt-2`}>Loading shops from Supabase...</Text>
+            <View style={tw`py-12 items-center justify-center`}>
+              <ActivityIndicator size="large" color="#8fda58" />
             </View>
           ) : filteredShops.length === 0 ? (
             <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-100`}>

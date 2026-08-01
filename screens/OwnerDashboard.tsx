@@ -812,9 +812,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             <Text style={tw`text-[18px] font-black text-gray-900`}>{t.orders} ({orders.length})</Text>
 
             {loading ? (
-              <View style={tw`py-10 items-center justify-center`}>
-                <ActivityIndicator size="large" color="#16a34a" />
-                <Text style={tw`text-xs text-gray-400 font-medium mt-2`}>Loading orders from Supabase...</Text>
+              <View style={tw`py-12 items-center justify-center`}>
+                <ActivityIndicator size="large" color="#8fda58" />
               </View>
             ) : orders.length === 0 ? (
               <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-200`}>
