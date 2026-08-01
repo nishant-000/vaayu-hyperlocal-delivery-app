@@ -4,12 +4,23 @@ const CACHE_KEY = 'VAAYU_APP_CONFIG';
 const CACHE_TIMESTAMP_KEY = 'VAAYU_APP_CONFIG_TS';
 const TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
+export interface DeliverySlotConfig {
+  id: string;
+  name: string;
+  label: string;
+  start_hour: number;
+  start_minute: number;
+  cutoff_hour: number;
+  cutoff_minute: number;
+}
+
 export interface AppConfig {
   delivery_fee: { instant: number; scheduled: number };
   free_delivery_threshold: number; // Free delivery threshold (default 150)
   platform_fee: number;
   min_order_value: number;
   service_radius_or_blocks: string[];
+  delivery_slots: DeliverySlotConfig[];
   promo_codes: Array<{
     code: string;
     discount_type: 'flat' | 'percentage';
@@ -34,6 +45,10 @@ export const DEFAULT_CONFIG: AppConfig = {
   platform_fee: 5,
   min_order_value: 30,
   service_radius_or_blocks: ["Gate 1", "Block A", "Block B", "Block C", "Admin Block", "Library"],
+  delivery_slots: [
+    { id: "slot_1", name: "Lunch Slot", label: "12:40 PM – 1:40 PM", start_hour: 12, start_minute: 40, cutoff_hour: 12, cutoff_minute: 10 },
+    { id: "slot_2", name: "Night Slot", label: "7:00 PM – 9:00 PM", start_hour: 19, start_minute: 0, cutoff_hour: 18, cutoff_minute: 30 }
+  ],
   promo_codes: [
     { code: "VAAYU50", discount_type: "flat", discount_value: 50, min_order_value: 150, active: true },
     { code: "WELCOME20", discount_type: "percentage", discount_value: 20, min_order_value: 100, active: true }

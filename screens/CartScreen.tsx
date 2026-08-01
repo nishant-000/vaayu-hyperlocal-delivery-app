@@ -61,46 +61,44 @@ export default function CartScreen({
     return () => unsubscribe()
   }, [])
 
-  // Live slot filtering: slot is only selectable if current time is > 30 minutes BEFORE slot start time
+  // IST Timezone-aware minute calculation (Asia/Kolkata)
+  const getISTMinutesFromMidnight = (nowDate?: Date): number => {
+    const d = nowDate || new Date()
+    try {
+      const istTimeString = d.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      const [hStr, mStr] = istTimeString.split(':')
+      const hours = parseInt(hStr, 10) % 24
+      const minutes = parseInt(mStr, 10)
+      return hours * 60 + minutes
+    } catch {
+      return d.getHours() * 60 + d.getMinutes()
+    }
+  }
+
+  // Live slot filtering from Remote Config with 30-minute pre-start cutoff
   const getAvailableSlots = (nowDate?: Date) => {
-    const now = nowDate || new Date()
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const currentMinutes = getISTMinutesFromMidnight(nowDate)
+    const configuredSlots = config.delivery_slots || DEFAULT_CONFIG.delivery_slots
 
-    const ALL_SLOTS = [
-      {
-        id: 'slot_1',
-        name: 'Lunch Slot',
-        label: '12:40 PM – 1:40 PM',
-        startHour: 12,
-        startMinute: 40,
-        cutoffMinutes: 12 * 60 + 10 // 12:10 PM (30 mins before 12:40 PM)
-      },
-      {
-        id: 'slot_2',
-        name: 'Night Slot',
-        label: '7:00 PM – 9:00 PM',
-        startHour: 19,
-        startMinute: 0,
-        cutoffMinutes: 18 * 60 + 30 // 6:30 PM (30 mins before 7:00 PM)
-      }
-    ]
-
-    return ALL_SLOTS.filter(s => currentMinutes < s.cutoffMinutes)
+    return configuredSlots.filter(s => {
+      const cutoff = (s.cutoff_hour * 60) + s.cutoff_minute
+      return currentMinutes < cutoff
+    })
   }
 
   const availableSlots = getAvailableSlots()
 
-  // Ensure selectedSlotId points to a valid available slot
+  // Ensure selectedSlotId points to a valid available slot (without silent deliveryMode mutation)
   useEffect(() => {
-    if (availableSlots.length > 0) {
-      if (!availableSlots.some(s => s.id === selectedSlotId)) {
-        setSelectedSlotId(availableSlots[0].id)
-      }
-    } else if (deliveryMode === 'regular') {
-      // Auto-switch to instant if no slots remain available
-      setDeliveryMode('instant')
+    if (availableSlots.length > 0 && !availableSlots.some(s => s.id === selectedSlotId)) {
+      setSelectedSlotId(availableSlots[0].id)
     }
-  }, [deliveryMode])
+  }, [availableSlots])
 
   const freeDeliveryThreshold = config.free_delivery_threshold || 150
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * (i.quantity || i.qty), 0)
@@ -348,13 +346,19 @@ export default function CartScreen({
             <View style={tw`mt-2`}>
               <Text style={tw`text-[10px] font-bold text-gray-400 uppercase mb-1.5`}>Select Delivery Slot</Text>
               {availableSlots.length === 0 ? (
-                <View style={tw`bg-amber-50 border border-amber-200 rounded-2xl p-3.5 items-center justify-center`}>
-                  <Text style={tw`text-[12px] font-bold text-amber-900 text-center`}>
-                    ⚠️ No delivery slots available right now
+                <View style={tw`bg-amber-50 border border-amber-200 rounded-2xl p-4 items-center justify-center`}>
+                  <Text style={tw`text-[13px] font-black text-amber-950 text-center`}>
+                    ⚠️ Scheduled Slots Closed For Today
                   </Text>
-                  <Text style={tw`text-[11px] text-amber-800 text-center mt-1 font-medium leading-relaxed`}>
-                    Scheduled slots for today are closed (must book 30+ mins before slot start). Please select Instant ASAP delivery above.
+                  <Text style={tw`text-[11px] text-amber-800 text-center mt-1.5 font-medium leading-relaxed px-2`}>
+                    Slots must be booked at least 30 minutes before slot start time. Tap below to switch to Instant delivery:
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => setDeliveryMode('instant')}
+                    style={[tw`mt-3 px-5 py-2.5 rounded-xl items-center flex-row justify-center gap-2 shadow-xs`, { backgroundColor: '#8fda58' }]}
+                  >
+                    <Text style={tw`text-xs font-black text-white`}>⚡ Switch to Instant ASAP Delivery</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={tw`flex-col gap-2`}>
