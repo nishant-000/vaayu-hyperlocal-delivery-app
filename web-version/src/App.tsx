@@ -821,7 +821,7 @@ export default function App() {
                     transition={{ delay: 0.05 }}
                     className="text-[11px] font-semibold text-green-600 uppercase tracking-widest mb-2"
                   >
-                    Good evening, {user?.name || 'Aditya'} 👋
+                    Good evening, {user?.name || user?.email?.split('@')[0] || 'Student'} 👋
                   </motion.p>
                   <motion.h1
                     initial={{ opacity: 0, y: 10 }}

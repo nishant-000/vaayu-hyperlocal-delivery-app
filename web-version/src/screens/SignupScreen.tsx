@@ -105,9 +105,9 @@ export default function SignupScreen({ onDone }: { onDone: (userData: any) => vo
       const determinedRole = role === 'owner' ? 'shop_owner' : 'customer'
       onDone({
         role: determinedRole,
-        name: determinedRole === 'customer' ? (name.trim() || 'Aditya Sharma') : (shopName.trim() || name.trim() || 'Campus Bites Cafe'),
+        name: determinedRole === 'customer' ? (name.trim() || email.split('@')[0]) : (shopName.trim() || name.trim() || email.split('@')[0]),
         email: email || (determinedRole === 'shop_owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
-        phoneNumber: phone || '+91 98765 43210',
+        phoneNumber: phone.trim(),
         category: determinedRole === 'shop_owner' ? effectiveCategory : undefined
       })
     }
