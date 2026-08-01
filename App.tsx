@@ -396,6 +396,18 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
+            {/* Empty state — no real notifications yet */}
+            <View style={tw`py-12 items-center justify-center gap-3`}>
+              <Text style={tw`text-5xl`}>🔕</Text>
+              <Text style={tw`text-[16px] font-black text-gray-800 mt-2`}>No notifications yet</Text>
+              <Text style={tw`text-[12px] text-gray-400 font-medium text-center px-6`}>
+                Order updates and alerts will appear here when available.
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Complete Profile Modal for existing accounts with missing name/phone */}
       {user && (!user.phone_number || !user.name || user.name === user.email?.split('@')[0]) && (
         <View style={tw`absolute inset-0 z-50 bg-black/80 items-center justify-center p-6`}>
