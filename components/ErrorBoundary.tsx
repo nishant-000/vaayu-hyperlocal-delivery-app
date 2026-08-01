@@ -30,26 +30,6 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public render() {
-    if (this.state.hasError) {
-      return (
-        <View style={tw`flex-1 bg-white items-center justify-center p-6 text-center`}>
-          <View style={tw`w-20 h-20 rounded-full bg-red-50 items-center justify-center mb-4`}>
-            <Text style={tw`text-4xl`}>⚠️</Text>
-          </View>
-          <Text style={tw`text-[20px] font-black text-gray-900 mb-2`}>Something went wrong</Text>
-          <Text style={tw`text-[13px] text-gray-500 font-medium text-center mb-6 leading-relaxed`}>
-            An unexpected error occurred. Please restart the app or tap below to retry.
-          </Text>
-          <TouchableOpacity
-            onPress={this.handleReset}
-            style={[tw`px-6 py-3.5 rounded-2xl shadow-md`, { backgroundColor: '#8fda58' }]}
-          >
-            <Text style={tw`text-white font-black text-[14px]`}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     return this.props.children;
   }
 }
