@@ -409,7 +409,7 @@ export default function App() {
       )}
 
       {/* Complete Profile Modal for existing accounts with missing name/phone */}
-      {user && (!user.phone_number || !user.name || user.name === user.email?.split('@')[0]) && (
+      {user && (!user.phone_number || !user.name) && (
         <View style={tw`absolute inset-0 z-50 bg-black/80 items-center justify-center p-6`}>
           <View style={tw`w-full bg-white rounded-3xl p-6 shadow-2xl border border-gray-100`}>
             <View style={tw`items-center mb-4`}>

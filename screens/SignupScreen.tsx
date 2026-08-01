@@ -655,18 +655,34 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       } as any
     }
 
-    // 2. Query profiles & shops by email
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .ilike('email', cleanEmail)
-      .single()
+    // 2. Query profiles & shops by auth ID or email
+    let profile: any = null
+    if (authUser?.id) {
+      const { data: pById } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle()
+      profile = pById
+    }
+
+    if (!profile) {
+      const { data: pList } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('email', cleanEmail)
+        .order('created_at', { ascending: false })
+
+      if (pList && pList.length > 0) {
+        profile = pList.find((p: any) => p.full_name && p.phone_number) || pList[0]
+      }
+    }
 
     const { data: shop } = await supabase
       .from('shops')
       .select('*')
       .eq('owner_id', profile?.id || authUser?.id || '')
-      .single()
+      .maybeSingle()
 
     setIsSubmitting(false)
 
