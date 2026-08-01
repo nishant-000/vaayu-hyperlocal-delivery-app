@@ -5,6 +5,7 @@ import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
 import { supabase } from '../lib/supabase'
+import { getCache, setCache } from '../lib/cache'
 
 // Language Translations Dictionary for Low-Literacy Shop Owners
 const i18n: Record<string, Record<string, string>> = {
@@ -345,7 +346,13 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   // 1. Load Initial Real Data from Supabase & Subscribe to Realtime Updates
   useEffect(() => {
     async function loadShopData() {
-      setLoading(true)
+      // 1. Instant Cache Hydration for 0ms Load Time
+      const cachedOrders = await getCache<any[]>('owner_orders')
+      const cachedMenu = await getCache<any[]>('owner_menu')
+      if (cachedOrders) setOrders(cachedOrders)
+      if (cachedMenu) setMenuItems(cachedMenu)
+      if (cachedOrders || cachedMenu) setLoading(false)
+      else setLoading(true)
 
       // Fetch Active Shop Details
       const targetShopId = activeShopId || user?.shop_id
@@ -374,7 +381,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (ordersData) setOrders(ordersData)
+      if (ordersData) {
+        setOrders(ordersData)
+        await setCache('owner_orders', ordersData, 300)
+      }
 
       // Fetch Menu Items
       const { data: menuData } = await supabase
@@ -383,11 +393,17 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         .order('created_at', { ascending: false })
 
       if (menuData) {
-        setMenuItems(menuData.map(m => ({
+        const formattedMenu = menuData.map(m => ({
           id: m.id,
           name: m.name,
           price: m.price,
           available: m.is_available && (m.stock_quantity === undefined || m.stock_quantity === null || m.stock_quantity > 0),
+          stockQuantity: m.stock_quantity ?? 10,
+          image: m.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200'
+        }))
+        setMenuItems(formattedMenu)
+        await setCache('owner_menu', formattedMenu, 300)
+      }
           stockQuantity: m.stock_quantity ?? 0,
           img: m.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'
         })))

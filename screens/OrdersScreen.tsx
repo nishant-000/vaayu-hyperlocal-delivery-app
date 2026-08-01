@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator } fr
 import tw from 'twrnc'
 import Svg, { Polyline } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
+import { getCache, setCache } from '../lib/cache'
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   delivered:        { label: 'Delivered',         color: '#16a34a', bg: '#dcfce7', dot: '#16a34a' },
@@ -120,7 +121,16 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
   // Fetch real orders from Supabase & Subscribe to Realtime Updates
   useEffect(() => {
     async function fetchOrders() {
-      setLoading(true)
+      // 1. Instant Cache Hydration for 0ms Load Time
+      const cached = await getCache<any[]>('user_orders')
+      if (cached && cached.length > 0) {
+        setOrders(cached)
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+
+      // 2. Fetch fresh orders from Supabase in background
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -128,6 +138,7 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
 
       if (!error && data) {
         setOrders(data)
+        await setCache('user_orders', data, 300)
       }
       setLoading(false)
     }

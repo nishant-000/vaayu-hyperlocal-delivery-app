@@ -10,6 +10,7 @@ import {
 } from './Icons'
 import { fetchRemoteConfig, subscribeToRemoteConfig, AppConfig, DEFAULT_CONFIG } from '../lib/remoteConfig'
 import { supabase } from '../lib/supabase'
+import { getCache, setCache } from '../lib/cache'
 
 export const categories = [
   {
@@ -96,7 +97,14 @@ export default function HomeScreen({
         setRemoteConfig(updated)
       })
 
-      // Fetch live shops from Supabase
+      // 1. Instant Cache Hydration for 0ms Load Time
+      const cachedShops = await getCache<any[]>('campus_shops')
+      if (cachedShops && cachedShops.length > 0) {
+        setShops(cachedShops)
+        setLoading(false)
+      }
+
+      // 2. Fetch fresh live shops from Supabase in background
       const { data: shopsData, error } = await supabase
         .from('shops')
         .select('*, menu_items(*)')
@@ -125,7 +133,8 @@ export default function HomeScreen({
           phone: s.phone || ''
         }))
         setShops(formatted)
-      } else {
+        await setCache('campus_shops', formatted, 600)
+      } else if (!cachedShops) {
         setShops([])
       }
       setLoading(false)
