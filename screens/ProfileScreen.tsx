@@ -50,10 +50,10 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
   const [avatarUrl, setAvatarUrl] = useState(AVATAR_OPTIONS[0])
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
 
-  // Edit profile state
-  const [name, setName] = useState(user?.name || 'Aditya Sharma')
-  const [email] = useState(user?.email || '251420@iiitt.ac.in')
-  const [phone, setPhone] = useState(user?.phoneNumber || '+91 98765 43210')
+  // Edit profile state initialized directly from logged in user data without fake hardcoded fallbacks
+  const [name, setName] = useState(user?.name || '')
+  const [email] = useState(user?.email || '')
+  const [phone, setPhone] = useState(user?.phoneNumber || user?.phone_number || '')
   const [hostel] = useState('IIIT Tiruchirappalli, Gate 1')
 
   // Security state
@@ -423,8 +423,11 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
               </Text>
             </View>
             <View style={tw`flex-1 min-w-0`}>
-              <Text style={tw`text-[18px] font-black text-gray-900`}>{user?.name || name}</Text>
+              <Text style={tw`text-[18px] font-black text-gray-900`}>{user?.name || name || 'Campus Student'}</Text>
               <Text style={tw`text-[12px] text-gray-400 font-medium`}>{user?.email || email}</Text>
+              {user?.phoneNumber || user?.phone_number || phone ? (
+                <Text style={tw`text-[12px] text-gray-700 font-bold mt-1`}>📱 {user?.phoneNumber || user?.phone_number || phone}</Text>
+              ) : null}
               <View style={tw`flex-row items-center gap-1.5 mt-1.5`}>
                 <View style={tw`w-1.5 h-1.5 rounded-full bg-green-500`} />
                 <Text style={tw`text-[11px] text-green-600 font-semibold`}>Campus verified</Text>

@@ -41,10 +41,10 @@ export default function ProfileScreen({ user, onSignOut }: { user: any; onSignOu
   const [avatarUrl, setAvatarUrl] = useState(AVATAR_OPTIONS[0])
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
 
-  // Edit profile state
-  const [name, setName] = useState(user?.name || 'Aditya Sharma')
-  const [email] = useState(user?.email || '251420@iiitt.ac.in')
-  const [phone, setPhone] = useState(user?.phoneNumber || '+91 98765 43210')
+  // Edit profile state initialized directly from logged in user data without fake hardcoded fallbacks
+  const [name, setName] = useState(user?.name || '')
+  const [email] = useState(user?.email || '')
+  const [phone, setPhone] = useState(user?.phoneNumber || user?.phone_number || '')
   const [hostel] = useState('IIIT Tiruchirappalli, Gate 1')
 
   // Security state

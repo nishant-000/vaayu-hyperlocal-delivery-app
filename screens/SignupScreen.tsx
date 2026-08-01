@@ -457,13 +457,21 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     }
 
     try {
-      await supabase.from('profiles').upsert([{
+      const realFullName = name.trim() || (determinedRole === 'shop_owner' ? shopName.trim() : userEmail.split('@')[0])
+      const realPhoneNumber = phone.trim()
+
+      const { error: profErr } = await supabase.from('profiles').upsert([{
         id: userId,
+        user_id: userId,
         email: userEmail,
-        full_name: (name.trim() || shopName.trim() || userEmail.split('@')[0]),
-        phone: phone.trim(),
+        full_name: realFullName,
+        phone_number: realPhoneNumber,
         role: determinedRole
       }])
+
+      if (profErr) {
+        console.error('[SignupScreen] Profile upsert error:', profErr.message)
+      }
 
       let newShopId = undefined
       if (determinedRole === 'shop_owner') {
@@ -479,8 +487,9 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
           await supabase.from('shop_workers').insert([{
             shop_id: shopData.id,
             user_id: userId,
-            worker_name: (name.trim() || shopName.trim() || 'Owner'),
-            worker_phone: phone.trim()
+            worker_name: realFullName,
+            worker_phone: realPhoneNumber,
+            role: 'owner'
           }])
         }
       }
@@ -490,10 +499,10 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       completeAuth({
         id: userId,
         role: determinedRole,
-        name: determinedRole === 'shop_owner' ? shopName.trim() : (name.trim() || userEmail.split('@')[0]),
+        name: realFullName,
         email: userEmail,
-        phoneNumber: phone.trim(),
-        category: determinedRole === 'shop_owner' ? (effectiveCategory || 'Others') : undefined,
+        phoneNumber: realPhoneNumber,
+        phone_number: realPhoneNumber,
         shop_id: newShopId,
         shop_name: determinedRole === 'shop_owner' ? shopName.trim() : undefined
       })
@@ -502,9 +511,10 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       completeAuth({
         id: userId,
         role: determinedRole,
-        name: determinedRole === 'shop_owner' ? shopName.trim() : (name.trim() || userEmail.split('@')[0]),
+        name: name.trim() || (determinedRole === 'shop_owner' ? shopName.trim() : userEmail.split('@')[0]),
         email: userEmail,
-        phoneNumber: phone.trim()
+        phoneNumber: phone.trim(),
+        phone_number: phone.trim()
       })
     }
   }
@@ -557,14 +567,18 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
     const userId = authUser?.id || profile?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
     const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
-    const displayName = shop?.name || profile?.full_name || cleanEmail.split('@')[0] || 'Student'
+    
+    // Read real full_name from database profile, fallback to shop name or email handle
+    const displayName = profile?.full_name || (shop ? shop.name : '') || cleanEmail.split('@')[0]
+    const displayPhone = profile?.phone_number || ''
 
     completeAuth({
       id: userId,
       role: determinedRole,
       name: displayName,
       email: cleanEmail,
-      phoneNumber: profile?.phone || '',
+      phoneNumber: displayPhone,
+      phone_number: displayPhone,
       shop_id: shop?.id || undefined,
       shop_name: shop?.name || undefined
     })
