@@ -1020,12 +1020,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
               We sent a 6-digit OTP code to <Text style={tw`font-bold text-gray-800`}>{email || 'your email'}</Text>. Enter the code below to verify your account.
             </Text>
 
-            {/* Dev hint when testing without SMTP */}
-            <View style={tw`bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 mb-6 w-full items-center`}>
-              <Text style={tw`text-[11px] font-bold text-amber-900 text-center`}>
-                💡 Testing Hint: If custom SMTP is not configured in Supabase yet, enter <Text style={tw`font-black text-amber-950 underline`}>123456</Text> or tap below to activate.
-              </Text>
-            </View>
+
 
             <View style={tw`w-full mb-6`}>
               <TextInput
