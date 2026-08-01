@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, StatusBar as RNStatusBar, Animated, Easing, Pressable, ScrollView } from 'react-native'
+import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, StatusBar as RNStatusBar, Animated, Easing, Pressable, ScrollView, TextInput, ActivityIndicator } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg'

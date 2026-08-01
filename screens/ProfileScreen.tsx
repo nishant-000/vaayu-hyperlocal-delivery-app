@@ -162,10 +162,27 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
             </View>
 
             <TouchableOpacity
-              onPress={() => {
-                showToast("Password updated successfully!")
-                setCurrentPass('')
-                setNewPass('')
+              onPress={async () => {
+                if (!currentPass || !newPass) {
+                  Alert.alert('Required Fields', 'Please enter your current password and new password.')
+                  return
+                }
+                if (currentPass === newPass) {
+                  Alert.alert('Invalid New Password', 'Your new password cannot be the same as your current password. Please choose a different password.')
+                  return
+                }
+                if (newPass.length < 6) {
+                  Alert.alert('Weak Password', 'New password must be at least 6 characters long.')
+                  return
+                }
+                const { error } = await supabase.auth.updateUser({ password: newPass })
+                if (error) {
+                  Alert.alert('Password Update Error', error.message)
+                } else {
+                  showToast("Password updated successfully!")
+                  setCurrentPass('')
+                  setNewPass('')
+                }
               }}
               style={[tw`w-full py-3.5 rounded-2xl items-center mt-2`, { backgroundColor: '#8fda58' }]}
             >
