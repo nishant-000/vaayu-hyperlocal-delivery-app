@@ -15,6 +15,8 @@ const statusConfig: Record<string, { label: string; color: string; bg: string; d
   cancelled:        { label: 'Cancelled',         color: '#dc2626', bg: '#fef2f2', dot: '#dc2626' },
 }
 
+const tabs = ['All', 'Active', 'Past']
+
 function LiveTracker({ activeOrder }: { activeOrder: any }) {
   if (!activeOrder) return null
 
