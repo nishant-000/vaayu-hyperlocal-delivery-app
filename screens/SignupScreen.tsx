@@ -107,6 +107,28 @@ function VaayuIcon() {
   )
 }
 
+function ShopIcon() {
+  return (
+    <Svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#8fda58" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <Polyline points="9 22 9 12 15 12 15 22" />
+    </Svg>
+  )
+}
+
+function SlideDots({ active, onDotClick }: { active: number; onDotClick: (idx: 0 | 1) => void }) {
+  return (
+    <View style={tw`flex-row items-center gap-2 mt-2`}>
+      <TouchableOpacity onPress={() => onDotClick(0)} activeOpacity={0.6}>
+        <View style={[tw`h-2 rounded-full`, { width: active === 0 ? 24 : 8, backgroundColor: active === 0 ? '#8fda58' : '#d1d5db' }]} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => onDotClick(1)} activeOpacity={0.6}>
+        <View style={[tw`h-2 rounded-full`, { width: active === 1 ? 24 : 8, backgroundColor: active === 1 ? '#8fda58' : '#d1d5db' }]} />
+      </TouchableOpacity>
+    </View>
+  )
+}
+
 // ── Shared UI Components ─────────────────────────────────────────────────────
 
 function CustomInput({
