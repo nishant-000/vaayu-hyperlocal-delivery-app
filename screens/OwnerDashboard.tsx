@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
 import { supabase } from '../lib/supabase'
 import { getCache, setCache } from '../lib/cache'
+import OrderDetailsModal from '../components/OrderDetailsModal'
 
 // Language Translations Dictionary for Low-Literacy Shop Owners
 const i18n: Record<string, Record<string, string>> = {
@@ -184,6 +185,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [isLiveToday, setIsLiveToday] = useState(true)
   const [lang, setLang] = useState<'en' | 'hi' | 'ta'>('en')
   const [loading, setLoading] = useState(true)
+
+  const [selectedOrderIdForDetails, setSelectedOrderIdForDetails] = useState<string | null>(null)
 
   const t = i18n[lang] || i18n['en']
 
@@ -843,10 +846,13 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 return (
                   <View key={order.id} style={tw`bg-white rounded-3xl p-5 border-2 border-gray-300 shadow-md gap-3`}>
                     <View style={tw`flex-row justify-between items-start border-b border-gray-100 pb-3`}>
-                      <View style={tw`flex-1 mr-2`}>
-                        <Text style={tw`text-[28px] font-black text-gray-900 leading-none`}>#{order.id}</Text>
+                      <TouchableOpacity onPress={() => setSelectedOrderIdForDetails(order.id)} style={tw`flex-1 mr-2`}>
+                        <View style={tw`flex-row items-center gap-2 mb-1`}>
+                          <Text style={tw`text-[28px] font-black text-gray-900 leading-none`}>#{order.id}</Text>
+                          <Text style={tw`text-[11px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-md`}>View Details ➔</Text>
+                        </View>
                         <Text style={tw`text-[20px] font-black text-green-700 mt-1`}>📍 {order.location}</Text>
-                      </View>
+                      </TouchableOpacity>
 
                       <View style={tw`items-end gap-1.5`}>
                         <View style={tw`bg-gray-100 px-3 py-1.5 rounded-full`}>
@@ -1329,6 +1335,14 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Order Details Modal */}
+      <OrderDetailsModal
+        visible={!!selectedOrderIdForDetails}
+        orderId={selectedOrderIdForDetails}
+        onClose={() => setSelectedOrderIdForDetails(null)}
+        isOwnerView
+      />
     </View>
   )
 }

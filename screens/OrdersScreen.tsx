@@ -5,6 +5,8 @@ import Svg, { Polyline } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
 import { getCache, setCache } from '../lib/cache'
 
+import OrderDetailsModal from '../components/OrderDetailsModal'
+
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   delivered:        { label: 'Delivered',         color: '#16a34a', bg: '#dcfce7', dot: '#16a34a' },
   ready_for_pickup: { label: 'Collect Your Order', color: '#9333ea', bg: '#f3e8ff', dot: '#9333ea' },
@@ -81,7 +83,7 @@ function getStepIndex(status: string) {
 }
 
 // 🟢 Per-Order Tracking Card Component (Dark Green #1a3a2a)
-function ActiveOrderTrackingCard({ order }: { order: any }) {
+function ActiveOrderTrackingCard({ order, onPress }: { order: any; onPress: () => void }) {
   const currentStep = getStepIndex(order.status)
   const isInstant = order.delivery_mode === 'instant' || !order.selected_slot_label
   const late = isOrderLate(order)
@@ -99,7 +101,7 @@ function ActiveOrderTrackingCard({ order }: { order: any }) {
     : 'ORDER PLACED'
 
   return (
-    <View style={[tw`rounded-3xl overflow-hidden shadow-md mb-3`, { backgroundColor: '#1a3a2a' }]}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={[tw`rounded-3xl overflow-hidden shadow-md mb-3`, { backgroundColor: '#1a3a2a' }]}>
       <View style={tw`p-5`}>
         <View style={tw`flex-row items-start justify-between mb-3`}>
           <View style={tw`flex-1 mr-2`}>
@@ -171,10 +173,10 @@ function ActiveOrderTrackingCard({ order }: { order: any }) {
           <Text style={tw`text-[12px] text-gray-300 font-medium`}>
             {new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
-          <Text style={tw`font-black text-[16px] text-white`}>₹{order.grand_total || order.total_amount || 0}</Text>
+          <Text style={tw`font-black text-[14px] text-[#8fda58]`}>Tap to view full details ➔</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   )
 }
 
@@ -189,6 +191,7 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
   const [activeTab, setActiveTab] = useState('All')
   const [orders, setOrders] = useState<any[]>(initialOrders || [])
   const [loading, setLoading] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
   // Fetch real orders from Supabase & Subscribe to Realtime Updates
   useEffect(() => {
@@ -290,13 +293,24 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
 
               // Active orders get their own dark green tracking card!
               if (isActive) {
-                return <ActiveOrderTrackingCard key={order.id} order={order} />
+                return (
+                  <ActiveOrderTrackingCard
+                    key={order.id}
+                    order={order}
+                    onPress={() => setSelectedOrderId(order.id)}
+                  />
+                )
               }
 
               // Delivered or Cancelled orders get the plain white card design
               const s = statusConfig[order.status] || { label: order.status, color: '#6b7280', bg: '#f3f4f6', dot: '#9ca3af' }
               return (
-                <View key={order.id} style={tw`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 mb-3`}>
+                <TouchableOpacity
+                  key={order.id}
+                  onPress={() => setSelectedOrderId(order.id)}
+                  activeOpacity={0.8}
+                  style={tw`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 mb-3`}
+                >
                   <View style={tw`flex-row gap-3 p-4`}>
                     <View style={tw`w-14 h-14 rounded-2xl bg-green-100 items-center justify-center`}>
                       <Text style={tw`text-2xl`}>🍔</Text>
@@ -316,10 +330,11 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
                         📍 {order.location}
                       </Text>
 
-                      <View style={tw`bg-gray-50 rounded-xl px-2.5 py-1.5 mt-2 border border-gray-100`}>
+                      <View style={tw`bg-gray-50 rounded-xl px-2.5 py-1.5 mt-2 border border-gray-100 flex-row items-center justify-between`}>
                         <Text style={tw`text-[11px] font-bold text-gray-700`}>
                           ⏱️ Expected: <Text style={tw`font-black text-gray-900`}>{order.delivery_mode === 'instant' ? '20 mins from order placement' : (order.selected_slot_label || 'Selected Slot')}</Text>
                         </Text>
+                        <Text style={tw`text-[11px] font-bold text-gray-400`}>Details ➔</Text>
                       </View>
 
                       <View style={tw`flex-row items-center justify-between mt-2 pt-2 border-t border-gray-100`}>
@@ -330,13 +345,19 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
                       </View>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               )
             })
           )}
         </View>
       </ScrollView>
+
+      {/* Full Order Details Modal */}
+      <OrderDetailsModal
+        visible={!!selectedOrderId}
+        orderId={selectedOrderId}
+        onClose={() => setSelectedOrderId(null)}
+      />
     </View>
   )
 }
-
