@@ -80,14 +80,16 @@ export default function CartScreen({
     }
   }
 
-  // Live slot filtering from Remote Config with 30-minute pre-start cutoff
+  // Live slot filtering: cutoff is dynamically computed as start_time - 30 minutes
   const getAvailableSlots = (nowDate?: Date) => {
     const currentMinutes = getISTMinutesFromMidnight(nowDate)
     const configuredSlots = config.delivery_slots || DEFAULT_CONFIG.delivery_slots
 
     return configuredSlots.filter(s => {
-      const cutoff = (s.cutoff_hour * 60) + s.cutoff_minute
-      return currentMinutes < cutoff
+      // Dynamic cutoff calculation: 30 minutes before slot start time
+      const startMinutesFromMidnight = (s.start_hour * 60) + s.start_minute
+      const cutoffMinutes = startMinutesFromMidnight - 30
+      return currentMinutes < cutoffMinutes
     })
   }
 
