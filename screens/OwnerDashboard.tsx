@@ -404,10 +404,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         setMenuItems(formattedMenu)
         await setCache('owner_menu', formattedMenu, 300)
       }
-          stockQuantity: m.stock_quantity ?? 0,
-          img: m.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'
-        })))
-      }
 
       // Fetch Shop Workers
       const { data: workersData } = await supabase
