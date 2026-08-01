@@ -187,6 +187,39 @@ function PremiumInputField({
       secureTextEntry={secure}
       style={tw`w-full h-[52px] bg-gray-50 border border-gray-200 rounded-[14px] px-4 text-[14px] font-medium text-gray-800`}
     />
+  }
+
+function PrimarySubmitButton({
+  onPress,
+  disabled,
+  isLoading,
+  label
+}: {
+  onPress: () => void
+  disabled?: boolean
+  isLoading?: boolean
+  label: string
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || isLoading}
+      activeOpacity={0.85}
+      style={tw`w-full my-2 overflow-hidden rounded-2xl`}
+    >
+      <LinearGradient
+        colors={disabled ? ['#d1d5db', '#9ca3af'] : ['#8fda58', '#7fc448']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={tw`w-full h-14 items-center justify-center`}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#ffffff" />
+        ) : (
+          <Text style={tw`text-[16px] font-black text-white tracking-wide uppercase`}>{label}</Text>
+        )}
+      </LinearGradient>
+    </TouchableOpacity>
   )
 }
 
@@ -611,18 +644,11 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
                   <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
                 </TouchableOpacity>
 
-                <View style={tw`gap-3`}>
-                  <TouchableOpacity onPress={handleLoginSubmit}>
-                    <LinearGradient
-                      colors={['#8fda58', '#7fc448']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={tw`w-full h-[52px] rounded-[14px] items-center justify-center`}
-                    >
-                      <Text style={tw`text-white text-[15px] font-bold tracking-[0.3px]`}>Log In</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
+                <PrimarySubmitButton
+                  onPress={handleLoginSubmit}
+                  isLoading={isSubmitting}
+                  label="Log In"
+                />
 
                 <Text style={tw`text-center text-[12px] text-gray-400 mt-4`}>
                   Don't have an account?{' '}
@@ -750,20 +776,11 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
               <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleLoginSubmit} disabled={isSubmitting} style={tw`mt-4 mb-6`}>
-              <LinearGradient
-                colors={['#8fda58', '#7fc448']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={tw`w-full py-4 rounded-2xl items-center justify-center`}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="white" size="small" />
-                ) : (
-                  <Text style={tw`text-[15px] font-black text-white`}>Log In</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+            <PrimarySubmitButton
+              onPress={handleLoginSubmit}
+              isLoading={isSubmitting}
+              label="Log In"
+            />
 
             <TouchableOpacity onPress={() => setStep(role === 'owner' ? 'signup_owner' : 'signup_student')} style={tw`self-center`}>
               <Text style={tw`text-[13px] text-gray-400 font-semibold`}>
@@ -845,20 +862,12 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
           </TouchableOpacity>
 
           <View style={tw`px-6 mb-6`}>
-            <TouchableOpacity
+            <PrimarySubmitButton
               onPress={handleStudentSubmit}
-              disabled={!isStudentValid || isSubmitting}
-              style={[
-                tw`w-full py-4 rounded-2xl items-center justify-center`,
-                { backgroundColor: isStudentValid && !isSubmitting ? '#8fda58' : '#d1d5db' }
-              ]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={tw`text-[15px] font-black text-white`}>Proceed to Verification</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!isStudentValid}
+              isLoading={isSubmitting}
+              label="Proceed to Verification"
+            />
           </View>
 
           <TouchableOpacity onPress={() => setStep('login')} style={tw`self-center`}>
@@ -963,20 +972,12 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
           />
 
           <View style={tw`px-6 mb-6 mt-4`}>
-            <TouchableOpacity
+            <PrimarySubmitButton
               onPress={handleOwnerSubmit}
-              disabled={!isOwnerValid || isSubmitting}
-              style={[
-                tw`w-full py-4 rounded-2xl items-center justify-center`,
-                { backgroundColor: isOwnerValid && !isSubmitting ? '#8fda58' : '#d1d5db' }
-              ]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={tw`text-[15px] font-black text-white`}>Proceed to Verification</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!isOwnerValid}
+              isLoading={isSubmitting}
+              label="Proceed to Verification"
+            />
           </View>
 
           <TouchableOpacity onPress={() => setStep('login')} style={tw`self-center`}>
@@ -1025,16 +1026,11 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
               />
             </View>
 
-            <TouchableOpacity
+            <PrimarySubmitButton
               onPress={() => handleVerificationComplete()}
-              style={[tw`w-full py-4 rounded-2xl items-center mb-4`, { backgroundColor: '#8fda58' }]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={tw`text-[15px] font-black text-white`}>Verify & Enter App</Text>
-              )}
-            </TouchableOpacity>
+              isLoading={isSubmitting}
+              label="Verify & Enter App"
+            />
 
             <TouchableOpacity
               onPress={async () => {
