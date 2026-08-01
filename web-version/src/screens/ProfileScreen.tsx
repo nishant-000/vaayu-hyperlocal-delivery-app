@@ -44,7 +44,7 @@ export default function ProfileScreen({ user, onSignOut }: { user: any; onSignOu
   // Edit profile state initialized directly from logged in user data without fake hardcoded fallbacks
   const [name, setName] = useState(user?.name || '')
   const [email] = useState(user?.email || '')
-  const [phone, setPhone] = useState(user?.phoneNumber || user?.phone_number || '')
+  const [phone, setPhone] = useState(user?.phone_number || '')
   const [hostel] = useState('IIIT Tiruchirappalli, Gate 1')
 
   // Security state

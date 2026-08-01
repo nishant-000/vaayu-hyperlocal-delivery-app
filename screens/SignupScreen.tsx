@@ -501,7 +501,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
         role: determinedRole,
         name: realFullName,
         email: userEmail,
-        phoneNumber: realPhoneNumber,
         phone_number: realPhoneNumber,
         shop_id: newShopId,
         shop_name: determinedRole === 'shop_owner' ? shopName.trim() : undefined
@@ -513,7 +512,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
         role: determinedRole,
         name: name.trim() || (determinedRole === 'shop_owner' ? shopName.trim() : userEmail.split('@')[0]),
         email: userEmail,
-        phoneNumber: phone.trim(),
         phone_number: phone.trim()
       })
     }
@@ -577,7 +575,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       role: determinedRole,
       name: displayName,
       email: cleanEmail,
-      phoneNumber: displayPhone,
       phone_number: displayPhone,
       shop_id: shop?.id || undefined,
       shop_name: shop?.name || undefined

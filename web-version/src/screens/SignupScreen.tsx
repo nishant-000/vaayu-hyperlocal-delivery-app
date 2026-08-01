@@ -107,7 +107,7 @@ export default function SignupScreen({ onDone }: { onDone: (userData: any) => vo
         role: determinedRole,
         name: determinedRole === 'customer' ? (name.trim() || email.split('@')[0]) : (shopName.trim() || name.trim() || email.split('@')[0]),
         email: email || (determinedRole === 'shop_owner' ? 'owner@campusbites.com' : 'student@iiitt.ac.in'),
-        phoneNumber: phone.trim(),
+        phone_number: phone.trim(),
         category: determinedRole === 'shop_owner' ? effectiveCategory : undefined
       })
     }
@@ -299,7 +299,7 @@ export default function SignupScreen({ onDone }: { onDone: (userData: any) => vo
                 role,
                 name: role === 'customer' ? name : shopName,
                 email,
-                phoneNumber: phone,
+                phone_number: phone,
                 category: role === 'owner' ? effectiveCategory : undefined
               })
             }}

@@ -159,6 +159,10 @@ export default function App() {
   const [showPermissionPrePrompt, setShowPermissionPrePrompt] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
 
+  // Profile Completion Modal State
+  const [profileNameInput, setProfileNameInput] = useState('')
+  const [profilePhoneInput, setProfilePhoneInput] = useState('')
+
   // Toast / Alert State
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -392,14 +396,69 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Empty state — no real notifications yet */}
-            <View style={tw`py-12 items-center justify-center gap-3`}>
-              <Text style={tw`text-5xl`}>🔕</Text>
-              <Text style={tw`text-[16px] font-black text-gray-800 mt-2`}>No notifications yet</Text>
-              <Text style={tw`text-[12px] text-gray-400 font-medium text-center px-6`}>
-                Order updates and alerts will appear here when available.
+      {/* Complete Profile Modal for existing accounts with missing name/phone */}
+      {user && (!user.phone_number || !user.name || user.name === user.email?.split('@')[0]) && (
+        <View style={tw`absolute inset-0 z-50 bg-black/80 items-center justify-center p-6`}>
+          <View style={tw`w-full bg-white rounded-3xl p-6 shadow-2xl border border-gray-100`}>
+            <View style={tw`items-center mb-4`}>
+              <View style={tw`w-14 h-14 rounded-2xl bg-green-100 items-center justify-center mb-2`}>
+                <Text style={tw`text-2xl`}>👤</Text>
+              </View>
+              <Text style={tw`text-[22px] font-black text-gray-900 text-center`}>Complete Your Profile</Text>
+              <Text style={tw`text-[12px] text-gray-500 font-medium text-center mt-1 px-2 leading-relaxed`}>
+                Please enter your real full name and mobile phone number to continue using Vaayu.
               </Text>
             </View>
+
+            <Text style={tw`text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5`}>Full Name</Text>
+            <TextInput
+              placeholder="e.g. Nishant Singh"
+              placeholderTextColor="#9ca3af"
+              value={profileNameInput}
+              onChangeText={setProfileNameInput}
+              style={tw`w-full h-12 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm font-semibold text-gray-800 mb-4`}
+            />
+
+            <Text style={tw`text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5`}>Mobile Phone Number</Text>
+            <TextInput
+              placeholder="e.g. 9812345678"
+              placeholderTextColor="#9ca3af"
+              keyboardType="phone-pad"
+              value={profilePhoneInput}
+              onChangeText={setProfilePhoneInput}
+              style={tw`w-full h-12 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm font-semibold text-gray-800 mb-6`}
+            />
+
+            <TouchableOpacity
+              onPress={async () => {
+                if (!profileNameInput.trim() || !profilePhoneInput.trim()) {
+                  Alert.alert('Required Fields', 'Please fill in both your full name and phone number.')
+                  return
+                }
+                const cleanN = profileNameInput.trim()
+                const cleanP = profilePhoneInput.trim()
+                try {
+                  await supabase.from('profiles').upsert([{
+                    id: user.id,
+                    user_id: user.id,
+                    email: user.email,
+                    full_name: cleanN,
+                    phone_number: cleanP,
+                    role: user.role || 'customer'
+                  }])
+                } catch (e) {
+                  console.warn('[CompleteProfile] upsert notice:', e)
+                }
+                setUser((prev: any) => ({
+                  ...prev,
+                  name: cleanN,
+                  phone_number: cleanP
+                }))
+              }}
+              style={tw`w-full py-4 bg-[#8fda58] rounded-2xl items-center justify-center shadow-md`}
+            >
+              <Text style={tw`text-[15px] font-black text-white uppercase tracking-wide`}>Save Profile</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
