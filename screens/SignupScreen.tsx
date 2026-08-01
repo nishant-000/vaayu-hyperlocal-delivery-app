@@ -281,21 +281,66 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const userEmail = email.trim()
     setIsSubmitting(true)
 
+    // 1. Check if profile already exists in database
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('email', userEmail)
+      .maybeSingle()
+
+    if (existingProfile) {
+      setIsSubmitting(false)
+      Alert.alert(
+        'Email Already Registered',
+        'This email is already registered. Please log in instead or use a different email address.',
+        [
+          {
+            text: 'Log In Now',
+            onPress: () => {
+              setEmail(userEmail)
+              setStep('login')
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      )
+      return
+    }
+
     try {
-      await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userEmail,
         password: password
       })
-      
-      // Explicitly call resend to force SMTP email dispatch for new or existing registrations
-      const { error: resendErr } = await supabase.auth.resend({
+
+      const isAlreadyRegistered =
+        authError?.message?.toLowerCase().includes('already registered') ||
+        authError?.message?.toLowerCase().includes('already exists') ||
+        (authData?.user && authData?.user?.identities && authData.user.identities.length === 0)
+
+      if (isAlreadyRegistered) {
+        setIsSubmitting(false)
+        Alert.alert(
+          'Email Already Registered',
+          'This email is already registered. Please log in instead or use a different email address.',
+          [
+            {
+              text: 'Log In Now',
+              onPress: () => {
+                setEmail(userEmail)
+                setStep('login')
+              }
+            },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        )
+        return
+      }
+
+      await supabase.auth.resend({
         type: 'signup',
         email: userEmail
       })
-
-      if (resendErr) {
-        console.warn('[SignupScreen] resend notice:', resendErr.message)
-      }
     } catch (e) {
       console.warn('[SignupScreen] signUp exception:', e)
     }
@@ -311,21 +356,66 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const userEmail = email.trim()
     setIsSubmitting(true)
 
+    // 1. Check if profile already exists in database
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('email', userEmail)
+      .maybeSingle()
+
+    if (existingProfile) {
+      setIsSubmitting(false)
+      Alert.alert(
+        'Email Already Registered',
+        'This email is already registered. Please log in instead or use a different email address.',
+        [
+          {
+            text: 'Log In Now',
+            onPress: () => {
+              setEmail(userEmail)
+              setStep('login')
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      )
+      return
+    }
+
     try {
-      await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userEmail,
         password: password
       })
 
-      // Explicitly call resend to force SMTP email dispatch for new or existing registrations
-      const { error: resendErr } = await supabase.auth.resend({
+      const isAlreadyRegistered =
+        authError?.message?.toLowerCase().includes('already registered') ||
+        authError?.message?.toLowerCase().includes('already exists') ||
+        (authData?.user && authData?.user?.identities && authData.user.identities.length === 0)
+
+      if (isAlreadyRegistered) {
+        setIsSubmitting(false)
+        Alert.alert(
+          'Email Already Registered',
+          'This email is already registered. Please log in instead or use a different email address.',
+          [
+            {
+              text: 'Log In Now',
+              onPress: () => {
+                setEmail(userEmail)
+                setStep('login')
+              }
+            },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        )
+        return
+      }
+
+      await supabase.auth.resend({
         type: 'signup',
         email: userEmail
       })
-
-      if (resendErr) {
-        console.warn('[SignupScreen] resend notice:', resendErr.message)
-      }
     } catch (e) {
       console.warn('[SignupScreen] signUp exception:', e)
     }
