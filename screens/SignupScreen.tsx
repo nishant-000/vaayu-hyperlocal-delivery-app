@@ -187,7 +187,8 @@ function PremiumInputField({
       secureTextEntry={secure}
       style={tw`w-full h-[52px] bg-gray-50 border border-gray-200 rounded-[14px] px-4 text-[14px] font-medium text-gray-800`}
     />
-  }
+  )
+}
 
 function PrimarySubmitButton({
   onPress,
