@@ -854,18 +854,42 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         </View>
                         {/* Status Badge */}
                         <View style={[tw`px-3 py-1 rounded-full`, 
+                          order.status !== 'delivered' && order.status !== 'cancelled' && (function() {
+                            const now = new Date()
+                            if (order.delivery_mode === 'instant' || !order.selected_slot_label) {
+                              const createdAt = new Date(order.created_at || Date.now())
+                              return now > new Date(createdAt.getTime() + 20 * 60 * 1000)
+                            }
+                            return false
+                          })() ? tw`bg-red-500` :
                           order.status === 'incoming' ? tw`bg-blue-100` :
                           order.status === 'out_for_delivery' || order.status === 'preparing' || order.status === 'accepted' ? tw`bg-orange-100` :
                           order.status === 'ready_for_pickup' ? tw`bg-purple-100` :
                           order.status === 'delivered' ? tw`bg-green-100` : tw`bg-red-100`
                         ]}>
                           <Text style={[tw`text-[12px] font-black uppercase`,
+                            order.status !== 'delivered' && order.status !== 'cancelled' && (function() {
+                              const now = new Date()
+                              if (order.delivery_mode === 'instant' || !order.selected_slot_label) {
+                                const createdAt = new Date(order.created_at || Date.now())
+                                return now > new Date(createdAt.getTime() + 20 * 60 * 1000)
+                              }
+                              return false
+                            })() ? tw`text-white` :
                             order.status === 'incoming' ? tw`text-blue-700` :
                             order.status === 'out_for_delivery' || order.status === 'preparing' || order.status === 'accepted' ? tw`text-orange-700` :
                             order.status === 'ready_for_pickup' ? tw`text-purple-700` :
                             order.status === 'delivered' ? tw`text-green-700` : tw`text-red-700`
                           ]}>
-                            {order.status === 'incoming' ? '📥 NEW ORDER' :
+                            {order.status !== 'delivered' && order.status !== 'cancelled' && (function() {
+                              const now = new Date()
+                              if (order.delivery_mode === 'instant' || !order.selected_slot_label) {
+                                const createdAt = new Date(order.created_at || Date.now())
+                                return now > new Date(createdAt.getTime() + 20 * 60 * 1000)
+                              }
+                              return false
+                            })() ? '⚠️ LATE / OVERDUE' :
+                             order.status === 'incoming' ? '📥 NEW ORDER' :
                              order.status === 'out_for_delivery' || order.status === 'preparing' || order.status === 'accepted' ? '🛵 OUT FOR DELIVERY' :
                              order.status === 'ready_for_pickup' ? '📍 COLLECT YOUR ORDER' :
                              order.status === 'delivered' ? '✅ DELIVERED' : '❌ CANCELLED'}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Polyline } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
@@ -18,60 +18,116 @@ const statusConfig: Record<string, { label: string; color: string; bg: string; d
 
 const tabs = ['All', 'Active', 'Past']
 
-function LiveTracker({ activeOrder }: { activeOrder: any }) {
-  if (!activeOrder) return null
+export function getSlotEndTimeDate(slotLabel: string, createdAtIso?: string): Date | null {
+  try {
+    const orderDate = createdAtIso ? new Date(createdAtIso) : new Date()
+    const parts = slotLabel.split(/[-–—to]/i)
+    const endTimeStr = (parts.length > 1 ? parts[1] : parts[0]).trim()
 
-  const getStepIndex = (status: string) => {
-    if (status === 'delivered') return 3
-    if (status === 'ready_for_pickup') return 2
-    if (status === 'out_for_delivery' || status === 'preparing' || status === 'accepted') return 1
-    return 0 // incoming / pending
+    const match = endTimeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i)
+    if (!match) return null
+
+    let hours = parseInt(match[1], 10)
+    const minutes = parseInt(match[2], 10)
+    const ampm = match[3] ? match[3].toUpperCase() : null
+
+    if (ampm === 'PM' && hours < 12) hours += 12
+    if (ampm === 'AM' && hours === 12) hours = 0
+
+    const slotDate = new Date(orderDate)
+    slotDate.setHours(hours, minutes, 0, 0)
+    return slotDate
+  } catch (e) {
+    return null
+  }
+}
+
+export function isOrderLate(order: any): boolean {
+  if (!order || order.status === 'delivered' || order.status === 'cancelled') {
+    return false
   }
 
-  const currentStep = getStepIndex(activeOrder.status)
-  const isInstant = activeOrder.delivery_mode === 'instant'
+  const now = new Date()
+
+  if (order.delivery_mode === 'instant' || !order.selected_slot_label) {
+    const createdAt = new Date(order.created_at || Date.now())
+    const expectedTime = new Date(createdAt.getTime() + 20 * 60 * 1000)
+    return now > expectedTime
+  }
+
+  if (order.selected_slot_label) {
+    const slotEndTime = getSlotEndTimeDate(order.selected_slot_label, order.created_at)
+    if (slotEndTime) {
+      return now > slotEndTime
+    }
+  }
+
+  return false
+}
+
+function getStepIndex(status: string) {
+  if (status === 'delivered') return 3
+  if (status === 'ready_for_pickup') return 2
+  if (status === 'out_for_delivery' || status === 'preparing' || status === 'accepted') return 1
+  return 0 // incoming / pending
+}
+
+// 🟢 Per-Order Tracking Card Component (Dark Green #1a3a2a)
+function ActiveOrderTrackingCard({ order }: { order: any }) {
+  const currentStep = getStepIndex(order.status)
+  const isInstant = order.delivery_mode === 'instant' || !order.selected_slot_label
+  const late = isOrderLate(order)
+
   const expectedText = isInstant
     ? '20 mins from order placement'
-    : (activeOrder.selected_slot_label || 'Selected Slot')
+    : (order.selected_slot_label || 'Selected Slot')
 
-  const statusDisplayTitle = activeOrder.status === 'ready_for_pickup'
+  const statusDisplayTitle = late
+    ? 'OVERDUE'
+    : order.status === 'ready_for_pickup'
     ? 'COLLECT AT GATE'
-    : activeOrder.status === 'out_for_delivery' || activeOrder.status === 'preparing' || activeOrder.status === 'accepted'
+    : order.status === 'out_for_delivery' || order.status === 'preparing' || order.status === 'accepted'
     ? 'ON THE WAY'
-    : activeOrder.status === 'delivered'
-    ? 'DELIVERED'
     : 'ORDER PLACED'
 
   return (
-    <View style={[tw`mx-4 mb-4 rounded-3xl overflow-hidden shadow-md`, { backgroundColor: '#1a3a2a' }]}>
+    <View style={[tw`rounded-3xl overflow-hidden shadow-md mb-3`, { backgroundColor: '#1a3a2a' }]}>
       <View style={tw`p-5`}>
         <View style={tw`flex-row items-start justify-between mb-3`}>
           <View style={tw`flex-1 mr-2`}>
-            <Text style={tw`text-[10px] font-black uppercase tracking-widest text-[#8fda58] mb-1`}>Live tracking</Text>
-            <Text style={tw`text-white font-black text-[20px]`}>Order #{activeOrder.id}</Text>
+            <View style={tw`flex-row items-center gap-2 mb-1`}>
+              <Text style={tw`text-[10px] font-black uppercase tracking-widest text-[#8fda58]`}>Live tracking</Text>
+              {late && (
+                <View style={tw`bg-red-500 rounded-full px-2 py-0.5`}>
+                  <Text style={tw`text-white font-black text-[9px] uppercase tracking-wider`}>⚠️ LATE</Text>
+                </View>
+              )}
+            </View>
+            <Text style={tw`text-white font-black text-[20px]`}>Order #{order.id}</Text>
             <Text style={tw`text-[12px] font-medium text-gray-300 mt-0.5`} numberOfLines={1}>
-              📍 {activeOrder.location}
+              📍 {order.location}
             </Text>
           </View>
-          <View style={tw`bg-white/10 border border-white/20 rounded-2xl px-3 py-1.5 items-center`}>
-            <Text style={tw`text-[#8fda58] font-black text-[13px] leading-none uppercase`}>
+          <View style={[tw`border rounded-2xl px-3 py-1.5 items-center`, { backgroundColor: late ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.1)', borderColor: late ? '#ef4444' : 'rgba(255,255,255,0.2)' }]}>
+            <Text style={[tw`font-black text-[12px] leading-none uppercase`, { color: late ? '#f87171' : '#8fda58' }]}>
               {statusDisplayTitle}
             </Text>
           </View>
         </View>
 
         {/* Expected Time of Delivery */}
-        <View style={tw`bg-white/10 rounded-2xl p-3 mb-4 border border-white/10`}>
+        <View style={[tw`rounded-2xl p-3 mb-4 border`, { backgroundColor: late ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.1)', borderColor: late ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.1)' }]}>
           <Text style={tw`text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-0.5`}>
             {isInstant ? '⚡ Instant Delivery' : '📅 Scheduled Slot'}
           </Text>
           <Text style={tw`text-[13px] font-black text-white`}>
-            Expected Delivery: <Text style={tw`text-[#8fda58]`}>{expectedText}</Text>
+            Expected Delivery: <Text style={{ color: late ? '#f87171' : '#8fda58' }}>{expectedText}</Text>
+            {late && <Text style={tw`text-red-400 font-bold text-[11px]`}> (Past Schedule)</Text>}
           </Text>
         </View>
 
         {/* Progress steps: Placed -> Out for Delivery -> Collect Your Order -> Delivered */}
-        <View style={tw`flex-row items-center mt-1`}>
+        <View style={tw`flex-row items-center mt-1 mb-2`}>
           {['Placed', 'Out for Delivery', 'Collect Your Order', 'Delivered'].map((step, i) => {
             const done = i < currentStep
             const active = i === currentStep
@@ -100,6 +156,14 @@ function LiveTracker({ activeOrder }: { activeOrder: any }) {
               </View>
             )
           })}
+        </View>
+
+        {/* Amount & Time footer */}
+        <View style={tw`flex-row items-center justify-between pt-3 border-t border-white/10 mt-1`}>
+          <Text style={tw`text-[12px] text-gray-300 font-medium`}>
+            {new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          <Text style={tw`font-black text-[16px] text-white`}>₹{order.grand_total || order.total_amount || 0}</Text>
         </View>
       </View>
     </View>
@@ -172,8 +236,6 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
     return true
   })
 
-  const activeOrder = orders.find(o => o.status !== 'delivered' && o.status !== 'cancelled')
-
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       {/* Header */}
@@ -203,11 +265,6 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-36 pt-4`}>
-        {/* Live tracker card for active order */}
-        {activeOrder && (activeTab === 'All' || activeTab === 'Active') && (
-          <LiveTracker activeOrder={activeOrder} />
-        )}
-
         <View style={tw`flex-col gap-3 px-4`}>
           {loading ? (
             <View style={tw`py-12 items-center justify-center`}>
@@ -221,9 +278,17 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
             </View>
           ) : (
             filtered.map(order => {
+              const isActive = order.status !== 'delivered' && order.status !== 'cancelled'
+
+              // Active orders get their own dark green tracking card!
+              if (isActive) {
+                return <ActiveOrderTrackingCard key={order.id} order={order} />
+              }
+
+              // Delivered or Cancelled orders get the plain white card design
               const s = statusConfig[order.status] || { label: order.status, color: '#6b7280', bg: '#f3f4f6', dot: '#9ca3af' }
               return (
-                <View key={order.id} style={tw`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100`}>
+                <View key={order.id} style={tw`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 mb-3`}>
                   <View style={tw`flex-row gap-3 p-4`}>
                     <View style={tw`w-14 h-14 rounded-2xl bg-green-100 items-center justify-center`}>
                       <Text style={tw`text-2xl`}>🍔</Text>
@@ -266,3 +331,4 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
     </View>
   )
 }
+
