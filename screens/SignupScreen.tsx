@@ -262,10 +262,14 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
   const handleOwnerSubmit = () => {
     setRole('owner')
     const userEmail = email.trim()
-    Alert.alert(
-      '🔑 OTP Code Sent',
-      `An OTP verification code has been sent to ${userEmail}. Please enter the code below to verify your shop account.`
-    )
+
+    setOtpCode('')
+    setStep('verify')
+
+    supabase.auth.signUp({
+      email: userEmail,
+      password: password
+    }).catch(err => console.warn('[SignupScreen] signUp notice:', err))
   }
 
   const handleForgotPassword = async (emailAddr: string) => {

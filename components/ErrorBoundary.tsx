@@ -36,10 +36,17 @@ export class ErrorBoundary extends Component<Props, State> {
           <View style={tw`w-20 h-20 rounded-full bg-green-50 items-center justify-center mb-4 border border-green-100`}>
             <Text style={tw`text-4xl`}>⚡</Text>
           </View>
-          <Text style={tw`text-[22px] font-black text-gray-900 mb-2`}>Refreshing App...</Text>
-          <Text style={tw`text-[13px] text-gray-500 font-medium text-center mb-6 leading-relaxed px-4`}>
-            Tap below to reload VAAYU and return to your screen.
+          <Text style={tw`text-[22px] font-black text-gray-900 mb-1`}>Something went wrong</Text>
+          <Text style={tw`text-[13px] text-gray-500 font-medium text-center mb-3 leading-relaxed px-4`}>
+            An error occurred while loading this view. Tap below to reload.
           </Text>
+          {this.state.error?.message && (
+            <View style={tw`bg-gray-100 rounded-xl p-3 mb-6 max-w-[280px] border border-gray-200`}>
+              <Text style={tw`text-[11px] font-mono text-red-600 text-center`}>
+                {this.state.error.message}
+              </Text>
+            </View>
+          )}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={this.handleReset}
