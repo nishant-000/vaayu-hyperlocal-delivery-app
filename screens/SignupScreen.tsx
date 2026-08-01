@@ -374,6 +374,8 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
         Alert.alert('OTP Verification Failed', error.message || 'Invalid or expired OTP code.')
         return
       }
+    }
+
     if (password && newResetPassword === password) {
       setIsSubmitting(false)
       Alert.alert('Invalid New Password', 'Your new password cannot be the same as your current password. Please choose a different password.')
