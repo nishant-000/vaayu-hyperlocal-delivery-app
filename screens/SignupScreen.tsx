@@ -247,22 +247,21 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const userEmail = email.trim()
     setIsSubmitting(true)
 
-    const { error } = await supabase.auth.signUp({
-      email: userEmail,
-      password: password
-    })
-    setIsSubmitting(false)
-
-    if (error && !error.message.includes('already registered')) {
-      console.warn('[SignupScreen] signUp notice:', error.message)
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: userEmail,
+        password: password
+      })
+      if (error && !error.message.includes('already registered')) {
+        console.warn('[SignupScreen] signUp notice:', error.message)
+      }
+    } catch (e) {
+      console.warn('[SignupScreen] signUp notice:', e)
     }
 
     setOtpCode('')
     setStep('verify')
-    Alert.alert(
-      '🔑 OTP Code Sent',
-      `An OTP verification code has been sent to ${userEmail}. Please enter the code below to complete registration.`
-    )
+    setIsSubmitting(false)
   }
 
   const handleOwnerSubmit = async () => {
@@ -270,22 +269,21 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const userEmail = email.trim()
     setIsSubmitting(true)
 
-    const { error } = await supabase.auth.signUp({
-      email: userEmail,
-      password: password
-    })
-    setIsSubmitting(false)
-
-    if (error && !error.message.includes('already registered')) {
-      console.warn('[SignupScreen] signUp notice:', error.message)
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: userEmail,
+        password: password
+      })
+      if (error && !error.message.includes('already registered')) {
+        console.warn('[SignupScreen] signUp notice:', error.message)
+      }
+    } catch (e) {
+      console.warn('[SignupScreen] signUp notice:', e)
     }
 
     setOtpCode('')
     setStep('verify')
-    Alert.alert(
-      '🔑 OTP Code Sent',
-      `An OTP verification code has been sent to ${userEmail}. Please enter the code below to verify your shop account.`
-    )
+    setIsSubmitting(false)
   }
 
   const handleForgotPassword = async (emailAddr: string) => {
@@ -752,14 +750,18 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
               <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleLoginSubmit} style={tw`mt-4 mb-6`}>
+            <TouchableOpacity onPress={handleLoginSubmit} disabled={isSubmitting} style={tw`mt-4 mb-6`}>
               <LinearGradient
                 colors={['#8fda58', '#7fc448']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={tw`w-full py-4 rounded-2xl items-center`}
+                style={tw`w-full py-4 rounded-2xl items-center justify-center`}
               >
-                <Text style={tw`text-[15px] font-black text-white`}>Log In</Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={tw`text-[15px] font-black text-white`}>Log In</Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
 
@@ -845,13 +847,17 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
           <View style={tw`px-6 mb-6`}>
             <TouchableOpacity
               onPress={handleStudentSubmit}
-              disabled={!isStudentValid}
+              disabled={!isStudentValid || isSubmitting}
               style={[
-                tw`w-full py-4 rounded-2xl items-center`,
-                { backgroundColor: isStudentValid ? '#8fda58' : '#d1d5db' }
+                tw`w-full py-4 rounded-2xl items-center justify-center`,
+                { backgroundColor: isStudentValid && !isSubmitting ? '#8fda58' : '#d1d5db' }
               ]}
             >
-              <Text style={tw`text-[15px] font-black text-white`}>Proceed to Verification</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={tw`text-[15px] font-black text-white`}>Proceed to Verification</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -959,13 +965,17 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
           <View style={tw`px-6 mb-6 mt-4`}>
             <TouchableOpacity
               onPress={handleOwnerSubmit}
-              disabled={!isOwnerValid}
+              disabled={!isOwnerValid || isSubmitting}
               style={[
-                tw`w-full py-4 rounded-2xl items-center`,
-                { backgroundColor: isOwnerValid ? '#8fda58' : '#d1d5db' }
+                tw`w-full py-4 rounded-2xl items-center justify-center`,
+                { backgroundColor: isOwnerValid && !isSubmitting ? '#8fda58' : '#d1d5db' }
               ]}
             >
-              <Text style={tw`text-[15px] font-black text-white`}>Proceed to Verification</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={tw`text-[15px] font-black text-white`}>Proceed to Verification</Text>
+              )}
             </TouchableOpacity>
           </View>
 
