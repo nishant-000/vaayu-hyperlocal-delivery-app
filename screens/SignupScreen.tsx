@@ -282,20 +282,28 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      await supabase.auth.signUp({
         email: userEmail,
         password: password
       })
-      if (error && !error.message.includes('already registered')) {
-        console.warn('[SignupScreen] signUp notice:', error.message)
+      
+      // Explicitly call resend to force SMTP email dispatch for new or existing registrations
+      const { error: resendErr } = await supabase.auth.resend({
+        type: 'signup',
+        email: userEmail
+      })
+
+      if (resendErr) {
+        console.warn('[SignupScreen] resend notice:', resendErr.message)
       }
     } catch (e) {
-      console.warn('[SignupScreen] signUp notice:', e)
+      console.warn('[SignupScreen] signUp exception:', e)
     }
 
     setOtpCode('')
     setStep('verify')
     setIsSubmitting(false)
+    Alert.alert('Verification Code Sent 📧', `A 6-digit verification code has been sent to ${userEmail}. Please check your email inbox.`)
   }
 
   const handleOwnerSubmit = async () => {
@@ -304,20 +312,28 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      await supabase.auth.signUp({
         email: userEmail,
         password: password
       })
-      if (error && !error.message.includes('already registered')) {
-        console.warn('[SignupScreen] signUp notice:', error.message)
+
+      // Explicitly call resend to force SMTP email dispatch for new or existing registrations
+      const { error: resendErr } = await supabase.auth.resend({
+        type: 'signup',
+        email: userEmail
+      })
+
+      if (resendErr) {
+        console.warn('[SignupScreen] resend notice:', resendErr.message)
       }
     } catch (e) {
-      console.warn('[SignupScreen] signUp notice:', e)
+      console.warn('[SignupScreen] signUp exception:', e)
     }
 
     setOtpCode('')
     setStep('verify')
     setIsSubmitting(false)
+    Alert.alert('Verification Code Sent 📧', `A 6-digit verification code has been sent to ${userEmail}. Please check your email inbox.`)
   }
 
   const handleForgotPassword = async (emailAddr: string) => {
