@@ -195,7 +195,7 @@ export default function App() {
             .or(`owner_id.eq.${profile?.id || ''},owner_id.eq.${authUser?.id || ''}`)
             .maybeSingle()
 
-          const userId = profile?.id || authUser.id
+          const userId = authUser.id || profile?.id || profile?.user_id
           const determinedRole = shop ? 'shop_owner' : (profile?.role || 'customer')
           const realFullName = profile?.full_name || ''
           const displayName = realFullName || (shop ? shop.name : undefined) || cleanEmail.split('@')[0]

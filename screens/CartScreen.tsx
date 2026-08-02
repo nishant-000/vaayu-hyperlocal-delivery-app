@@ -167,12 +167,21 @@ export default function CartScreen({
       ? (selectedSlotId === 'slot_1' ? '12:40 PM – 1:40 PM (Lunch Slot)' : '8:00 PM – 9:00 PM (Dinner Slot)')
       : undefined
 
+    // Resolve authenticated Supabase user ID dynamically to guarantee RLS compliance
+    let authUid = user?.id || null
+    try {
+      const { data: authData } = await supabase.auth.getUser()
+      if (authData?.user?.id) {
+        authUid = authData.user.id
+      }
+    } catch (_) {}
+
     const orderPayload = {
       id: orderId,
-      user_id: user?.id || null,                                          // actual column name
+      user_id: authUid,
       shop_id: cartShop?.id || null,
-      shop_name: cartShop?.name || '',                                     // actual column
-      customer_name: user?.name || 'Campus Student',
+      shop_name: cartShop?.name || '',
+      customer_name: user?.name || user?.full_name || 'Campus Student',
       location: `${address.area}, Room ${address.room}${address.landmark ? ' · ' + address.landmark : ''}`,
       delivery_mode: deliveryMode,
       selected_slot_label: selectedSlotLabel || null,
@@ -198,22 +207,13 @@ export default function CartScreen({
       if (error) {
         console.error('[CartScreen] Error inserting order into Supabase:', error)
       } else {
-        // Decrement stock_quantity for each ordered item in Supabase (real-time update)
+        // Safely decrement stock_quantity for each ordered item in Supabase via SECURITY DEFINER RPC
         for (const cartItem of cartItems) {
           const qty = cartItem.quantity || cartItem.qty || 1
-          const shopItem = cartShop?.items?.find((i: any) => i.id === cartItem.id)
-          const currentStock = shopItem?.stockQuantity ?? shopItem?.stock_quantity
-
-          if (currentStock !== undefined && currentStock !== null) {
-            const newStock = Math.max(0, currentStock - qty)
-            await supabase
-              .from('menu_items')
-              .update({
-                stock_quantity: newStock,
-                is_available: newStock > 0
-              })
-              .eq('id', cartItem.id)
-          }
+          await supabase.rpc('decrement_menu_stock', {
+            item_id: cartItem.id,
+            quantity_to_subtract: qty
+          })
         }
       }
     } catch (err) {

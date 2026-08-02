@@ -740,7 +740,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       return
     }
 
-    const userId = profile?.id || authUser?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
+    const userId = authUser?.id || profile?.id || profile?.user_id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
     const determinedRole = isShopPartner ? 'shop_owner' : (profile?.role || 'customer')
     
     // Read real full_name from database profile, fallback to shop name or email handle
