@@ -14,6 +14,7 @@ import ShopDetailsScreen from './screens/ShopDetailsScreen'
 import OwnerDashboard from './screens/OwnerDashboard'
 import { BACKEND_URL } from './screens/apiConfig'
 import { registerForPushNotifications, checkNotificationPermissionStatus, setupNotificationListeners } from './lib/notifications'
+import { supabase } from './lib/supabase'
 import { PermissionPrePromptModal } from './components/PermissionPrePromptModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
