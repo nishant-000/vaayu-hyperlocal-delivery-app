@@ -794,34 +794,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         </TouchableOpacity>
       </View>
 
-      {/* Summary Cards */}
-      <View style={tw`flex-row px-4 pt-4 gap-3`}>
-        <View style={[tw`flex-1 rounded-2xl p-4 border`, incomingCount > 0 ? tw`bg-red-50 border-red-300` : tw`bg-white border-gray-200`]}>
-          <Text style={tw`text-[12px] font-black uppercase text-gray-500`}>{t.newWaiting}</Text>
-          <Text style={[tw`text-[32px] font-black mt-0.5`, incomingCount > 0 ? tw`text-red-600` : tw`text-gray-900`]}>{incomingCount}</Text>
-        </View>
-
-        <View style={tw`flex-1 bg-white rounded-2xl p-4 border border-gray-200`}>
-          <Text style={tw`text-[12px] font-black uppercase text-gray-500`}>{t.todayCash}</Text>
-          <Text style={tw`text-[32px] font-black text-gray-900 mt-0.5`}>₹{todayTotalCashCollected}</Text>
-        </View>
-      </View>
-
-      {/* Delivery Fee Policy Banner */}
-      <View style={tw`px-4 pt-3`}>
-        <View style={tw`bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3.5 flex-row items-center gap-3 shadow-xs`}>
-          <Text style={tw`text-2xl`}>🛵</Text>
-          <View style={tw`flex-1`}>
-            <Text style={tw`text-[12px] font-black text-emerald-950 uppercase tracking-wide`}>
-              DELIVERY FEE POLICY NOTE
-            </Text>
-            <Text style={tw`text-[11px] font-bold text-emerald-900 leading-tight mt-0.5`}>
-              Free delivery on orders ≥ ₹150 applies <Text style={tw`font-black text-emerald-950 underline`}>ONLY to Scheduled Delivery</Text>. Instant Delivery carries standard fee regardless of order total.
-            </Text>
-          </View>
-        </View>
-      </View>
-
       <ScrollView contentContainerStyle={tw`p-4 pb-36`}>
         {/* ── 1. ORDERS TAB ────── */}
         {activeTab === 'orders' && (
