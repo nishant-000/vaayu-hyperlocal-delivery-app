@@ -639,6 +639,9 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
     setIsSubmitting(true)
 
+    // Determine target portal (if on Slide 0 of carousel, role is 'customer'. If step === 'login' and role === 'owner', it's 'owner')
+    const targetPortal = (step === 'carousel' && activeSlide === 0) ? 'customer' : (role === 'owner' ? 'owner' : 'customer')
+
     // 1. Authenticate with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
@@ -653,6 +656,12 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
         id: `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
         email: cleanEmail
       } as any
+    }
+
+    if (!authUser && authError) {
+      setIsSubmitting(false)
+      Alert.alert('Login Failed', authError.message || 'Incorrect email or password. Please try again.')
+      return
     }
 
     // 2. Query profiles & shops by email first, fallback to auth ID
@@ -682,15 +691,57 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       .or(`owner_id.eq.${profile?.id || ''},owner_id.eq.${authUser?.id || ''}`)
       .maybeSingle()
 
+    const { data: worker } = await supabase
+      .from('shop_workers')
+      .select('*')
+      .or(`user_id.eq.${profile?.id || ''},user_id.eq.${authUser?.id || ''}`)
+      .maybeSingle()
+
+    const isShopPartner = shop !== null || worker !== null || profile?.role === 'shop_owner' || profile?.role === 'worker'
+
     setIsSubmitting(false)
 
-    if (!authUser && !profile) {
-      Alert.alert('Login Failed', 'Incorrect email or password. Please try again.')
+    // ── STRICT PORTAL BOUNDARY ENFORCEMENT ──
+    if (targetPortal === 'customer' && isShopPartner) {
+      Alert.alert(
+        'Partner Account Detected 🏪',
+        'This email belongs to a registered Shop Partner. Please use the Partner Log In screen to access your shop dashboard.',
+        [
+          {
+            text: 'Go to Partner Log In',
+            onPress: () => {
+              setRole('owner')
+              setStep('login')
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      )
+      await supabase.auth.signOut()
+      return
+    }
+
+    if (targetPortal === 'owner' && !isShopPartner) {
+      Alert.alert(
+        'Customer Account Detected 👤',
+        'This email belongs to a Customer account. Please use the Customer Log In screen to browse canteens and place orders.',
+        [
+          {
+            text: 'Go to Customer Log In',
+            onPress: () => {
+              setRole('customer')
+              setStep('login')
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      )
+      await supabase.auth.signOut()
       return
     }
 
     const userId = profile?.id || authUser?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
-    const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
+    const determinedRole = isShopPartner ? 'shop_owner' : (profile?.role || 'customer')
     
     // Read real full_name from database profile, fallback to shop name or email handle
     const realFullName = profile?.full_name || ''
