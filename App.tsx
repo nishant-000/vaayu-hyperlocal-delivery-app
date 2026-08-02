@@ -171,6 +171,64 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 2500)
   }
 
+  // Restore persisted Supabase auth session on app startup
+  useEffect(() => {
+    async function restoreSession() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (!error && session?.user) {
+          const authUser = session.user
+          const cleanEmail = authUser.email || ''
+
+          const { data: pList } = await supabase
+            .from('profiles')
+            .select('*')
+            .ilike('email', cleanEmail.trim())
+            .order('created_at', { ascending: false })
+
+          const profile = (pList && pList.length > 0) ? (pList.find((p: any) => p.full_name && p.phone_number) || pList[0]) : null
+
+          const { data: shop } = await supabase
+            .from('shops')
+            .select('*')
+            .or(`owner_id.eq.${profile?.id || ''},owner_id.eq.${authUser?.id || ''}`)
+            .maybeSingle()
+
+          const userId = profile?.id || authUser.id
+          const determinedRole = shop ? 'shop_owner' : (profile?.role || 'customer')
+          const realFullName = profile?.full_name || ''
+          const displayName = realFullName || (shop ? shop.name : undefined) || cleanEmail.split('@')[0]
+          const displayPhone = profile?.phone_number || ''
+
+          setUser({
+            id: userId,
+            role: determinedRole,
+            name: displayName,
+            full_name: realFullName || displayName,
+            email: cleanEmail,
+            phone_number: displayPhone,
+            shop_id: shop?.id || undefined,
+            shop_name: shop?.name || undefined
+          })
+        }
+      } catch (e) {
+        console.warn('[App] restoreSession notice:', e)
+      }
+    }
+
+    restoreSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setUser(null)
+      }
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
+  }, [])
+
   // Push Notifications Setup & Permission Check
   useEffect(() => {
     async function initPush() {
@@ -382,7 +440,10 @@ export default function App() {
               address={address}
               setAddress={setAddress}
               savedShops={savedShops}
-              onSignOut={() => setUser(null)}
+              onSignOut={async () => {
+                await supabase.auth.signOut()
+                setUser(null)
+              }}
             />
           )}
 
