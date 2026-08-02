@@ -51,7 +51,7 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
 
   // Edit profile state initialized directly from logged in user data without fake hardcoded fallbacks
-  const [name, setName] = useState(user?.name || '')
+  const [name, setName] = useState(user?.name || user?.full_name || '')
   const [email] = useState(user?.email || '')
   const [phone, setPhone] = useState(user?.phone_number || '')
   const [hostel] = useState('IIIT Tiruchirappalli, Gate 1')
@@ -75,6 +75,7 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
 
   // 1. Edit Profile Screen
   if (activeModal === 'Edit profile') {
+    const displayName = user?.name || user?.full_name || name || 'User'
     return (
       <View style={tw`flex-1 bg-gray-50`}>
         <BackHeader title="Edit Profile" onBack={() => setActiveModal(null)} />
@@ -82,10 +83,10 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
           <View style={tw`items-center my-4`}>
             <View style={tw`w-24 h-24 rounded-3xl bg-emerald-700 items-center justify-center mb-2 shadow-sm`}>
               <Text style={tw`text-3xl font-black text-white`}>
-                {(user?.name || name || 'U').charAt(0).toUpperCase()}
+                {displayName.charAt(0).toUpperCase()}
               </Text>
             </View>
-            <Text style={tw`text-[16px] font-black text-gray-900`}>{user?.name || name}</Text>
+            <Text style={tw`text-[16px] font-black text-gray-900`}>{displayName}</Text>
             <Text style={tw`text-[12px] text-gray-400 font-medium`}>{user?.email || email}</Text>
           </View>
 

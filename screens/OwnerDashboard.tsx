@@ -753,7 +753,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             </Text>
             <Text style={tw`text-[22px] font-black text-gray-900`} numberOfLines={1}>{shopName}</Text>
             <Text style={tw`text-[12px] font-bold text-gray-700`}>
-              👤 {user?.name || user?.email?.split('@')[0] || 'Owner'} {user?.phone_number ? `• 📱 ${user?.phone_number}` : ''}
+              👤 {user?.name || user?.full_name || user?.email?.split('@')[0] || 'Owner'} {user?.phone_number ? `• 📱 ${user?.phone_number}` : ''}
             </Text>
           </View>
 
