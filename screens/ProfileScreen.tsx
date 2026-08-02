@@ -50,29 +50,29 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
 
   // Edit profile state initialized directly from logged in user data without fake hardcoded fallbacks
-  const [name, setName] = useState(user?.name || user?.full_name || '')
-  const [email] = useState(user?.email || '')
-  const [phone, setPhone] = useState(user?.phone_number || '')
+  const [name, setName] = useState<string>(user?.full_name || (user?.name && user.name !== user?.email?.split('@')[0] ? user.name : ''))
+  const [email] = useState<string>(user?.email || '')
+  const [phone, setPhone] = useState<string>(user?.phone_number || '')
   const [hostel] = useState('IIIT Tiruchirappalli, Gate 1')
 
   // Auto-fetch fresh profile details directly from Supabase profiles table on mount
   useEffect(() => {
     async function loadLiveProfile() {
-      if (!user) return
-      const userEmail = user.email || ''
-      const userId = user.id || ''
+      const userEmail = user?.email || email
+      if (!userEmail) return
 
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
-          .or(`id.eq.${userId},user_id.eq.${userId},email.ilike.${userEmail}`)
+          .select('full_name, phone_number')
+          .ilike('email', userEmail.trim())
           .order('created_at', { ascending: false })
+          .limit(1)
 
         if (!error && data && data.length > 0) {
-          const bestProfile = data.find((p: any) => p.full_name && p.phone_number) || data[0]
-          if (bestProfile.full_name) setName(bestProfile.full_name)
-          if (bestProfile.phone_number) setPhone(bestProfile.phone_number)
+          const p = data[0]
+          if (p.full_name) setName(p.full_name)
+          if (p.phone_number) setPhone(p.phone_number)
         }
       } catch (e) {
         console.warn('[ProfileScreen] live profile fetch notice:', e)
@@ -80,7 +80,7 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
     }
 
     loadLiveProfile()
-  }, [user])
+  }, [user, email])
 
   // Security state
   const [currentPass, setCurrentPass] = useState('')
@@ -460,8 +460,15 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32`}>
         {/* Profile card */}
         {(() => {
-          const userEmailPrefix = (user?.email || email || '').split('@')[0]
-          const displayName = (name && name !== userEmailPrefix) ? name : (user?.name && user.name !== userEmailPrefix) ? user.name : (user?.full_name || name || 'Campus Student')
+          const emailPrefix = (email || user?.email || '').split('@')[0]
+          const displayName = (name && name !== emailPrefix) 
+            ? name 
+            : (user?.full_name && user.full_name !== emailPrefix) 
+            ? user.full_name 
+            : (user?.name && user.name !== emailPrefix) 
+            ? user.name 
+            : (name || emailPrefix || 'Campus Student')
+
           const displayPhone = phone || user?.phone_number || ''
 
           return (
