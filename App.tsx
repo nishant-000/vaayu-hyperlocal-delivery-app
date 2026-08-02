@@ -412,10 +412,6 @@ export default function App() {
           </View>
         </View>
       )}
-
-          </View>
-        </View>
-      )}
     </View>
   </ErrorBoundary>
 )
