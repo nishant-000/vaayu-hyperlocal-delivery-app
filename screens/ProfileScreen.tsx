@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Linking, Platform } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line } from 'react-native-svg'
+import { supabase } from '../lib/supabase'
 
 // Hosted PDF URL — served from web app's /public/ or GitHub raw
 const VAAYU_TERMS_PDF_URL = Platform.OS === 'web'
@@ -15,8 +16,6 @@ const AVATAR_OPTIONS = [
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format',
   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format',
 ]
-
-
 
 function ChevronRight() {
   return (
@@ -55,6 +54,33 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
   const [email] = useState(user?.email || '')
   const [phone, setPhone] = useState(user?.phone_number || '')
   const [hostel] = useState('IIIT Tiruchirappalli, Gate 1')
+
+  // Auto-fetch fresh profile details directly from Supabase profiles table on mount
+  useEffect(() => {
+    async function loadLiveProfile() {
+      if (!user) return
+      const userEmail = user.email || ''
+      const userId = user.id || ''
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`id.eq.${userId},user_id.eq.${userId},email.ilike.${userEmail}`)
+          .order('created_at', { ascending: false })
+
+        if (!error && data && data.length > 0) {
+          const bestProfile = data.find((p: any) => p.full_name && p.phone_number) || data[0]
+          if (bestProfile.full_name) setName(bestProfile.full_name)
+          if (bestProfile.phone_number) setPhone(bestProfile.phone_number)
+        }
+      } catch (e) {
+        console.warn('[ProfileScreen] live profile fetch notice:', e)
+      }
+    }
+
+    loadLiveProfile()
+  }, [user])
 
   // Security state
   const [currentPass, setCurrentPass] = useState('')
@@ -433,26 +459,34 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32`}>
         {/* Profile card */}
-        <View style={tw`mx-4 mt-4 bg-white rounded-3xl p-4 shadow-sm`}>
-          <View style={tw`flex-row items-center gap-4`}>
-            <View style={tw`w-16 h-16 rounded-2xl bg-emerald-700 items-center justify-center shadow-xs`}>
-              <Text style={tw`text-2xl font-black text-white`}>
-                {(user?.name || name || 'U').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={tw`flex-1 min-w-0`}>
-              <Text style={tw`text-[18px] font-black text-gray-900`}>{user?.name || name || 'Campus Student'}</Text>
-              <Text style={tw`text-[12px] text-gray-400 font-medium`}>{user?.email || email}</Text>
-              {user?.phone_number || phone ? (
-                <Text style={tw`text-[12px] text-gray-700 font-bold mt-1`}>📱 {user?.phone_number || phone}</Text>
-              ) : null}
-              <View style={tw`flex-row items-center gap-1.5 mt-1.5`}>
-                <View style={tw`w-1.5 h-1.5 rounded-full bg-green-500`} />
-                <Text style={tw`text-[11px] text-green-600 font-semibold`}>Campus verified</Text>
+        {(() => {
+          const userEmailPrefix = (user?.email || email || '').split('@')[0]
+          const displayName = (name && name !== userEmailPrefix) ? name : (user?.name && user.name !== userEmailPrefix) ? user.name : (user?.full_name || name || 'Campus Student')
+          const displayPhone = phone || user?.phone_number || ''
+
+          return (
+            <View style={tw`mx-4 mt-4 bg-white rounded-3xl p-4 shadow-sm`}>
+              <View style={tw`flex-row items-center gap-4`}>
+                <View style={tw`w-16 h-16 rounded-2xl bg-emerald-700 items-center justify-center shadow-xs`}>
+                  <Text style={tw`text-2xl font-black text-white`}>
+                    {displayName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={tw`flex-1 min-w-0`}>
+                  <Text style={tw`text-[18px] font-black text-gray-900`}>{displayName}</Text>
+                  <Text style={tw`text-[12px] text-gray-400 font-medium`}>{user?.email || email}</Text>
+                  {displayPhone ? (
+                    <Text style={tw`text-[12px] text-gray-700 font-bold mt-1`}>📱 {displayPhone}</Text>
+                  ) : null}
+                  <View style={tw`flex-row items-center gap-1.5 mt-1.5`}>
+                    <View style={tw`w-1.5 h-1.5 rounded-full bg-green-500`} />
+                    <Text style={tw`text-[11px] text-green-600 font-semibold`}>Campus verified</Text>
+                  </View>
+                </View>
               </View>
             </View>
-          </View>
-        </View>
+          )
+        })()}
 
         {/* Menu sections */}
         {menuSections.map(section => (

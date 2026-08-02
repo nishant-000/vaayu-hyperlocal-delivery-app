@@ -203,12 +203,30 @@ export default function App() {
     setShowPermissionPrePrompt(false)
   }
 
-  // Auth registration handler
+  // Auth registration & session handler
   const handleRegisterUser = async (registeredUser: any) => {
+    let realName = registeredUser.name || registeredUser.full_name || ''
+    let realPhone = registeredUser.phone_number || ''
+
+    if (!realName || !realPhone || realName === registeredUser.email?.split('@')[0]) {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, phone_number')
+          .or(`id.eq.${registeredUser.id},user_id.eq.${registeredUser.id},email.eq.${registeredUser.email}`)
+          .maybeSingle()
+        if (data) {
+          if (data.full_name) realName = data.full_name
+          if (data.phone_number) realPhone = data.phone_number
+        }
+      } catch (e) {}
+    }
+
     const normalizedUser = {
       ...registeredUser,
-      name: registeredUser.name || registeredUser.full_name || '',
-      phone_number: registeredUser.phone_number || ''
+      name: realName || registeredUser.name || registeredUser.email?.split('@')[0],
+      full_name: realName || registeredUser.full_name || '',
+      phone_number: realPhone || registeredUser.phone_number || ''
     }
     setUser(normalizedUser)
     await registerForPushNotifications(registeredUser.id, registeredUser.role)
