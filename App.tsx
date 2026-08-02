@@ -205,7 +205,12 @@ export default function App() {
 
   // Auth registration handler
   const handleRegisterUser = async (registeredUser: any) => {
-    setUser(registeredUser)
+    const normalizedUser = {
+      ...registeredUser,
+      name: registeredUser.name || registeredUser.full_name || '',
+      phone_number: registeredUser.phone_number || ''
+    }
+    setUser(normalizedUser)
     await registerForPushNotifications(registeredUser.id, registeredUser.role)
   }
 

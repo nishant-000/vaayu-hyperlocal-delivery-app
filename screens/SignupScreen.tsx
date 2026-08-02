@@ -661,7 +661,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       const { data: pById } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', authUser.id)
+        .or(`id.eq.${authUser.id},user_id.eq.${authUser.id},email.eq.${cleanEmail}`)
         .maybeSingle()
       profile = pById
     }
@@ -681,7 +681,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const { data: shop } = await supabase
       .from('shops')
       .select('*')
-      .eq('owner_id', profile?.id || authUser?.id || '')
+      .or(`owner_id.eq.${profile?.id || ''},owner_id.eq.${authUser?.id || ''}`)
       .maybeSingle()
 
     setIsSubmitting(false)
@@ -695,13 +695,14 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
     
     // Read real full_name from database profile, fallback to shop name or email handle
-    const displayName = profile?.full_name || (shop ? shop.name : '') || cleanEmail.split('@')[0]
+    const displayName = profile?.full_name || (shop ? shop.name : undefined) || cleanEmail.split('@')[0]
     const displayPhone = profile?.phone_number || ''
 
     completeAuth({
       id: userId,
       role: determinedRole,
       name: displayName,
+      full_name: displayName,
       email: cleanEmail,
       phone_number: displayPhone,
       shop_id: shop?.id || undefined,
