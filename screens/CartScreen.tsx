@@ -187,6 +187,8 @@ export default function CartScreen({
       items_subtotal: subtotal,
       delivery_fee: deliveryFee,
       platform_fee: platformFee,
+      applied_promo: appliedPromo || null,
+      promo_discount: promoDiscountAmount || 0,
       grand_total: total,
       expire_at: expireTime,
     }
