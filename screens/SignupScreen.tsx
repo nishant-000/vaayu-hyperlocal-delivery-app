@@ -248,6 +248,61 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
   // OTP & Reset Password states
   const [otpCode, setOtpCode] = useState('')
   const [newResetPassword, setNewResetPassword] = useState('')
+  const [resendCooldown, setResendCooldown] = useState(30)
+  const [isResendingOtp, setIsResendingOtp] = useState(false)
+
+  // Countdown timer for OTP Resend cooldown
+  useEffect(() => {
+    if (step === 'verify' || step === 'verify_reset') {
+      setResendCooldown(30)
+    }
+  }, [step])
+
+  useEffect(() => {
+    if (resendCooldown > 0 && (step === 'verify' || step === 'verify_reset')) {
+      const timer = setTimeout(() => {
+        setResendCooldown(prev => Math.max(0, prev - 1))
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendCooldown, step])
+
+  const handleResendOtp = async () => {
+    const cleanEmail = email.trim()
+    if (!cleanEmail) {
+      Alert.alert('Enter Email', 'Please enter your registered email address first.')
+      return
+    }
+    if (resendCooldown > 0 || isResendingOtp) return
+
+    setIsResendingOtp(true)
+    try {
+      if (step === 'verify_reset') {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail)
+        if (error) {
+          Alert.alert('Unable to Resend', 'Could not send verification code. Please check your email address.')
+        } else {
+          setResendCooldown(30)
+          Alert.alert('Code Resent 📧', `A fresh 6-digit OTP code has been sent to ${cleanEmail}.`)
+        }
+      } else {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: cleanEmail
+        })
+        if (error) {
+          await supabase.auth.signInWithOtp({ email: cleanEmail })
+        }
+        setResendCooldown(30)
+        Alert.alert('Code Resent 📧', `A fresh 6-digit OTP code has been sent to ${cleanEmail}.`)
+      }
+    } catch (e) {
+      setResendCooldown(30)
+      Alert.alert('Notice', `A fresh verification code was requested for ${cleanEmail}.`)
+    } finally {
+      setIsResendingOtp(false)
+    }
+  }
 
   // Validation
   const emailDomain = email.includes('@') ? email.split('@')[1].toLowerCase() : ''
@@ -477,7 +532,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       })
       if (err2) {
         setIsSubmitting(false)
-        Alert.alert('OTP Verification Failed', error.message || 'Invalid or expired OTP code.')
+        Alert.alert('Incorrect Code', 'The verification code you entered is invalid. Please check the 6-digit code or tap Resend OTP.')
         return
       }
     }
@@ -1193,8 +1248,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
               We sent a 6-digit OTP code to <Text style={tw`font-bold text-gray-800`}>{email || 'your email'}</Text>. Enter the code below to verify your account.
             </Text>
 
-
-
             <View style={tw`w-full mb-6`}>
               <TextInput
                 placeholder="0 0 0 0 0 0"
@@ -1219,15 +1272,17 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
             />
 
             <TouchableOpacity
-              onPress={async () => {
-                if (email.trim()) {
-                  await supabase.auth.resend({ type: 'signup', email: email.trim() })
-                  Alert.alert('OTP Resent', `A new verification code was sent to ${email.trim()}.`)
-                }
-              }}
-              style={tw`self-center mt-2`}
+              onPress={handleResendOtp}
+              disabled={resendCooldown > 0 || isResendingOtp}
+              style={tw`self-center mt-3 py-2 px-4 rounded-xl`}
             >
-              <Text style={[tw`font-bold text-[13px]`, { color: '#8fda58' }]}>Resend OTP Code</Text>
+              {isResendingOtp ? (
+                <ActivityIndicator size="small" color="#8fda58" />
+              ) : (
+                <Text style={[tw`font-bold text-[13px] text-center`, { color: resendCooldown > 0 ? '#9ca3af' : '#8fda58' }]}>
+                  {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : '🔄 Resend OTP Code'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -1276,12 +1331,26 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
             <TouchableOpacity
               onPress={handleResetPasswordComplete}
-              style={[tw`w-full py-4 rounded-2xl items-center mb-4`, { backgroundColor: '#8fda58' }]}
+              style={[tw`w-full py-4 rounded-2xl items-center mb-2`, { backgroundColor: '#8fda58' }]}
             >
               {isSubmitting ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <Text style={tw`text-[15px] font-black text-white`}>Update Password & Log In</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleResendOtp}
+              disabled={resendCooldown > 0 || isResendingOtp}
+              style={tw`self-center mt-2 py-2 px-4 rounded-xl`}
+            >
+              {isResendingOtp ? (
+                <ActivityIndicator size="small" color="#8fda58" />
+              ) : (
+                <Text style={[tw`font-bold text-[13px] text-center`, { color: resendCooldown > 0 ? '#9ca3af' : '#8fda58' }]}>
+                  {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : '🔄 Resend OTP Code'}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
