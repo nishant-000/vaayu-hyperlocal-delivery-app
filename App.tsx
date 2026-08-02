@@ -454,11 +454,8 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 10,
     gap: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
     alignSelf: "center",
   },
   tabPressable: {
