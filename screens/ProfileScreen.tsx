@@ -495,6 +495,23 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
           )
         })()}
 
+        {/* Optional Soft Profile Completion Banner */}
+        {(!phone || !name || name === (email || user?.email || '').split('@')[0]) && (
+          <TouchableOpacity
+            onPress={() => setActiveModal('Edit profile')}
+            style={tw`mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex-row items-center justify-between shadow-xs`}
+          >
+            <View style={tw`flex-row items-center gap-3 flex-1`}>
+              <Text style={tw`text-xl`}>💡</Text>
+              <View style={tw`flex-1`}>
+                <Text style={tw`text-[13px] font-bold text-amber-900`}>Complete Your Profile</Text>
+                <Text style={tw`text-[11px] text-amber-700 font-medium`}>Tap here to add your name & mobile number for delivery updates.</Text>
+              </View>
+            </View>
+            <Text style={tw`text-[12px] font-black text-amber-800 ml-2`}>Edit ›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Menu sections */}
         {menuSections.map(section => (
           <View key={section.title} style={tw`mx-4 mt-3 bg-white rounded-3xl shadow-sm overflow-hidden`}>

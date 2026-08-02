@@ -655,27 +655,25 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       } as any
     }
 
-    // 2. Query profiles & shops by auth ID or email
+    // 2. Query profiles & shops by email first, fallback to auth ID
     let profile: any = null
-    if (authUser?.id) {
+    const { data: pList } = await supabase
+      .from('profiles')
+      .select('*')
+      .ilike('email', cleanEmail.trim())
+      .order('created_at', { ascending: false })
+
+    if (pList && pList.length > 0) {
+      profile = pList.find((p: any) => p.full_name && p.phone_number) || pList[0]
+    }
+
+    if (!profile && authUser?.id) {
       const { data: pById } = await supabase
         .from('profiles')
         .select('*')
-        .or(`id.eq.${authUser.id},user_id.eq.${authUser.id},email.eq.${cleanEmail}`)
+        .or(`id.eq.${authUser.id},user_id.eq.${authUser.id}`)
         .maybeSingle()
       profile = pById
-    }
-
-    if (!profile) {
-      const { data: pList } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('email', cleanEmail)
-        .order('created_at', { ascending: false })
-
-      if (pList && pList.length > 0) {
-        profile = pList.find((p: any) => p.full_name && p.phone_number) || pList[0]
-      }
     }
 
     const { data: shop } = await supabase
@@ -691,18 +689,19 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       return
     }
 
-    const userId = authUser?.id || profile?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
+    const userId = profile?.id || authUser?.id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
     const determinedRole = shop ? 'shop_owner' : (profile?.role || (role === 'owner' ? 'shop_owner' : 'customer'))
     
     // Read real full_name from database profile, fallback to shop name or email handle
-    const displayName = profile?.full_name || (shop ? shop.name : undefined) || cleanEmail.split('@')[0]
+    const realFullName = profile?.full_name || ''
+    const displayName = realFullName || (shop ? shop.name : undefined) || cleanEmail.split('@')[0]
     const displayPhone = profile?.phone_number || ''
 
     completeAuth({
       id: userId,
       role: determinedRole,
       name: displayName,
-      full_name: displayName,
+      full_name: realFullName || displayName,
       email: cleanEmail,
       phone_number: displayPhone,
       shop_id: shop?.id || undefined,
