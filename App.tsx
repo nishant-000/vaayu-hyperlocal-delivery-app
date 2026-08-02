@@ -469,6 +469,7 @@ export default function App() {
                 setUser((prev: any) => ({
                   ...prev,
                   name: cleanN,
+                  full_name: cleanN,
                   phone_number: cleanP
                 }))
               }}
