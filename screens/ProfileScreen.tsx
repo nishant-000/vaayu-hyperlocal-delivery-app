@@ -529,7 +529,6 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
                       style={tw`flex-row items-center gap-1 mt-1`}
                     >
                       <Text style={tw`text-[12px] text-emerald-800 font-bold`}>📱 {displayPhone}</Text>
-                      <Text style={tw`text-[10px] text-emerald-600 font-semibold`}>(Tap to call)</Text>
                     </TouchableOpacity>
                   ) : null}
                   <View style={tw`flex-row items-center gap-1.5 mt-1.5`}>
