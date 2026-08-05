@@ -318,6 +318,8 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
   const [isSyncing, setIsSyncing] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
+  const [isTransitionComplete, setIsTransitionComplete] = useState(false)
+
   const userCacheKey = user?.id ? `user_orders_${user.id}` : 'user_orders_guest'
 
   const fetchOrders = useCallback(async (showSpinner = false) => {
@@ -354,6 +356,7 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
 
     const interactionTask = InteractionManager.runAfterInteractions(() => {
       if (!isMounted) return
+      setIsTransitionComplete(true)
 
       // 1. Instant Cache Hydration
       getCache<any[]>(userCacheKey).then(cached => {
@@ -502,27 +505,44 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
         </View>
       </View>
 
-      <FlatList
-        data={filteredOrders}
-        renderItem={renderOrderItem}
-        keyExtractor={keyExtractor}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={tw`pb-36 pt-4 px-4`}
-        initialNumToRender={5}
-        maxToRenderPerBatch={5}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
-        updateCellsBatchingPeriod={50}
-        ListEmptyComponent={ListEmptyComponent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isSyncing}
-            onRefresh={() => fetchOrders(true)}
-            tintColor="#8fda58"
-            colors={['#8fda58']}
-          />
-        }
-      />
+      {!isTransitionComplete ? (
+        <View style={tw`pt-4 px-4 gap-3`}>
+          <View style={tw`bg-white rounded-3xl p-5 border border-gray-100 shadow-sm opacity-60`}>
+            <View style={tw`flex-row justify-between items-center mb-3`}>
+              <View style={tw`w-24 h-4 bg-gray-200 rounded-md`} />
+              <View style={tw`w-20 h-4 bg-gray-100 rounded-full`} />
+            </View>
+            <View style={tw`w-40 h-3 bg-gray-100 rounded-md mb-3`} />
+            <View style={tw`w-full h-8 bg-gray-50 rounded-xl mb-3`} />
+            <View style={tw`flex-row justify-between items-center pt-2 border-t border-gray-100`}>
+              <View style={tw`w-16 h-3 bg-gray-100 rounded-md`} />
+              <View style={tw`w-12 h-4 bg-gray-200 rounded-md`} />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredOrders}
+          renderItem={renderOrderItem}
+          keyExtractor={keyExtractor}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={tw`pb-36 pt-4 px-4`}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
+          updateCellsBatchingPeriod={50}
+          ListEmptyComponent={ListEmptyComponent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isSyncing}
+              onRefresh={() => fetchOrders(true)}
+              tintColor="#8fda58"
+              colors={['#8fda58']}
+            />
+          }
+        />
+      )}
 
       {/* Full Order Details Modal - Lazily Rendered */}
       {selectedOrderId && (
