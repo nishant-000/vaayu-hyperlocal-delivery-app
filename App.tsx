@@ -64,91 +64,83 @@ function IconUser({ active }: { active: boolean }) {
   )
 }
 
-const NAV_ITEMS: { id: TabId; label: string; Icon: React.FC<{ active: boolean }> }[] = [
-  { id: "home",    label: "Home",    Icon: IconHome },
-  { id: "orders",  label: "Orders",  Icon: IconBag },
-  { id: "cart",    label: "Cart",    Icon: IconCart },
-  { id: "profile", label: "Profile", Icon: IconUser },
+const NAV_ITEMS: { id: TabId; label: string; Icon: React.FC<{ active: boolean }>; maxWidth: number }[] = [
+  { id: "home",    label: "Home",    Icon: IconHome,    maxWidth: 45 },
+  { id: "orders",  label: "Orders",  Icon: IconBag,     maxWidth: 56 },
+  { id: "cart",    label: "Cart",    Icon: IconCart,    maxWidth: 35 },
+  { id: "profile", label: "Profile", Icon: IconUser,    maxWidth: 52 },
 ]
 
-const NavTab = React.memo(function NavTab({
-  id, label, Icon, isActive, onPress
+function NavTab({
+  id, label, Icon, isActive, onPress, maxWidth,
 }: {
   id: TabId; label: string
   Icon: React.FC<{ active: boolean }>
   isActive: boolean; onPress: () => void
+  maxWidth: number
 }) {
-  const scale = useRef(new Animated.Value(isActive ? 1.04 : 1)).current
+  const width  = useRef(new Animated.Value(isActive ? 1 : 0)).current
+  const opacity = useRef(new Animated.Value(isActive ? 1 : 0)).current
+  const scale  = useRef(new Animated.Value(isActive ? 1 : 0.95)).current
+  const translateY = useRef(new Animated.Value(isActive ? -1 : 0)).current
 
   useEffect(() => {
-    Animated.spring(scale, {
-      toValue: isActive ? 1.04 : 1,
-      tension: 320,
-      friction: 20,
-      useNativeDriver: true,
-    }).start()
+    Animated.parallel([
+      Animated.timing(width, {
+        toValue: isActive ? 1 : 0,
+        duration: 250,
+        easing: Easing.bezier(0.25, 1, 0.5, 1),
+        useNativeDriver: false
+      }),
+      Animated.timing(opacity, {
+        toValue: isActive ? 1 : 0,
+        duration: 200,
+        easing: Easing.bezier(0.25, 1, 0.5, 1),
+        useNativeDriver: true
+      }),
+      Animated.spring(scale, {
+        toValue: isActive ? 1 : 0.95,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 12
+      }),
+      Animated.spring(translateY, {
+        toValue: isActive ? -1 : 0,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 12
+      }),
+    ]).start()
   }, [isActive])
 
-  const handlePressIn = () => {
-    Animated.spring(scale, {
-      toValue: 0.92,
-      tension: 400,
-      friction: 20,
-      useNativeDriver: true,
-    }).start()
-  }
-
-  const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: isActive ? 1.04 : 1,
-      tension: 400,
-      friction: 20,
-      useNativeDriver: true,
-    }).start()
-  }
+  const labelWidth = width.interpolate({ inputRange: [0, 1], outputRange: [0, maxWidth] })
+  const textMarginLeft = width.interpolate({ inputRange: [0, 1], outputRange: [0, 8] })
 
   return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={styles.tabPressable}
-      hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
-    >
+    <Pressable onPress={onPress} style={styles.tabPressable}>
       <Animated.View
         style={[
           styles.pill,
-          isActive && styles.activePill,
-          { transform: [{ scale }] },
+          { backgroundColor: isActive ? "#8fda58" : "transparent", transform: [{ scale }] },
         ]}
       >
-        <Icon active={isActive} />
-        {isActive && (
-          <Text style={styles.label} numberOfLines={1}>
+        <Animated.View style={{ transform: [{ translateY }] }}>
+          <Icon active={isActive} />
+        </Animated.View>
+        <Animated.View style={{ width: labelWidth, marginLeft: textMarginLeft, overflow: "hidden" }}>
+          <Animated.Text style={[styles.label, { opacity }]} numberOfLines={1}>
             {label}
-          </Text>
-        )}
+          </Animated.Text>
+        </Animated.View>
       </Animated.View>
     </Pressable>
   )
-})
+}
 
 export default function App() {
   // App States
   const [user, setUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<TabId>('home')
-  const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(['home']))
-
-  const handleTabChange = (tab: TabId) => {
-    setActiveTab(tab)
-    setVisitedTabs(prev => {
-      if (prev.has(tab)) return prev
-      const next = new Set(prev)
-      next.add(tab)
-      return next
-    })
-  }
-
   const [savedShops, setSavedShops] = useState<Set<number>>(new Set([3]))
   const [selectedShop, setSelectedShop] = useState<any>(null)
   
@@ -576,68 +568,61 @@ export default function App() {
           onChangeQuantity={changeQuantity}
           onViewCart={() => {
             setSelectedShop(null)
-            handleTabChange('cart')
+            setActiveTab('cart')
           }}
         />
       ) : (
         <>
-          {/* Keep screens mounted to eliminate remount lag and preserve 60fps animations */}
-          <View style={[tw`flex-1`, activeTab !== 'home' && { display: 'none' }]}>
+          {activeTab === 'home' && (
             <HomeScreen
               onSelectShop={setSelectedShop}
               cartItems={cartItems}
-              onOpenCart={() => handleTabChange('cart')}
+              onOpenCart={() => setActiveTab('cart')}
               onOpenNotifications={() => {
                 setShowNotifications(true)
                 setHasUnreadNotifications(false)
               }}
               hasUnreadNotifications={hasUnreadNotifications}
               address={address}
-              onOpenAddressPicker={() => handleTabChange('profile')}
+              onOpenAddressPicker={() => setActiveTab('profile')}
             />
-          </View>
-
-          {visitedTabs.has('orders') && (
-            <View style={[tw`flex-1`, activeTab !== 'orders' && { display: 'none' }]}>
-              <OrdersScreen
-                orders={orders}
-                onReorder={(order) => {
-                  showToast("Items added from previous order!")
-                  handleTabChange('cart')
-                }}
-                onTrackOrder={(order) => {
-                  showToast(`Tracking #${order.id}`)
-                }}
-                user={user}
-              />
-            </View>
           )}
 
-          {visitedTabs.has('cart') && (
-            <View style={[tw`flex-1`, activeTab !== 'cart' && { display: 'none' }]}>
-              <CartScreen
-                cartItems={cartItems}
-                cartShop={cartShop}
-                changeQuantity={changeQuantity}
-                placeOrder={handlePlaceOrder}
-                address={address}
-                setAddress={setAddress}
-                onContinueShopping={() => handleTabChange('home')}
-                user={user}
-              />
-            </View>
+          {activeTab === 'orders' && (
+            <OrdersScreen
+              orders={orders}
+              onReorder={(order) => {
+                showToast("Items added from previous order!")
+                setActiveTab('cart')
+              }}
+              onTrackOrder={(order) => {
+                showToast(`Tracking #${order.id}`)
+              }}
+              user={user}
+            />
           )}
 
-          {visitedTabs.has('profile') && (
-            <View style={[tw`flex-1`, activeTab !== 'profile' && { display: 'none' }]}>
-              <ProfileScreen
-                user={user}
-                address={address}
-                setAddress={setAddress}
-                savedShops={savedShops}
-                onSignOut={handleSignOut}
-              />
-            </View>
+          {activeTab === 'cart' && (
+            <CartScreen
+              cartItems={cartItems}
+              cartShop={cartShop}
+              changeQuantity={changeQuantity}
+              placeOrder={handlePlaceOrder}
+              address={address}
+              setAddress={setAddress}
+              onContinueShopping={() => setActiveTab('home')}
+              user={user}
+            />
+          )}
+
+          {activeTab === 'profile' && (
+            <ProfileScreen
+              user={user}
+              address={address}
+              setAddress={setAddress}
+              savedShops={savedShops}
+              onSignOut={handleSignOut}
+            />
           )}
 
           {/* Bottom Floating Navigation Capsule */}
@@ -648,7 +633,7 @@ export default function App() {
                   key={item.id}
                   {...item}
                   isActive={activeTab === item.id}
-                  onPress={() => handleTabChange(item.id)}
+                  onPress={() => setActiveTab(item.id)}
                 />
               ))}
             </View>
@@ -755,57 +740,38 @@ const styles = StyleSheet.create({
   },
   wrapper: {
     position: "absolute",
-    bottom: 24,
-    left: 20,
-    right: 20,
+    bottom: 28,
+    left: 0,
+    right: 0,
     alignItems: "center",
     zIndex: 40,
   },
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(255,255,255,0.98)",
-    borderRadius: 36,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    width: "100%",
-    maxWidth: 380,
+    backgroundColor: "rgba(255,255,255,0.97)",
+    borderRadius: 28,
+    padding: 10,
+    gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(229,231,235,0.9)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 8,
+    borderColor: "#e5e7eb",
+    alignSelf: "center",
   },
   tabPressable: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 2,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     borderRadius: 999,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    gap: 6,
-  },
-  activePill: {
-    backgroundColor: "#8fda58",
-    paddingHorizontal: 14,
-    shadowColor: "#8fda58",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    overflow: "hidden",
   },
   label: {
-    fontSize: 13,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     color: "#ffffff",
   },
 })

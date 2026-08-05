@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Linking, Platform, StatusBar as RNStatusBar } from 'react-native'
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
+  Linking,
+  Platform,
+  StatusBar as RNStatusBar,
+  InteractionManager
+} from 'react-native'
 import tw from 'twrnc'
 import Svg, { Polyline } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
 import { getCache, setCache } from '../lib/cache'
-
 import OrderDetailsModal from '../components/OrderDetailsModal'
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
@@ -83,8 +93,14 @@ function getStepIndex(status: string) {
   return 0 // incoming / pending / accepted -> Prepaid
 }
 
-// 🟢 Per-Order Tracking Card Component (Dark Green #1a3a2a)
-function ActiveOrderTrackingCard({ order, onPress }: { order: any; onPress: () => void }) {
+// 🟢 Per-Order Tracking Card Component (Dark Green #1a3a2a) - Memoized
+const ActiveOrderTrackingCard = memo(function ActiveOrderTrackingCard({
+  order,
+  onPress,
+}: {
+  order: any
+  onPress: (id: string) => void
+}) {
   const currentStep = getStepIndex(order.status)
   const isInstant = order.delivery_mode === 'instant' || !order.selected_slot_label
   const late = isOrderLate(order)
@@ -103,8 +119,24 @@ function ActiveOrderTrackingCard({ order, onPress }: { order: any; onPress: () =
     ? 'OUT FOR DELIVERY'
     : 'ORDER CONFIRMED'
 
+  const formattedTime = useMemo(() => {
+    try {
+      return new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return ''
+    }
+  }, [order.created_at])
+
+  const handlePress = useCallback(() => {
+    onPress(order.id)
+  }, [onPress, order.id])
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={[tw`rounded-3xl overflow-hidden shadow-md mb-3`, { backgroundColor: '#1a3a2a' }]}>
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.9}
+      style={[tw`rounded-3xl overflow-hidden shadow-md mb-3`, { backgroundColor: '#1a3a2a' }]}
+    >
       <View style={tw`p-5`}>
         <View style={tw`flex-row items-start justify-between mb-3`}>
           <View style={tw`flex-1 mr-2`}>
@@ -151,7 +183,7 @@ function ActiveOrderTrackingCard({ order, onPress }: { order: any; onPress: () =
           </View>
         )}
 
-        {/* Progress steps: Order Confirmed -> OUT FOR DELIVERY -> Collect Order -> Delivered */}
+        {/* Progress steps */}
         <View style={tw`flex-row items-center mt-1 mb-2`}>
           {['Order Confirmed', 'OUT FOR DELIVERY', 'Collect Order', 'Delivered'].map((step, i) => {
             const done = i < currentStep
@@ -186,7 +218,7 @@ function ActiveOrderTrackingCard({ order, onPress }: { order: any; onPress: () =
         {/* Amount & Time footer */}
         <View style={tw`flex-row items-center justify-between pt-3 border-t border-white/10 mt-1`}>
           <Text style={tw`text-[12px] text-gray-300 font-medium`}>
-            {new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {formattedTime}
           </Text>
           {order.shop_phone ? (
             <TouchableOpacity
@@ -207,7 +239,70 @@ function ActiveOrderTrackingCard({ order, onPress }: { order: any; onPress: () =
       </View>
     </TouchableOpacity>
   )
-}
+})
+
+// ⚪ Past / Delivered Order Card Component - Memoized
+const PastOrderCard = memo(function PastOrderCard({
+  order,
+  onPress,
+}: {
+  order: any
+  onPress: (id: string) => void
+}) {
+  const s = statusConfig[order.status] || { label: order.status, color: '#6b7280', bg: '#f3f4f6', dot: '#9ca3af' }
+
+  const formattedTime = useMemo(() => {
+    try {
+      return new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return ''
+    }
+  }, [order.created_at])
+
+  const handlePress = useCallback(() => {
+    onPress(order.id)
+  }, [onPress, order.id])
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.8}
+      style={tw`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 mb-3`}
+    >
+      <View style={tw`p-4`}>
+        <View style={tw`flex-row items-start justify-between gap-2`}>
+          <Text style={tw`font-black text-[16px] text-gray-900`}>#{order.id}</Text>
+          <View style={[tw`rounded-full px-2.5 py-0.5 flex-row items-center gap-1`, { backgroundColor: s.bg }]}>
+            <View style={[tw`w-1.5 h-1.5 rounded-full`, { backgroundColor: s.dot }]} />
+            <Text style={{ color: s.color, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }}>
+              {s.label}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={tw`text-[12px] text-gray-500 font-medium mt-1.5`} numberOfLines={1}>
+          📍 {order.location}
+        </Text>
+
+        <View style={tw`bg-gray-50 rounded-xl px-2.5 py-1.5 mt-2 border border-gray-100`}>
+          <Text style={tw`text-[11px] font-bold text-gray-700`}>
+            ⏱️ Expected: <Text style={tw`font-black text-gray-900`}>{order.delivery_mode === 'instant' ? '20 mins from order placement' : (order.selected_slot_label || 'Selected Slot')}</Text>
+          </Text>
+        </View>
+
+        <View style={tw`flex-row items-center justify-between mt-2.5 pt-2 border-t border-gray-100`}>
+          <Text style={tw`text-[12px] text-gray-400 font-medium`}>
+            {formattedTime}
+          </Text>
+          <View style={tw`flex-row items-center gap-3`}>
+            <Text style={tw`text-[11px] font-bold text-gray-400`}>Details ➔</Text>
+            <Text style={tw`font-black text-[16px] text-gray-900`}>₹{order.grand_total || order.total_amount || 0}</Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  )
+})
 
 interface OrdersScreenProps {
   orders: any[]
@@ -225,7 +320,7 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
 
   const userCacheKey = user?.id ? `user_orders_${user.id}` : 'user_orders_guest'
 
-  const fetchOrders = async (showSpinner = false) => {
+  const fetchOrders = useCallback(async (showSpinner = false) => {
     if (showSpinner) setIsSyncing(true)
     try {
       let query = supabase
@@ -249,61 +344,117 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
       if (showSpinner) setIsSyncing(false)
       setLoading(false)
     }
-  }
+  }, [user?.id, user?.user_id, userCacheKey])
 
-  // Fetch real orders from Supabase & Subscribe to Realtime Updates
+  // Defer heavy cache reads, network requests, and realtime subscriptions until after tab animation
   useEffect(() => {
-    // 1. Instant Cache Hydration for 0ms Load Time (Namespaced per user)
-    async function initCache() {
-      const cached = await getCache<any[]>(userCacheKey)
-      if (cached && cached.length > 0) {
-        setOrders(cached)
-        setLoading(false)
-      } else {
-        setLoading(true)
-      }
-      fetchOrders(false)
-    }
+    let isMounted = true
+    let subscription: any = null
+    let pollTimer: any = null
 
-    initCache()
+    const interactionTask = InteractionManager.runAfterInteractions(() => {
+      if (!isMounted) return
 
-    // 2. Subscribe to Supabase Realtime on orders table
-    const subscription = supabase
-      .channel('customer_orders_realtime_v2')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setOrders(prev => {
-              if (prev.some(o => o.id === payload.new.id)) return prev
-              return [payload.new, ...prev]
-            })
-          } else if (payload.eventType === 'UPDATE') {
-            setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o))
-          } else if (payload.eventType === 'DELETE') {
-            setOrders(prev => prev.filter(o => o.id !== (payload.old as any).id))
-          }
+      // 1. Instant Cache Hydration
+      getCache<any[]>(userCacheKey).then(cached => {
+        if (!isMounted) return
+        if (cached && cached.length > 0) {
+          setOrders(cached)
+          setLoading(false)
         }
-      )
-      .subscribe()
+        fetchOrders(false)
+      }).catch(() => {
+        if (isMounted) fetchOrders(false)
+      })
 
-    // 3. Fallback auto-sync polling every 4 seconds for 100% real-time reliability
-    const pollTimer = setInterval(() => {
-      fetchOrders(false)
-    }, 4000)
+      // 2. Subscribe to Supabase Realtime
+      subscription = supabase
+        .channel('customer_orders_realtime_v2')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          (payload) => {
+            if (!isMounted) return
+            if (payload.eventType === 'INSERT') {
+              setOrders(prev => {
+                if (prev.some(o => o.id === payload.new.id)) return prev
+                return [payload.new, ...prev]
+              })
+            } else if (payload.eventType === 'UPDATE') {
+              setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o))
+            } else if (payload.eventType === 'DELETE') {
+              setOrders(prev => prev.filter(o => o.id !== (payload.old as any).id))
+            }
+          }
+        )
+        .subscribe()
+
+      // 3. Fallback auto-sync polling
+      pollTimer = setInterval(() => {
+        if (isMounted) fetchOrders(false)
+      }, 5000)
+    })
 
     return () => {
-      clearInterval(pollTimer)
-      supabase.removeChannel(subscription)
+      isMounted = false
+      interactionTask.cancel()
+      if (pollTimer) clearInterval(pollTimer)
+      if (subscription) supabase.removeChannel(subscription)
     }
-  }, [user])
+  }, [fetchOrders, userCacheKey])
 
-  const filtered = orders.filter(o => {
-    if (activeTab === 'Active') return o.status !== 'delivered' && o.status !== 'cancelled'
-    if (activeTab === 'Past') return o.status === 'delivered' || o.status === 'cancelled'
-    return true
-  })
+  const filteredOrders = useMemo(() => {
+    if (activeTab === 'Active') return orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+    if (activeTab === 'Past') return orders.filter(o => o.status === 'delivered' || o.status === 'cancelled')
+    return orders
+  }, [orders, activeTab])
+
+  const handleSelectOrder = useCallback((orderId: string) => {
+    setSelectedOrderId(orderId)
+  }, [])
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedOrderId(null)
+  }, [])
+
+  const renderOrderItem = useCallback(({ item }: { item: any }) => {
+    const isActive = item.status !== 'delivered' && item.status !== 'cancelled'
+    if (isActive) {
+      return (
+        <ActiveOrderTrackingCard
+          order={item}
+          onPress={handleSelectOrder}
+        />
+      )
+    }
+
+    return (
+      <PastOrderCard
+        order={item}
+        onPress={handleSelectOrder}
+      />
+    )
+  }, [handleSelectOrder])
+
+  const keyExtractor = useCallback((item: any) => String(item.id), [])
+
+  const ListEmptyComponent = useMemo(() => {
+    if (loading) {
+      return (
+        <View style={tw`py-16 items-center justify-center`}>
+          <ActivityIndicator size="large" color="#8fda58" />
+          <Text style={tw`text-xs font-bold text-gray-400 mt-3`}>Fetching your live orders...</Text>
+        </View>
+      )
+    }
+    return (
+      <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-100`}>
+        <Text style={tw`text-4xl mb-2`}>📦</Text>
+        <Text style={tw`text-base font-bold text-gray-900`}>No orders found</Text>
+        <Text style={tw`text-xs text-gray-400 font-medium mt-1`}>Your order history will appear here.</Text>
+      </View>
+    )
+  }, [loading])
 
   return (
     <View style={tw`flex-1 bg-gray-50`}>
@@ -351,9 +502,18 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
         </View>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={filteredOrders}
+        renderItem={renderOrderItem}
+        keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={tw`pb-36 pt-4`}
+        contentContainerStyle={tw`pb-36 pt-4 px-4`}
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        updateCellsBatchingPeriod={50}
+        ListEmptyComponent={ListEmptyComponent}
         refreshControl={
           <RefreshControl
             refreshing={isSyncing}
@@ -362,87 +522,17 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
             colors={['#8fda58']}
           />
         }
-      >
-        <View style={tw`flex-col gap-3 px-4`}>
-          {loading ? (
-            <View style={tw`py-16 items-center justify-center`}>
-              <ActivityIndicator size="large" color="#8fda58" />
-              <Text style={tw`text-xs font-bold text-gray-400 mt-3`}>Fetching your live orders...</Text>
-            </View>
-          ) : filtered.length === 0 ? (
-            <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-100`}>
-              <Text style={tw`text-4xl mb-2`}>📦</Text>
-              <Text style={tw`text-base font-bold text-gray-900`}>No orders found</Text>
-              <Text style={tw`text-xs text-gray-400 font-medium mt-1`}>Your order history will appear here.</Text>
-            </View>
-          ) : (
-            filtered.map(order => {
-              const isActive = order.status !== 'delivered' && order.status !== 'cancelled'
-
-              // Active orders get their own dark green tracking card!
-              if (isActive) {
-                return (
-                  <ActiveOrderTrackingCard
-                    key={order.id}
-                    order={order}
-                    onPress={() => setSelectedOrderId(order.id)}
-                  />
-                )
-              }
-
-              // Delivered or Cancelled orders get the plain white card design
-              const s = statusConfig[order.status] || { label: order.status, color: '#6b7280', bg: '#f3f4f6', dot: '#9ca3af' }
-              return (
-                <TouchableOpacity
-                  key={order.id}
-                  onPress={() => setSelectedOrderId(order.id)}
-                  activeOpacity={0.8}
-                  style={tw`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 mb-3`}
-                >
-                  <View style={tw`p-4`}>
-                    <View style={tw`flex-row items-start justify-between gap-2`}>
-                      <Text style={tw`font-black text-[16px] text-gray-900`}>#{order.id}</Text>
-                      <View style={[tw`rounded-full px-2.5 py-0.5 flex-row items-center gap-1`, { backgroundColor: s.bg }]}>
-                        <View style={[tw`w-1.5 h-1.5 rounded-full`, { backgroundColor: s.dot }]} />
-                        <Text style={{ color: s.color, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }}>
-                          {s.label}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={tw`text-[12px] text-gray-500 font-medium mt-1.5`} numberOfLines={1}>
-                      📍 {order.location}
-                    </Text>
-
-                    <View style={tw`bg-gray-50 rounded-xl px-2.5 py-1.5 mt-2 border border-gray-100`}>
-                      <Text style={tw`text-[11px] font-bold text-gray-700`}>
-                        ⏱️ Expected: <Text style={tw`font-black text-gray-900`}>{order.delivery_mode === 'instant' ? '20 mins from order placement' : (order.selected_slot_label || 'Selected Slot')}</Text>
-                      </Text>
-                    </View>
-
-                    <View style={tw`flex-row items-center justify-between mt-2.5 pt-2 border-t border-gray-100`}>
-                      <Text style={tw`text-[12px] text-gray-400 font-medium`}>
-                        {new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
-                      <View style={tw`flex-row items-center gap-3`}>
-                        <Text style={tw`text-[11px] font-bold text-gray-400`}>Details ➔</Text>
-                        <Text style={tw`font-black text-[16px] text-gray-900`}>₹{order.grand_total || order.total_amount || 0}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              )
-            })
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Full Order Details Modal */}
-      <OrderDetailsModal
-        visible={!!selectedOrderId}
-        orderId={selectedOrderId}
-        onClose={() => setSelectedOrderId(null)}
       />
+
+      {/* Full Order Details Modal - Lazily Rendered */}
+      {selectedOrderId && (
+        <OrderDetailsModal
+          visible={!!selectedOrderId}
+          orderId={selectedOrderId}
+          onClose={handleCloseModal}
+        />
+      )}
     </View>
   )
 }
+
