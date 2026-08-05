@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect, useCallback } from 'react'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, RefreshControl, Linking } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Line, Polyline } from 'react-native-svg'
 import {
@@ -65,7 +65,11 @@ interface HomeScreenProps {
   cartItems: any[]
   onOpenCart: () => void
   onOpenNotifications: () => void
-  address: { area: string; room: string }
+  hasUnreadNotifications?: boolean
+  address: {
+    area: string
+    landmark: string
+  }
   onOpenAddressPicker: () => void
 }
 
@@ -74,37 +78,21 @@ export default function HomeScreen({
   cartItems,
   onOpenCart,
   onOpenNotifications,
+  hasUnreadNotifications = false,
   address,
-  onOpenAddressPicker,
+  onOpenAddressPicker
 }: HomeScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [savedShops, setSavedShops] = useState<Set<string | number>>(new Set())
-  const [remoteConfig, setRemoteConfig] = useState<AppConfig>(DEFAULT_CONFIG)
+  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG)
   const [shops, setShops] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Fetch Remote Config & Live Shops
-  useEffect(() => {
-    let unsubscribeConfig: () => void
-
-    async function loadData() {
-      setLoading(true)
-      const config = await fetchRemoteConfig()
-      setRemoteConfig(config)
-
-      unsubscribeConfig = subscribeToRemoteConfig((updated) => {
-        setRemoteConfig(updated)
-      })
-
-      // 1. Instant Cache Hydration for 0ms Load Time
-      const cachedShops = await getCache<any[]>('campus_shops')
-      if (cachedShops && cachedShops.length > 0) {
-        setShops(cachedShops)
-        setLoading(false)
-      }
-
-      // 2. Fetch fresh live shops from Supabase in background
+  const fetchFreshShops = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setRefreshing(true)
+    try {
       const { data: shopsData, error } = await supabase
         .from('shops')
         .select('*, menu_items(*)')
@@ -134,18 +122,51 @@ export default function HomeScreen({
         }))
         setShops(formatted)
         await setCache('campus_shops', formatted, 600)
-      } else if (!cachedShops) {
-        setShops([])
       }
+    } catch (e) {
+      console.warn('[HomeScreen] Fetch error:', e)
+    } finally {
+      if (isManualRefresh) setRefreshing(false)
       setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    let unsubscribeConfig: (() => void) | null = null
+
+    async function loadData() {
+      const initialConfig = await fetchRemoteConfig()
+      setConfig(initialConfig)
+      unsubscribeConfig = subscribeToRemoteConfig(setConfig)
+
+      // 1. Cache Hydration
+      const cachedShops = await getCache<any[]>('campus_shops')
+      if (cachedShops && cachedShops.length > 0) {
+        setShops(cachedShops)
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+
+      // 2. Fetch fresh live shops from Supabase
+      await fetchFreshShops(false)
     }
 
     loadData()
 
+    // 3. Realtime subscription to live shop changes (open/close, name, image)
+    const shopChannel = supabase
+      .channel('public_shops_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shops' }, () => {
+        fetchFreshShops(false)
+      })
+      .subscribe()
+
     return () => {
       if (unsubscribeConfig) unsubscribeConfig()
+      shopChannel.unsubscribe()
     }
-  }, [])
+  }, [fetchFreshShops])
 
   const toggleSaveShop = (id: string | number) => {
     setSavedShops(prev => {
@@ -166,17 +187,22 @@ export default function HomeScreen({
 
     const catName = categories.find(c => c.id === selectedCategory)?.name?.toLowerCase()
 
+    const shopCategories = (shop.category || '')
+      .toLowerCase()
+      .split(',')
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 0)
+
     if (catName === 'others') {
-      // Match shops whose category is 'Others' OR any custom/unknown category
-      const shopCat = (shop.category || '').toLowerCase()
-      return shopCat === 'others' || !MAIN_CATEGORIES.includes(shopCat)
+      // Match shops whose category array contains 'others' OR any custom/unknown category
+      return shopCategories.some((cat: string) => cat === 'others' || !MAIN_CATEGORIES.includes(cat))
     }
 
-    return catName ? shop.category?.toLowerCase() === catName : true
+    return catName ? shopCategories.includes(catName) : true
   })
 
   // Banners from live Remote Config
-  const liveBanners = remoteConfig.banners && remoteConfig.banners.length > 0 ? remoteConfig.banners : [
+  const liveBanners = config.banners && config.banners.length > 0 ? config.banners : [
     {
       id: "b1",
       title: "Gate 1 Express Delivery",
@@ -195,16 +221,16 @@ export default function HomeScreen({
               <IconChevronDown color="#ffffff" size={12} />
             </TouchableOpacity>
             <Text style={tw`text-[11px] text-white/90 font-medium text-center mt-0.5`} numberOfLines={1}>
-              {address.room ? `${address.area}, ${address.room}` : 'IIIT Tiruchirappalli, Gate 1'}
+              {address.area || 'IIIT Tiruchirappalli'}
             </Text>
           </View>
 
           <View style={tw`flex-row items-center gap-2.5`}>
             <TouchableOpacity onPress={onOpenNotifications} style={tw`relative p-1`}>
               <IconBell color="#ffffff" size={22} />
-              <View style={[tw`absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-white border rounded-full items-center justify-center`, { borderColor: '#8fda58' }]}>
-                <Text style={[tw`text-[9px] font-black`, { color: '#8fda58' }]}>3</Text>
-              </View>
+              {hasUnreadNotifications ? (
+                <View style={tw`absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white`} />
+              ) : null}
             </TouchableOpacity>
           </View>
         </View>
@@ -224,7 +250,18 @@ export default function HomeScreen({
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-36`}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={tw`pb-36`}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchFreshShops(true)}
+            tintColor="#8fda58"
+            colors={['#8fda58']}
+          />
+        }
+      >
         {/* Remote Config Live Banners Carousel */}
         <View style={tw`pt-4 pb-2`}>
           <FlatList
@@ -383,8 +420,9 @@ export default function HomeScreen({
           <Text style={tw`text-[18px] font-black text-gray-900 mb-3`}>Campus Shops & Canteens</Text>
 
           {loading ? (
-            <View style={tw`py-12 items-center justify-center`}>
+            <View style={tw`py-14 items-center justify-center`}>
               <ActivityIndicator size="large" color="#8fda58" />
+              <Text style={tw`text-xs font-bold text-gray-400 mt-3`}>Fetching campus shops...</Text>
             </View>
           ) : filteredShops.length === 0 ? (
             <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-100`}>
@@ -427,19 +465,9 @@ export default function HomeScreen({
                       </View>
                     </View>
 
-                    <Text style={tw`text-[12px] text-gray-500 font-medium mb-3`}>{shop.category} · Campus Delivery</Text>
-
-                    {/* Quick Items Preview */}
-                    {shop.items && shop.items.length > 0 && (
-                      <View style={tw`bg-gray-50 rounded-2xl p-2.5 border border-gray-100 flex-row gap-2`}>
-                        {shop.items.slice(0, 3).map((it: any) => (
-                          <View key={it.id} style={tw`flex-1 bg-white rounded-xl p-2 border border-gray-100 items-center`}>
-                            <Text style={tw`text-[11px] font-bold text-gray-900 text-center`} numberOfLines={1}>{it.name}</Text>
-                            <Text style={tw`text-[11px] font-black text-green-700 mt-0.5`}>₹{it.price}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
+                    <View style={tw`flex-row items-center justify-between mt-1 pt-2 border-t border-gray-50`}>
+                      <Text style={tw`text-[12px] text-gray-500 font-medium`}>{shop.category} · Campus Delivery</Text>
+                    </View>
                   </View>
                 </TouchableOpacity>
               ))}

@@ -69,3 +69,22 @@ export async function clearCache(key: string): Promise<void> {
     await CustomAsyncStorage.removeItem(`cache_${key}`)
   } catch (e) {}
 }
+
+/**
+ * Completely purges all in-memory and persistent user-specific cache keys on logout
+ */
+export async function clearAllUserCache(): Promise<void> {
+  memoryCache.clear()
+  try {
+    // Clear common known cache keys from persistent storage
+    const knownKeys = [
+      'user_orders',
+      'owner_orders',
+      'owner_menu',
+      'campus_shops'
+    ]
+    for (const k of knownKeys) {
+      await CustomAsyncStorage.removeItem(`cache_${k}`)
+    }
+  } catch (e) {}
+}

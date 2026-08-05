@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Linking, Platform } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Linking, Platform, Alert, ActivityIndicator } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
@@ -41,6 +41,9 @@ function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
 
 interface ProfileScreenProps {
   user: any
+  address?: any
+  setAddress?: any
+  savedShops?: any
   onSignOut: () => void
 }
 
@@ -53,13 +56,19 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
   const [name, setName] = useState<string>(user?.full_name || (user?.name && user.name !== user?.email?.split('@')[0] ? user.name : ''))
   const [email] = useState<string>(user?.email || '')
   const [phone, setPhone] = useState<string>(user?.phone_number || '')
-  const [hostel] = useState('IIIT Tiruchirappalli, Gate 1')
+  const [hostel] = useState('IIIT Tiruchirappalli')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
 
   // Auto-fetch fresh profile details directly from Supabase profiles table on mount
   useEffect(() => {
     async function loadLiveProfile() {
       const userEmail = user?.email || email
-      if (!userEmail) return
+      if (!userEmail) {
+        setIsLoadingProfile(false)
+        return
+      }
 
       try {
         const { data, error } = await supabase
@@ -75,7 +84,9 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
           if (p.phone_number) setPhone(p.phone_number)
         }
       } catch (e) {
-        console.warn('[ProfileScreen] live profile fetch notice:', e)
+        console.error('Failed to load profile data', e)
+      } finally {
+        setIsLoadingProfile(false)
       }
     }
 
@@ -157,13 +168,32 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
           </View>
 
           <TouchableOpacity
-            onPress={() => {
-              showToast("Profile details updated successfully!")
-              setActiveModal(null)
+            disabled={isSavingProfile}
+            onPress={async () => {
+              setIsSavingProfile(true)
+              try {
+                if (user?.id) {
+                  await supabase
+                    .from('profiles')
+                    .update({ full_name: name.trim(), phone_number: phone.trim() })
+                    .eq('id', user.id)
+                }
+                showToast("Profile details updated successfully!")
+                setActiveModal(null)
+              } catch (e) {
+                showToast("Saved locally")
+                setActiveModal(null)
+              } finally {
+                setIsSavingProfile(false)
+              }
             }}
-            style={[tw`w-full py-4 rounded-2xl items-center`, { backgroundColor: '#8fda58' }]}
+            style={[tw`w-full py-4 rounded-2xl items-center flex-row justify-center gap-2`, { backgroundColor: '#8fda58' }]}
           >
-            <Text style={tw`text-[15px] font-black text-white`}>Save Changes</Text>
+            {isSavingProfile ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={tw`text-[15px] font-black text-white`}>Save Changes</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -189,6 +219,7 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
             </View>
 
             <TouchableOpacity
+              disabled={isUpdatingPassword}
               onPress={async () => {
                 if (!currentPass || !newPass) {
                   Alert.alert('Required Fields', 'Please enter your current password and new password.')
@@ -202,18 +233,27 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
                   Alert.alert('Weak Password', 'New password must be at least 6 characters long.')
                   return
                 }
-                const { error } = await supabase.auth.updateUser({ password: newPass })
-                if (error) {
-                  Alert.alert('Password Update Error', error.message)
-                } else {
-                  showToast("Password updated successfully!")
-                  setCurrentPass('')
-                  setNewPass('')
+                setIsUpdatingPassword(true)
+                try {
+                  const { error } = await supabase.auth.updateUser({ password: newPass })
+                  if (error) {
+                    Alert.alert('Password Update Error', error.message)
+                  } else {
+                    showToast("Password updated successfully!")
+                    setCurrentPass('')
+                    setNewPass('')
+                  }
+                } finally {
+                  setIsUpdatingPassword(false)
                 }
               }}
-              style={[tw`w-full py-3.5 rounded-2xl items-center mt-2`, { backgroundColor: '#8fda58' }]}
+              style={[tw`w-full py-3.5 rounded-2xl items-center justify-center flex-row gap-2 mt-2`, { backgroundColor: '#8fda58' }]}
             >
-              <Text style={tw`text-[14px] font-black text-white`}>Update Password</Text>
+              {isUpdatingPassword ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={tw`text-[14px] font-black text-white`}>Update Password</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -483,7 +523,14 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
                   <Text style={tw`text-[18px] font-black text-gray-900`}>{displayName}</Text>
                   <Text style={tw`text-[12px] text-gray-400 font-medium`}>{user?.email || email}</Text>
                   {displayPhone ? (
-                    <Text style={tw`text-[12px] text-gray-700 font-bold mt-1`}>📱 {displayPhone}</Text>
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL(`tel:${displayPhone}`)}
+                      activeOpacity={0.7}
+                      style={tw`flex-row items-center gap-1 mt-1`}
+                    >
+                      <Text style={tw`text-[12px] text-emerald-800 font-bold`}>📱 {displayPhone}</Text>
+                      <Text style={tw`text-[10px] text-emerald-600 font-semibold`}>(Tap to call)</Text>
+                    </TouchableOpacity>
                   ) : null}
                   <View style={tw`flex-row items-center gap-1.5 mt-1.5`}>
                     <View style={tw`w-1.5 h-1.5 rounded-full bg-green-500`} />

@@ -10,8 +10,8 @@ interface CartScreenProps {
   cartShop: any
   changeQuantity: (id: string, diff: number) => void
   placeOrder: (finalTotal: number, discount: number, appliedPromo: string, deliveryMode: 'regular' | 'instant', selectedSlotId?: string) => void
-  address: { area: string; room: string; landmark: string }
-  setAddress: React.Dispatch<React.SetStateAction<{ area: string; room: string; landmark: string }>>
+  address: { area: string; room?: string; landmark: string }
+  setAddress: React.Dispatch<React.SetStateAction<{ area: string; room?: string; landmark: string }>>
   onContinueShopping: () => void
   user: any
 }
@@ -42,6 +42,7 @@ export default function CartScreen({
 }: CartScreenProps) {
   const [promoInput, setPromoInput] = useState('')
   const [appliedPromo, setAppliedPromo] = useState('')
+  const [appliedPromoType, setAppliedPromoType] = useState('')
   const [promoDiscountAmount, setPromoDiscountAmount] = useState(0)
   const [promoError, setPromoError] = useState('')
   const [isValidatingPromo, setIsValidatingPromo] = useState(false)
@@ -112,32 +113,31 @@ export default function CartScreen({
   const total = Math.max(0, subtotal + otherCharges - promoDiscountAmount)
 
   // Server-side promo code validation RPC call
-  const applyPromoServerSide = async () => {
-    if (!promoInput.trim()) return
+  const applyPromoServerSide = async (codeToApply?: string) => {
+    const targetCode = (codeToApply || promoInput).trim()
+    if (!targetCode) return
     setIsValidatingPromo(true)
     setPromoError('')
 
-    const result = await validatePromoCodeServerSide(promoInput, subtotal)
+    const result = await validatePromoCodeServerSide(targetCode, subtotal, platformFee)
     setIsValidatingPromo(false)
 
     if (result && result.valid) {
       setAppliedPromo(result.code)
+      setAppliedPromoType(result.discount_type || '')
       setPromoDiscountAmount(result.discount || 0)
+      setPromoInput(result.code)
       setPromoError('')
     } else {
       setPromoError(result?.reason || 'Invalid promo code')
       setAppliedPromo('')
+      setAppliedPromoType('')
       setPromoDiscountAmount(0)
     }
   }
 
   // Real order placement writing to Supabase orders table
   const handlePlaceOrder = async () => {
-    if (!address.area.trim() || !address.room.trim()) {
-      alert('Please enter your Hostel/Area and Room number.')
-      return
-    }
-
     if (deliveryMode === 'regular' && availableSlots.length === 0) {
       alert('Scheduled slots for today are closed (must book 30+ mins before slot start). Switched to Instant ASAP delivery.')
       setDeliveryMode('instant')
@@ -161,31 +161,55 @@ export default function CartScreen({
     }
 
     setIsSubmitting(true)
-    const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`
+    const orderId = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
     const expireTime = new Date(Date.now() + 15 * 60 * 1000).toISOString()
     const selectedSlotLabel = deliveryMode === 'regular'
       ? (selectedSlotId === 'slot_1' ? '12:40 PM – 1:40 PM (Lunch Slot)' : '8:00 PM – 9:00 PM (Dinner Slot)')
       : undefined
 
-    // Resolve authenticated Supabase user ID dynamically to guarantee RLS compliance
+    // Resolve authenticated Supabase user ID and profile phone number dynamically
     let authUid = user?.id || null
+    let customerName = user?.name || user?.full_name || 'Campus Student'
+    let customerPhone = user?.phone || user?.phone_number || ''
+
     try {
       const { data: authData } = await supabase.auth.getUser()
       if (authData?.user?.id) {
         authUid = authData.user.id
       }
+      if (authUid) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('full_name, phone_number')
+          .or(`id.eq.${authUid},user_id.eq.${authUid}`)
+          .maybeSingle()
+        if (prof) {
+          if (prof.phone_number) customerPhone = prof.phone_number
+          if (prof.full_name) customerName = prof.full_name
+        }
+      }
     } catch (_) {}
+
+    const isFreePlatformFee = appliedPromoType === 'platform_fee' || 
+      appliedPromoType === 'free_platform_fee' ||
+      (appliedPromo && (
+        ['FREEFEE', 'NOPLATFORM', 'FREEPLATFORM', 'ZEROFEES'].includes(appliedPromo.toUpperCase()) ||
+        config.promo_codes?.some(p => p.code?.toUpperCase() === appliedPromo.toUpperCase() && (p.discount_type === 'platform_fee' || p.discount_type === 'free_platform_fee'))
+      ))
+    const chargedPlatformFee = isFreePlatformFee ? 0 : platformFee
 
     const orderPayload = {
       id: orderId,
       user_id: authUid,
       shop_id: cartShop?.id || null,
       shop_name: cartShop?.name || '',
-      customer_name: user?.name || user?.full_name || 'Campus Student',
-      location: `${address.area}, Room ${address.room}${address.landmark ? ' · ' + address.landmark : ''}`,
+      shop_phone: cartShop?.phone || null,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      location: 'IIIT Trichy Campus',
       delivery_mode: deliveryMode,
       selected_slot_label: selectedSlotLabel || null,
-      payment_mode: 'cod',
+      payment_mode: 'upi',
       status: 'incoming',
       items: cartItems.map(i => ({
         id: i.id,
@@ -195,7 +219,7 @@ export default function CartScreen({
       })),
       items_subtotal: subtotal,
       delivery_fee: deliveryFee,
-      platform_fee: platformFee,
+      platform_fee: chargedPlatformFee,
       applied_promo: appliedPromo || null,
       promo_discount: promoDiscountAmount || 0,
       grand_total: total,
@@ -203,32 +227,37 @@ export default function CartScreen({
     }
 
     try {
-      const { error } = await supabase.from('orders').insert([orderPayload])
+      const { data: insertedOrder, error } = await supabase
+        .from('orders')
+        .insert([orderPayload])
+        .select()
+        .single()
+
       if (error) {
         console.error('[CartScreen] Error inserting order into Supabase:', error)
-      } else {
-        // Safely decrement stock_quantity for each ordered item in Supabase via SECURITY DEFINER RPC
-        for (const cartItem of cartItems) {
-          const qty = cartItem.quantity || cartItem.qty || 1
-          await supabase.rpc('decrement_menu_stock', {
-            item_id: cartItem.id,
-            quantity_to_subtract: qty
-          })
-        }
+        setIsSubmitting(false)
+        alert(`Order placement failed: ${error.message || 'Please try again.'}`)
+        return
       }
-    } catch (err) {
+
+      // Use server-verified grand total & order ID if returned
+      const finalGrandTotal = insertedOrder?.grand_total ?? total
+      const finalOrderId = insertedOrder?.id ?? orderId
+
+      setPlacedOrderDetails({
+        orderId: finalOrderId,
+        total: finalGrandTotal,
+      })
+      setPlaced(true)
+      setIsSubmitting(false)
+
+      // Clear local cart
+      placeOrder(finalGrandTotal, promoDiscountAmount, appliedPromo, deliveryMode, deliveryMode === 'regular' ? selectedSlotId : undefined)
+    } catch (err: any) {
       console.warn('[CartScreen] Order insert error:', err)
+      setIsSubmitting(false)
+      alert(`Could not place order: ${err?.message || 'Network error'}`)
     }
-
-    setPlacedOrderDetails({
-      orderId,
-      total,
-    })
-    setPlaced(true)
-    setIsSubmitting(false)
-
-    // Clear local cart
-    placeOrder(total, promoDiscountAmount, appliedPromo, deliveryMode, deliveryMode === 'regular' ? selectedSlotId : undefined)
   }
 
   if (placed) {
@@ -391,46 +420,33 @@ export default function CartScreen({
           )}
         </View>
 
-        {/* Delivery Address Form */}
-        <View style={tw`mx-4 mt-4 bg-white rounded-3xl p-4 shadow-sm`}>
-          <Text style={tw`text-gray-900 text-xs font-bold mb-3 uppercase tracking-wider`}>Delivery Details</Text>
-          <View style={tw`flex-row gap-3 mb-3`}>
-            <View style={tw`flex-1`}>
-              <Text style={tw`text-[10px] font-bold text-gray-400 uppercase`}>Hostel / Block *</Text>
-              <TextInput
-                value={address.area}
-                placeholder="e.g. Block A"
-                placeholderTextColor="#9ca3af"
-                onChangeText={text => setAddress(prev => ({ ...prev, area: text }))}
-                style={tw`w-full bg-gray-50 border border-gray-100 rounded-lg p-2 text-xs font-semibold text-gray-800 mt-1`}
-              />
-            </View>
-            <View style={tw`flex-1`}>
-              <Text style={tw`text-[10px] font-bold text-gray-400 uppercase`}>Room Number *</Text>
-              <TextInput
-                value={address.room}
-                placeholder="e.g. Room 102"
-                placeholderTextColor="#9ca3af"
-                onChangeText={text => setAddress(prev => ({ ...prev, room: text }))}
-                style={tw`w-full bg-gray-50 border border-gray-100 rounded-lg p-2 text-xs font-semibold text-gray-800 mt-1`}
-              />
-            </View>
-          </View>
-          <View>
-            <Text style={tw`text-[10px] font-bold text-gray-400 uppercase`}>Landmark / Notes</Text>
-            <TextInput
-              value={address.landmark}
-              placeholder="e.g. Near reception"
-              placeholderTextColor="#9ca3af"
-              onChangeText={text => setAddress(prev => ({ ...prev, landmark: text }))}
-              style={tw`w-full bg-gray-50 border border-gray-100 rounded-lg p-2 text-xs font-semibold text-gray-800 mt-1`}
-            />
+        {/* Delivery Details */}
+        <View style={tw`mx-4 mt-4 bg-white rounded-3xl p-4 shadow-sm border border-gray-100`}>
+          <Text style={tw`text-gray-900 text-xs font-bold uppercase tracking-wider mb-2.5`}>Delivery Location</Text>
+          <View style={tw`bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80`}>
+            <Text style={tw`text-[13px] font-black text-gray-900`}>IIIT Trichy Campus</Text>
+            <Text style={tw`text-[11px] font-medium text-gray-500 mt-0.5`}>Exclusive Campus Delivery Only</Text>
           </View>
         </View>
 
         {/* Promo code Server-Side Validation */}
         <View style={tw`mx-4 mt-4 bg-white rounded-3xl p-4 shadow-sm`}>
-          <Text style={tw`text-[13px] font-bold text-gray-700 mb-2`}>Promo code</Text>
+          <View style={tw`flex-row justify-between items-center mb-2`}>
+            <Text style={tw`text-[13px] font-bold text-gray-700`}>Promo code</Text>
+            {appliedPromo ? (
+              <TouchableOpacity
+                onPress={() => {
+                  setAppliedPromo('')
+                  setPromoDiscountAmount(0)
+                  setPromoInput('')
+                  setPromoError('')
+                }}
+              >
+                <Text style={tw`text-[11px] font-bold text-red-500`}>Remove</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
           <View style={tw`flex-row gap-2`}>
             <TextInput
               placeholder="Enter promo code"
@@ -441,7 +457,7 @@ export default function CartScreen({
               style={tw`flex-1 bg-gray-100 rounded-xl px-3 py-2 text-[13px] font-medium text-gray-700`}
             />
             <TouchableOpacity
-              onPress={applyPromoServerSide}
+              onPress={() => applyPromoServerSide()}
               disabled={isValidatingPromo}
               style={[tw`px-4 py-2 rounded-xl justify-center items-center`, { backgroundColor: '#8fda58' }]}
             >
@@ -452,10 +468,13 @@ export default function CartScreen({
               )}
             </TouchableOpacity>
           </View>
+
           {appliedPromo ? (
-            <Text style={[tw`text-[12px] font-semibold mt-2`, { color: '#8fda58' }]}>
-              ✓ {appliedPromo} applied — ₹{promoDiscountAmount} discount!
-            </Text>
+            <View style={tw`mt-2.5 bg-green-50 border border-green-200 rounded-xl p-2.5 flex-row items-center justify-between`}>
+              <Text style={[tw`text-[12px] font-bold`, { color: '#15803d' }]}>
+                🎉 {appliedPromo} applied: ₹{promoDiscountAmount} discount!
+              </Text>
+            </View>
           ) : null}
           {promoError ? (
             <Text style={tw`text-[12px] text-red-500 font-semibold mt-2`}>{promoError}</Text>
@@ -469,7 +488,7 @@ export default function CartScreen({
           <View style={tw`flex-1`}>
             {deliveryMode === 'instant' ? (
               <Text style={tw`text-[12px] font-bold text-purple-950`}>
-                Instant Delivery: Standard ₹10 fee applies. <Text style={tw`font-black underline`}>Free delivery ≥ ₹150 is valid ONLY for Scheduled Delivery.</Text>
+                Instant Delivery: Standard ₹{config.delivery_fee.instant} fee applies. <Text style={tw`font-black underline`}>Free delivery ≥ ₹{freeDeliveryThreshold} is valid ONLY for Scheduled Delivery.</Text>
               </Text>
             ) : isScheduledFree ? (
               <Text style={tw`text-[12px] font-black text-green-800`}>
@@ -540,7 +559,7 @@ export default function CartScreen({
             <ActivityIndicator color="white" size="small" />
           ) : (
             <>
-              <Text style={tw`text-[16px] font-black text-white`}>Place Order (COD)</Text>
+              <Text style={tw`text-[16px] font-black text-white`}>Place Order</Text>
               <View style={tw`flex-row items-center gap-1.5`}>
                 <Text style={tw`text-[15px] font-bold text-white`}>₹{total}</Text>
               </View>

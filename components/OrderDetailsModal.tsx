@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Linking } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Polyline } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
@@ -15,32 +15,36 @@ interface OrderDetailsModalProps {
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   delivered:        { label: 'Delivered',         color: '#16a34a', bg: '#dcfce7', dot: '#16a34a' },
-  ready_for_pickup: { label: 'Collect Your Order', color: '#9333ea', bg: '#f3e8ff', dot: '#9333ea' },
+  ready_for_pickup: { label: 'Collect Order',     color: '#9333ea', bg: '#f3e8ff', dot: '#9333ea' },
   out_for_delivery: { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  delivering:       { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
   preparing:        { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
-  accepted:         { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
-  incoming:         { label: 'Order Placed',      color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
-  pending:          { label: 'Order Placed',      color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
+  accepted:         { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
+  incoming:         { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
+  pending:          { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
   cancelled:        { label: 'Cancelled',         color: '#dc2626', bg: '#fef2f2', dot: '#dc2626' },
 }
 
 function getStepIndex(status: string) {
   if (status === 'delivered') return 3
   if (status === 'ready_for_pickup') return 2
-  if (status === 'out_for_delivery' || status === 'preparing' || status === 'accepted') return 1
+  if (status === 'out_for_delivery' || status === 'delivering' || status === 'preparing') return 1
   return 0
 }
 
 export default function OrderDetailsModal({ visible, orderId, initialOrder, onClose, isOwnerView }: OrderDetailsModalProps) {
   const [order, setOrder] = useState<any>(initialOrder || null)
   const [loading, setLoading] = useState<boolean>(false)
+  const [customerPhone, setCustomerPhone] = useState<string>(initialOrder?.customer_phone || '')
+  const [customerName, setCustomerName] = useState<string>(initialOrder?.customer_name || '')
+  const [shopPhone, setShopPhone] = useState<string>(initialOrder?.shop_phone || '')
 
-  // Fetch fresh order details by ID whenever modal opens
+  // Fetch fresh order details by ID whenever modal opens + real-time subscription & fallback polling
   useEffect(() => {
     if (!orderId || !visible) return
 
-    async function loadFreshOrder() {
-      setLoading(true)
+    async function loadFreshOrder(showSpinner = false) {
+      if (showSpinner) setLoading(true)
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -49,13 +53,41 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
 
       if (!error && data) {
         setOrder(data)
+        if (data.customer_name) setCustomerName(data.customer_name)
+        if (data.customer_phone) setCustomerPhone(data.customer_phone)
+        if (data.shop_phone) setShopPhone(data.shop_phone)
+
+        if (data.shop_id && !data.shop_phone) {
+          const { data: sData } = await supabase
+            .from('shops')
+            .select('phone')
+            .eq('id', data.shop_id)
+            .maybeSingle()
+          if (sData?.phone) setShopPhone(sData.phone)
+        }
+
+        if (data.user_id) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('full_name, phone_number')
+            .or(`id.eq.${data.user_id},user_id.eq.${data.user_id}`)
+            .maybeSingle()
+          
+          if (prof) {
+            if (prof.phone_number) setCustomerPhone(prof.phone_number)
+            if (prof.full_name) setCustomerName(prof.full_name)
+          }
+        }
       } else if (initialOrder) {
         setOrder(initialOrder)
+        if (initialOrder.customer_name) setCustomerName(initialOrder.customer_name)
+        if (initialOrder.customer_phone) setCustomerPhone(initialOrder.customer_phone)
+        if (initialOrder.shop_phone) setShopPhone(initialOrder.shop_phone)
       }
-      setLoading(false)
+      if (showSpinner) setLoading(false)
     }
 
-    loadFreshOrder()
+    loadFreshOrder(true)
 
     // Realtime subscription for live updates inside details modal
     const channel = supabase
@@ -69,7 +101,13 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
       )
       .subscribe()
 
+    // 3-second polling fallback while modal is open
+    const pollTimer = setInterval(() => {
+      loadFreshOrder(false)
+    }, 3000)
+
     return () => {
+      clearInterval(pollTimer)
       supabase.removeChannel(channel)
     }
   }, [orderId, visible])
@@ -117,7 +155,7 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
               
               {/* Status Header Pill */}
               <View style={tw`flex-row items-center justify-between bg-gray-50 rounded-2xl p-4 border border-gray-100`}>
-                <View style={tw`flex-1 mr-2`}>
+                <View style={tw`flex-1`}>
                   <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1`}>Status</Text>
                   <View style={tw`flex-row items-center gap-2`}>
                     <View style={[tw`rounded-full px-3 py-1 flex-row items-center gap-1.5`, { backgroundColor: late ? '#fef2f2' : s.bg }]}>
@@ -128,13 +166,6 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
                     </View>
                   </View>
                 </View>
-
-                <View style={tw`items-end`}>
-                  <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5`}>Payment</Text>
-                  <Text style={tw`text-[13px] font-black text-gray-900`}>
-                    {order.payment_mode === 'cod' ? '💵 Cash on Delivery' : '📱 Online UPI'}
-                  </Text>
-                </View>
               </View>
 
               {/* Live Tracking Progress Stepper (If Active) */}
@@ -142,7 +173,7 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
                 <View style={[tw`rounded-3xl p-5 border`, { backgroundColor: '#1a3a2a', borderColor: '#1a3a2a' }]}>
                   <Text style={tw`text-[10px] font-black uppercase tracking-widest text-[#8fda58] mb-3`}>Live Progress</Text>
                   <View style={tw`flex-row items-center`}>
-                    {['Placed', 'Out for Delivery', 'Collect Your Order', 'Delivered'].map((step, i) => {
+                    {['Order Confirmed', 'Out for Delivery', 'Collect Order', 'Delivered'].map((step, i) => {
                       const done = i < currentStep
                       const active = i === currentStep
                       return (
@@ -167,6 +198,23 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
                 </View>
               )}
 
+              {/* Partial Order Alert Banner */}
+              {order.is_partial && (
+                <View style={tw`bg-amber-50 border border-amber-300 rounded-3xl p-4 gap-1.5 shadow-xs`}>
+                  <View style={tw`flex-row items-center gap-1.5`}>
+                    <Text style={tw`text-[13px] font-black text-amber-900 uppercase tracking-wide`}>⚠️ Partial Order Accepted</Text>
+                  </View>
+                  <Text style={tw`text-[12px] text-amber-900 font-medium leading-4`}>
+                    The shop could not fulfill all items. Out-of-stock items have been excluded, and your final bill has been updated.
+                  </Text>
+                  {order.partial_reason && (
+                    <Text style={tw`text-[11px] text-amber-800 font-bold mt-0.5`}>
+                      Shop note: "{order.partial_reason}"
+                    </Text>
+                  )}
+                </View>
+              )}
+
               {/* Itemized Order List */}
               <View style={tw`bg-white rounded-3xl p-5 border border-gray-100 shadow-sm`}>
                 <Text style={tw`text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3`}>
@@ -175,18 +223,31 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
 
                 <View style={tw`gap-3`}>
                   {items.map((item: any, idx: number) => {
-                    const qty = item.quantity || item.qty || 1
+                    const isUnavailable = item.is_unavailable || item.quantity === 0
+                    const qty = item.quantity !== undefined ? item.quantity : (item.qty || 1)
                     const unitPrice = Number(item.price || 0)
-                    const lineTotal = qty * unitPrice
+                    const lineTotal = isUnavailable ? 0 : qty * unitPrice
                     return (
-                      <View key={idx} style={tw`flex-row items-center justify-between py-2 border-b border-gray-50 last:border-b-0`}>
+                      <View key={idx} style={[tw`flex-row items-center justify-between py-2 border-b border-gray-50 last:border-b-0`, isUnavailable ? tw`opacity-50` : {}]}>
                         <View style={tw`flex-1 mr-3`}>
-                          <Text style={tw`text-[14px] font-bold text-gray-900`}>{item.name || 'Item'}</Text>
-                          <Text style={tw`text-[11px] text-gray-400 font-medium mt-0.5`}>
+                          <View style={tw`flex-row items-center gap-1.5 flex-wrap`}>
+                            <Text style={[tw`text-[14px] font-bold`, isUnavailable ? tw`line-through text-gray-400` : tw`text-gray-900`]}>
+                              {item.name || 'Item'}
+                            </Text>
+                            {isUnavailable && (
+                              <View style={tw`bg-red-100 px-1.5 py-0.2 rounded`}>
+                                <Text style={tw`text-[9px] font-black text-red-700 uppercase`}>Out of Stock</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={[tw`text-[11px] font-medium mt-0.5`, isUnavailable ? tw`text-gray-400` : tw`text-gray-400`]}>
                             ₹{unitPrice} × {qty}
+                            {item.original_quantity && item.original_quantity !== qty ? ` (ordered ${item.original_quantity})` : ''}
                           </Text>
                         </View>
-                        <Text style={tw`text-[14px] font-black text-gray-900`}>₹{lineTotal}</Text>
+                        <Text style={[tw`text-[14px] font-black`, isUnavailable ? tw`line-through text-gray-400` : tw`text-gray-900`]}>
+                          ₹{lineTotal}
+                        </Text>
                       </View>
                     )
                   })}
@@ -240,10 +301,60 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
                   <Text style={tw`text-[14px] font-black text-gray-900`}>{order.shop_name || 'Bits Store'}</Text>
                 </View>
 
-                {isOwnerView && order.customer_name && (
-                  <View style={tw`gap-1 mt-1`}>
-                    <Text style={tw`text-[11px] font-bold text-gray-400 uppercase`}>Customer Name</Text>
-                    <Text style={tw`text-[14px] font-bold text-gray-800`}>{order.customer_name}</Text>
+                {/* Customer View: Clickable Store Phone */}
+                {!isOwnerView && (
+                  <View style={tw`bg-emerald-50 border border-emerald-300 rounded-2xl p-3 flex-row items-center justify-between mt-1 shadow-xs`}>
+                    <View style={tw`flex-1 mr-2`}>
+                      <Text style={tw`text-[10px] font-black text-emerald-800 uppercase tracking-wider`}>Store Contact</Text>
+                      <Text style={tw`text-[15px] font-black text-gray-900 mt-0.5`} numberOfLines={1}>
+                        🏪 {order.shop_name || 'Campus Store'}
+                      </Text>
+                    </View>
+                    {(shopPhone || order.shop_phone) ? (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(`tel:${shopPhone || order.shop_phone}`)}
+                        activeOpacity={0.8}
+                        style={tw`flex-row items-center gap-2 bg-green-600 px-3.5 py-2 rounded-xl shadow-md`}
+                      >
+                        <Text style={tw`text-base`}>📞</Text>
+                        <View>
+                          <Text style={tw`text-[9px] font-black text-green-100 uppercase tracking-widest leading-tight`}>TAP TO CALL</Text>
+                          <Text style={tw`text-[13px] font-black text-white leading-none tracking-wide`}>{shopPhone || order.shop_phone}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={tw`bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200`}>
+                        <Text style={tw`text-[11px] font-bold text-gray-400`}>📞 No Phone</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {isOwnerView && (
+                  <View style={tw`bg-emerald-50 border border-emerald-300 rounded-2xl p-3 flex-row items-center justify-between mt-1 shadow-xs`}>
+                    <View style={tw`flex-1 mr-2`}>
+                      <Text style={tw`text-[10px] font-black text-emerald-800 uppercase tracking-wider`}>Customer</Text>
+                      <Text style={tw`text-[15px] font-black text-gray-900 mt-0.5`} numberOfLines={1}>
+                        👤 {customerName || order.customer_name || 'Campus Student'}
+                      </Text>
+                    </View>
+                    {customerPhone ? (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(`tel:${customerPhone}`)}
+                        activeOpacity={0.8}
+                        style={tw`flex-row items-center gap-2 bg-green-600 px-3.5 py-2 rounded-xl shadow-md`}
+                      >
+                        <Text style={tw`text-base`}>📞</Text>
+                        <View>
+                          <Text style={tw`text-[9px] font-black text-green-100 uppercase tracking-widest leading-tight`}>TAP TO CALL</Text>
+                          <Text style={tw`text-[13px] font-black text-white leading-none tracking-wide`}>{customerPhone}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={tw`bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200`}>
+                        <Text style={tw`text-[11px] font-bold text-gray-400`}>📞 No Phone</Text>
+                      </View>
+                    )}
                   </View>
                 )}
 

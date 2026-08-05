@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line, Circle, Rect } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../lib/supabase'
+import { clearAllUserCache } from '../lib/cache'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const ALLOWED_DOMAINS = ['iiitt.ac.in']
@@ -241,7 +242,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
   // Shop specific states
   const [shopName, setShopName] = useState('')
-  const [category, setCategory] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [customCategory, setCustomCategory] = useState('')
   const [role, setRole] = useState<'customer' | 'owner'>('customer')
 
@@ -317,7 +318,10 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
                          passwordMatch && 
                          termsAccepted
 
-  const effectiveCategory = category === 'Others' ? customCategory.trim() : category
+  const effectiveCategory = selectedCategories
+    .map(c => c === 'Others' ? customCategory.trim() : c)
+    .filter(c => c.length > 0)
+    .join(', ')
 
   const isOwnerValid = shopName.trim().length > 0 && 
                        phone.trim().length === 10 && 
@@ -335,6 +339,12 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     setRole('customer')
     const userEmail = email.trim()
     setIsSubmitting(true)
+
+    // Security: Ensure any stale background auth session or cache is wiped before new registration
+    try {
+      await supabase.auth.signOut()
+      await clearAllUserCache()
+    } catch (_) {}
 
     // 1. Check if profile already exists in database
     const { data: existingProfile } = await supabase
@@ -410,6 +420,12 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     setRole('owner')
     const userEmail = email.trim()
     setIsSubmitting(true)
+
+    // Security: Ensure any stale background auth session or cache is wiped before new registration
+    try {
+      await supabase.auth.signOut()
+      await clearAllUserCache()
+    } catch (_) {}
 
     // 1. Check if profile already exists in database
     const { data: existingProfile } = await supabase
@@ -575,38 +591,45 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const userEmail = email.trim()
     const token = codeOverride || otpCode.trim()
 
+    let userId: string | null = null
+
     // 1. Verify OTP with Supabase if token entered
     if (token && token.length >= 4) {
       try {
-        const { error: otpErr } = await supabase.auth.verifyOtp({
+        const { data: verifyData, error: otpErr } = await supabase.auth.verifyOtp({
           email: userEmail,
           token: token,
           type: 'signup'
         })
-        if (otpErr) {
-          await supabase.auth.verifyOtp({
+        if (verifyData?.user?.id) {
+          userId = verifyData.user.id
+        } else if (otpErr) {
+          const { data: verifyData2 } = await supabase.auth.verifyOtp({
             email: userEmail,
             token: token,
             type: 'email'
           })
+          if (verifyData2?.user?.id) {
+            userId = verifyData2.user.id
+          }
         }
       } catch (e) {
         console.warn('[SignupScreen] OTP verification notice:', e)
       }
     }
 
-    let userId: string | null = null
+    // 2. If userId not yet obtained, check current session / user or sign in with password
+    if (!userId) {
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData?.user?.id) {
+          userId = userData.user.id
+        }
+      } catch (_) {}
+    }
 
-    // Check session or create auth user
-    try {
-      const { data: authData } = await supabase.auth.signUp({
-        email: userEmail,
-        password: password
-      })
-
-      if (authData?.user?.id) {
-        userId = authData.user.id
-      } else {
+    if (!userId && password) {
+      try {
         const { data: loginData } = await supabase.auth.signInWithPassword({
           email: userEmail,
           password: password
@@ -614,50 +637,45 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
         if (loginData?.user?.id) {
           userId = loginData.user.id
         }
+      } catch (e) {
+        console.warn('[SignupScreen] signIn notice:', e)
       }
-    } catch (e) {
-      console.warn('[SignupScreen] signUp/signIn notice:', e)
-    }
-
-    if (!userId) {
-      userId = `usr_${Date.now()}`
     }
 
     try {
       const realFullName = name.trim() || (determinedRole === 'shop_owner' ? shopName.trim() : userEmail.split('@')[0])
       const realPhoneNumber = phone.trim()
-
-      const { error: profErr } = await supabase.from('profiles').upsert([{
-        id: userId,
-        user_id: userId,
-        email: userEmail,
-        full_name: realFullName,
-        phone_number: realPhoneNumber,
-        role: determinedRole
-      }])
-
-      if (profErr) {
-        console.error('[SignupScreen] Profile upsert error:', profErr.message)
-      }
-
       let newShopId = undefined
-      if (determinedRole === 'shop_owner') {
-        const { data: shopData } = await supabase.from('shops').insert([{
-          owner_id: userId,
-          name: shopName.trim(),
-          category: effectiveCategory || 'Others',
-          is_open: true
-        }]).select().single()
+      let finalRole = determinedRole
 
-        if (shopData) {
-          newShopId = shopData.id
-          await supabase.from('shop_workers').insert([{
-            shop_id: shopData.id,
-            user_id: userId,
-            worker_name: realFullName,
-            worker_phone: realPhoneNumber,
-            role: 'owner'
-          }])
+      if (determinedRole === 'shop_owner') {
+        // Secure atomic shop registration and verified role assignment via RPC
+        const { data: regData, error: regErr } = await supabase.rpc('register_partner_shop', {
+          p_shop_name: shopName.trim(),
+          p_category: effectiveCategory || 'Others',
+          p_full_name: realFullName,
+          p_phone: realPhoneNumber
+        })
+
+        if (regErr) {
+          console.warn('[SignupScreen] register_partner_shop notice:', regErr.message)
+        } else if (regData?.shop_id) {
+          newShopId = regData.shop_id
+          finalRole = 'shop_owner'
+        }
+      } else if (userId) {
+        // Standard customer profile creation (strictly role: 'customer')
+        const { error: profErr } = await supabase.from('profiles').upsert([{
+          id: userId,
+          user_id: userId,
+          email: userEmail,
+          full_name: realFullName,
+          phone_number: realPhoneNumber,
+          role: 'customer'
+        }], { onConflict: 'id' })
+
+        if (profErr) {
+          console.warn('[SignupScreen] Profile upsert notice:', profErr.message)
         }
       }
 
@@ -665,7 +683,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
       completeAuth({
         id: userId,
-        role: determinedRole,
+        role: finalRole,
         name: realFullName,
         email: userEmail,
         phone_number: realPhoneNumber,
@@ -694,6 +712,12 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
     setIsSubmitting(true)
 
+    // Security: Purge any old session or cached state before authenticating
+    try {
+      await supabase.auth.signOut()
+      await clearAllUserCache()
+    } catch (_) {}
+
     // Determine target portal (if on Slide 0 of carousel, role is 'customer'. If step === 'login' and role === 'owner', it's 'owner')
     const targetPortal = (step === 'carousel' && activeSlide === 0) ? 'customer' : (role === 'owner' ? 'owner' : 'customer')
 
@@ -704,14 +728,6 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     })
 
     let authUser = authData?.user
-
-    // Handle case where password is correct but Supabase Auth holds email as unconfirmed (due to default SMTP)
-    if (!authUser && authError?.message?.includes('Email not confirmed')) {
-      authUser = {
-        id: `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-        email: cleanEmail
-      } as any
-    }
 
     if (!authUser && authError) {
       setIsSubmitting(false)
@@ -795,7 +811,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       return
     }
 
-    const userId = authUser?.id || profile?.id || profile?.user_id || `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`
+    const userId = authUser?.id || profile?.id || profile?.user_id
     const determinedRole = isShopPartner ? 'shop_owner' : (profile?.role || 'customer')
     
     // Read real full_name from database profile, fallback to shop name or email handle
@@ -1161,33 +1177,42 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
           {/* Shop Category Selection */}
           <View style={tw`mb-4 mx-6`}>
-            <Text style={tw`text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2`}>Shop Category</Text>
+            <Text style={tw`text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2`}>Shop Categories (Select Multiple)</Text>
             <View style={tw`flex-row flex-wrap gap-2`}>
-              {APP_CATEGORIES.map(c => (
-                <TouchableOpacity
-                  key={c}
-                  onPress={() => {
-                    setCategory(c)
-                    if (c !== 'Others') setCustomCategory('')
-                  }}
-                  style={[
-                    tw`px-3.5 py-2 rounded-full border`,
-                    {
-                      backgroundColor: category === c ? '#8fda58' : '#f9fafb',
-                      borderColor: category === c ? '#8fda58' : '#e5e7eb',
-                    }
-                  ]}
-                >
-                  <Text style={[tw`text-[12px] font-bold`, { color: category === c ? '#ffffff' : '#4b5563' }]}>
-                    {c}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {APP_CATEGORIES.map(c => {
+                const isSelected = selectedCategories.includes(c);
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    onPress={() => {
+                      setSelectedCategories(prev => {
+                        if (prev.includes(c)) {
+                          if (c === 'Others') setCustomCategory('');
+                          return prev.filter(item => item !== c);
+                        } else {
+                          return [...prev, c];
+                        }
+                      });
+                    }}
+                    style={[
+                      tw`px-3.5 py-2 rounded-full border`,
+                      {
+                        backgroundColor: isSelected ? '#8fda58' : '#f9fafb',
+                        borderColor: isSelected ? '#8fda58' : '#e5e7eb',
+                      }
+                    ]}
+                  >
+                    <Text style={[tw`text-[12px] font-bold`, { color: isSelected ? '#ffffff' : '#4b5563' }]}>
+                      {c}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           {/* Custom Category Input if Others selected */}
-          {category === 'Others' && (
+          {selectedCategories.includes('Others') && (
             <CustomInput
               label="Custom Category Name"
               placeholder="e.g. Books & Gifts, Electronics, Printing"

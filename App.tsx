@@ -12,9 +12,11 @@ import ProfileScreen from './screens/ProfileScreen'
 import SignupScreen from './screens/SignupScreen'
 import ShopDetailsScreen from './screens/ShopDetailsScreen'
 import OwnerDashboard from './screens/OwnerDashboard'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { BACKEND_URL } from './screens/apiConfig'
-import { registerForPushNotifications, checkNotificationPermissionStatus, setupNotificationListeners } from './lib/notifications'
+import { registerForPushNotifications, checkNotificationPermissionStatus, setupNotificationListeners, sendLocalNotification } from './lib/notifications'
 import { supabase } from './lib/supabase'
+import { clearAllUserCache } from './lib/cache'
 import { PermissionPrePromptModal } from './components/PermissionPrePromptModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
@@ -152,13 +154,14 @@ export default function App() {
   // Profile Address State
   const [address, setAddress] = useState({
     area: "IIIT Tiruchirappalli",
-    room: "Gate 1",
     landmark: "Sethurapatti, Trichy"
   })
 
-  // Notifications Pre-Prompt Modal State
+  // Notifications State
   const [showPermissionPrePrompt, setShowPermissionPrePrompt] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false)
+  const [notificationsList, setNotificationsList] = useState<Array<{ id: string; title: string; body: string; time: string }>>([])
 
   // Profile Completion Modal State
   const [profileNameInput, setProfileNameInput] = useState('')
@@ -230,6 +233,22 @@ export default function App() {
     }
   }, [])
 
+  // Load stored notifications on initial mount
+  useEffect(() => {
+    async function loadStoredNotifications() {
+      try {
+        const saved = await AsyncStorage.getItem('@vaayu_notifications_list')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) {
+            setNotificationsList(parsed)
+          }
+        }
+      } catch (_) {}
+    }
+    loadStoredNotifications()
+  }, [])
+
   // Push Notifications Setup & Permission Check
   useEffect(() => {
     async function initPush() {
@@ -242,16 +261,102 @@ export default function App() {
     }
     initPush()
 
-    // Notification tap handler (Deep linking)
-    const cleanupListeners = setupNotificationListeners((orderId) => {
-      showToast(`Opening order #${orderId}`)
-      setActiveTab('orders')
-    })
+    // Notification listeners (Foreground & Background Tap)
+    const cleanupListeners = setupNotificationListeners(
+      (orderId) => {
+        showToast(`Opening order #${orderId}`)
+        setActiveTab('orders')
+        setHasUnreadNotifications(false)
+      },
+      (notification) => {
+        const title = notification?.request?.content?.title || 'New Notification'
+        const body = notification?.request?.content?.body || ''
+        const notifData = notification?.request?.content?.data
+        setHasUnreadNotifications(true)
+        setNotificationsList(prev => {
+          const item = {
+            id: Date.now().toString(),
+            title,
+            body,
+            orderId: notifData?.orderId,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+          const updated = [item, ...prev.filter(n => n.id !== item.id)].slice(0, 30)
+          AsyncStorage.setItem('@vaayu_notifications_list', JSON.stringify(updated)).catch(() => {})
+          return updated
+        })
+      }
+    )
 
     return () => {
       cleanupListeners()
     }
   }, [user])
+
+  // In-app Realtime Order Updates for Customer
+  useEffect(() => {
+    if (!user?.id || user.role === 'shop_owner') return
+
+    const channel = supabase
+      .channel(`customer_order_updates_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload: any) => {
+          const newOrder = payload.new
+          const oldOrder = payload.old
+          // Check if this order belongs to the user and status changed
+          if (newOrder && oldOrder && newOrder.user_id === user.id && newOrder.status !== oldOrder.status) {
+            let title = `📦 Order #${newOrder.id} Updated`
+            let body = `Status changed to ${newOrder.status}`
+            
+            if (newOrder.status === 'accepted' || newOrder.status === 'preparing') {
+              title = `👨‍🍳 Cooking in Progress! #${newOrder.id}`
+              body = `${newOrder.shop_name || 'Shop'} is preparing your order with care.`
+            } else if (newOrder.status === 'ready_for_pickup') {
+              title = `🛍️ Ready for Pickup! #${newOrder.id}`
+              body = `Your order is packed and ready for pickup at ${newOrder.shop_name || 'the shop'}.`
+            } else if (newOrder.status === 'out_for_delivery' || newOrder.status === 'delivering') {
+              title = `🛵 Order On The Way! #${newOrder.id}`
+              body = `Your order is packed & heading towards ${newOrder.location || 'IIIT Trichy'}.`
+            } else if (newOrder.status === 'delivered') {
+              title = `🎉 Order Delivered! Enjoy your meal 😋`
+              body = `Order #${newOrder.id} has reached ${newOrder.location || 'IIIT Trichy'}.`
+            } else if (newOrder.status === 'cancelled') {
+              title = `❌ Order Cancelled #${newOrder.id}`
+              body = newOrder.cancel_reason || 'Your order was cancelled by the shop.'
+            }
+
+            const notifItem = {
+              id: Date.now().toString(),
+              title,
+              body,
+              orderId: newOrder.id,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+
+            setHasUnreadNotifications(true)
+            setNotificationsList(prev => {
+              const updated = [notifItem, ...prev.filter(n => n.id !== notifItem.id)].slice(0, 30)
+              AsyncStorage.setItem('@vaayu_notifications_list', JSON.stringify(updated)).catch(() => {})
+              return updated
+            })
+
+            showToast(`${title}\n${body}`)
+            sendLocalNotification(title, body, { orderId: newOrder.id })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id, user?.role])
 
   const handleAllowNotifications = async () => {
     setShowPermissionPrePrompt(false)
@@ -347,6 +452,22 @@ export default function App() {
     showToast("Order placed successfully via Cash on Delivery!")
   }
 
+    // Centralized, security-hardened Sign Out handler
+    const handleSignOut = async () => {
+      try {
+        await supabase.auth.signOut()
+      } catch (e) {
+        console.warn('[App] SignOut notice:', e)
+      }
+      await clearAllUserCache()
+      setUser(null)
+      setCartItems([])
+      setCartShop(null)
+      setOrders([])
+      setSelectedShop(null)
+      setActiveTab('home')
+    }
+
   // If user is not logged in, show Signup / Login Screen
   if (!user) {
     return <SignupScreen onDone={handleRegisterUser} onRegister={handleRegisterUser} />
@@ -357,7 +478,7 @@ export default function App() {
     return (
       <View style={[tw`flex-1 bg-gray-100`, styles.safeArea]}>
         <StatusBar style="dark" />
-        <OwnerDashboard user={user} onSignOut={() => setUser(null)} />
+        <OwnerDashboard user={user} onSignOut={handleSignOut} />
       </View>
     )
   }
@@ -402,7 +523,11 @@ export default function App() {
               onSelectShop={setSelectedShop}
               cartItems={cartItems}
               onOpenCart={() => setActiveTab('cart')}
-              onOpenNotifications={() => setShowNotifications(true)}
+              onOpenNotifications={() => {
+                setShowNotifications(true)
+                setHasUnreadNotifications(false)
+              }}
+              hasUnreadNotifications={hasUnreadNotifications}
               address={address}
               onOpenAddressPicker={() => setActiveTab('profile')}
             />
@@ -441,10 +566,7 @@ export default function App() {
               address={address}
               setAddress={setAddress}
               savedShops={savedShops}
-              onSignOut={async () => {
-                await supabase.auth.signOut()
-                setUser(null)
-              }}
+              onSignOut={handleSignOut}
             />
           )}
 
@@ -473,22 +595,65 @@ export default function App() {
                 <Text style={tw`text-2xl`}>🔔</Text>
                 <Text style={tw`text-[20px] font-black text-gray-900`}>Notifications</Text>
               </View>
-              <TouchableOpacity
-                onPress={() => setShowNotifications(false)}
-                style={tw`w-8 h-8 rounded-full bg-gray-100 items-center justify-center`}
-              >
-                <Text style={tw`text-gray-500 font-bold text-base`}>✕</Text>
-              </TouchableOpacity>
+              <View style={tw`flex-row items-center gap-2`}>
+                {notificationsList.length > 0 && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      setNotificationsList([])
+                      setHasUnreadNotifications(false)
+                      await AsyncStorage.removeItem('@vaayu_notifications_list').catch(() => {})
+                    }}
+                    style={tw`px-2.5 py-1 bg-gray-100 rounded-lg`}
+                  >
+                    <Text style={tw`text-[11px] font-bold text-gray-500`}>Clear All</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowNotifications(false)
+                    setHasUnreadNotifications(false)
+                  }}
+                  style={tw`w-8 h-8 rounded-full bg-gray-100 items-center justify-center`}
+                >
+                  <Text style={tw`text-gray-500 font-bold text-base`}>✕</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Empty state — no real notifications yet */}
-            <View style={tw`py-12 items-center justify-center gap-3`}>
-              <Text style={tw`text-5xl`}>🔕</Text>
-              <Text style={tw`text-[16px] font-black text-gray-800 mt-2`}>No notifications yet</Text>
-              <Text style={tw`text-[12px] text-gray-400 font-medium text-center px-6`}>
-                Order updates and alerts will appear here when available.
-              </Text>
-            </View>
+            {/* Notifications Content */}
+            {notificationsList.length > 0 ? (
+              <ScrollView style={tw`max-h-96`} showsVerticalScrollIndicator={false}>
+                <View style={tw`gap-2.5`}>
+                  {notificationsList.map(notif => (
+                    <TouchableOpacity
+                      key={notif.id}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setShowNotifications(false)
+                        setHasUnreadNotifications(false)
+                        setActiveTab('orders')
+                      }}
+                      style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 gap-1`}
+                    >
+                      <View style={tw`flex-row justify-between items-center`}>
+                        <Text style={tw`text-[14px] font-bold text-gray-900`}>{notif.title}</Text>
+                        <Text style={tw`text-[11px] text-gray-400 font-medium`}>{notif.time}</Text>
+                      </View>
+                      {notif.body ? <Text style={tw`text-[13px] text-gray-600 font-medium`}>{notif.body}</Text> : null}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            ) : (
+              /* Empty state */
+              <View style={tw`py-12 items-center justify-center gap-3`}>
+                <Text style={tw`text-5xl`}>🔕</Text>
+                <Text style={tw`text-[16px] font-black text-gray-800 mt-2`}>No notifications yet</Text>
+                <Text style={tw`text-[12px] text-gray-400 font-medium text-center px-6`}>
+                  Live order updates and campus alerts will appear here.
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       )}
