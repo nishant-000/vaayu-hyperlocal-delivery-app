@@ -391,7 +391,7 @@ export default function App() {
               title = `🛍️ Ready for Pickup! #${newOrder.id}`
               body = `Your order is packed and ready for pickup at ${newOrder.shop_name || 'the shop'}.`
             } else if (newOrder.status === 'out_for_delivery' || newOrder.status === 'delivering') {
-              title = `🛵 Order On The Way! #${newOrder.id}`
+              title = `Order On The Way! #${newOrder.id}`
               body = `Your order is packed & heading towards ${newOrder.location || 'IIIT Trichy'}.`
             } else if (newOrder.status === 'delivered') {
               title = `🎉 Order Delivered! Enjoy your order 😋`

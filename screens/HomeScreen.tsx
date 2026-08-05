@@ -8,7 +8,7 @@ import {
   IconBell,
   IconStar,
 } from './Icons'
-import { fetchRemoteConfig, subscribeToRemoteConfig, AppConfig, DEFAULT_CONFIG } from '../lib/remoteConfig'
+import { fetchRemoteConfig, subscribeToRemoteConfig, AppConfig, DEFAULT_CONFIG, getOptimizedImageUrl } from '../lib/remoteConfig'
 import { supabase } from '../lib/supabase'
 import { getCache, setCache } from '../lib/cache'
 
@@ -201,14 +201,32 @@ export default function HomeScreen({
     return catName ? shopCategories.includes(catName) : true
   })
 
-  // Banners from live Remote Config
-  const liveBanners = config.banners && config.banners.length > 0 ? config.banners : [
+  // ── Remote Config Live Banners (Inspected & Verified) ──
+  const rawBanners = config?.banners || []
+  
+  // 1 & 2 & 3. Verify active status and show_on matching customer_home
+  const activeBanners = rawBanners
+    .filter(b => {
+      const isActive = b.active !== false
+      const matchesScreen = !b.show_on || b.show_on.length === 0 || b.show_on.includes('customer_home')
+      console.log(`[HomeScreen] 2 & 3. Banner '${b.id}' (${b.title}): active=${isActive}, matchesScreen=${matchesScreen} (show_on=${JSON.stringify(b.show_on)})`)
+      return isActive && matchesScreen
+    })
+    .sort((a, b) => (a.priority || 99) - (b.priority || 99))
+
+  const liveBanners = activeBanners.length > 0 ? activeBanners : [
     {
-      id: "b1",
+      id: "b1_default",
       title: "Gate 1 Express Delivery",
-      image_url: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop"
+      image_url: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop",
+      active: true,
+      priority: 1,
+      show_on: ["customer_home"]
     }
   ]
+
+  // 7. Verify carousel is rendering at least one banner
+  console.log(`[HomeScreen] 7. Carousel rendering banner count: ${liveBanners.length}, IDs: [${liveBanners.map(b => b.id).join(', ')}]`)
 
   return (
     <View style={tw`flex-1 bg-gray-50`}>
@@ -270,17 +288,42 @@ export default function HomeScreen({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={tw`px-4 gap-3`}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <View style={tw`w-[85vw] h-40 rounded-3xl overflow-hidden relative shadow-md bg-gray-200`}>
-                <Image source={{ uri: item.image_url }} style={tw`w-full h-full`} resizeMode="cover" />
-                <View style={[tw`absolute inset-0 p-4 justify-between`, { backgroundColor: 'rgba(0,0,0,0.35)' }]}>
-                  <Text style={tw`text-white font-black text-xl w-3/4`}>{item.title}</Text>
-                  <View style={tw`bg-white/90 rounded-full px-3 py-1 self-start`}>
-                    <Text style={tw`text-[10px] font-black text-gray-900 uppercase`}>Vaayu Express</Text>
+            renderItem={({ item }) => {
+              const targetUrl = getOptimizedImageUrl(item.image_url, 800)
+              // 4. Log exact image_url passed into React Native Image component
+              console.log(`[HomeScreen] 4. Exact image_url passed to Image component for [${item.id}]:`, targetUrl)
+
+              return (
+                <View style={tw`w-[85vw] h-40 rounded-3xl overflow-hidden relative shadow-md bg-gray-200`}>
+                  <Image
+                    source={{ uri: targetUrl }}
+                    style={tw`w-full h-full`}
+                    resizeMode="cover"
+                    // 5. onLoad callback logging
+                    onLoad={(e) => {
+                      console.log(`[HomeScreen] 5. Banner image [${item.id}] loaded successfully:`, {
+                        url: targetUrl,
+                        width: e.nativeEvent?.source?.width,
+                        height: e.nativeEvent?.source?.height
+                      })
+                    }}
+                    // 6. onError callback logging
+                    onError={(e) => {
+                      console.error(`[HomeScreen] 6. Banner image [${item.id}] failed to load:`, {
+                        url: targetUrl,
+                        error: e.nativeEvent?.error || e.nativeEvent
+                      })
+                    }}
+                  />
+                  <View style={[tw`absolute inset-0 p-4 justify-between`, { backgroundColor: 'rgba(0,0,0,0.35)' }]}>
+                    <Text style={tw`text-white font-black text-xl w-3/4`}>{item.title}</Text>
+                    <View style={tw`bg-white/90 rounded-full px-3 py-1 self-start`}>
+                      <Text style={tw`text-[10px] font-black text-gray-900 uppercase`}>Vaayu Express</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
+              )
+            }}
           />
         </View>
 

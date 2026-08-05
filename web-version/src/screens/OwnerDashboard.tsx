@@ -14,7 +14,7 @@ const i18n: Record<string, Record<string, string>> = {
     todayCash: "TODAY'S CASH",
     accept: "✅ ACCEPT ORDER",
     decline: "❌ DECLINE",
-    markReady: "🛵 MARK READY (DISPATCH)",
+    markReady: "OUT FOR DELIVERY",
     markDelivered: "🎉 MARK DELIVERED",
     completed: "✓ DELIVERED",
     rejected: "✕ REJECTED",
@@ -42,7 +42,7 @@ const i18n: Record<string, Record<string, string>> = {
     financialSummary: "🏦 VAAYU FINANCIAL SETTLEMENT & RETURN VAULT",
     instantDeliveryTag: "⚡ Instant Delivery Fees (₹10/order)",
     scheduledDeliveryTag: "🟢 Scheduled Delivery Fees (₹5/order)",
-    platformFeeTag: "🛵 Platform Fees Owed to Vaayu (₹5/order)",
+    platformFeeTag: "Platform Fees Owed to Vaayu (₹5/order)",
     totalOwedToVaayu: "💸 CASH TO RETURN TO VAAYU",
     shopNetEarnings: "💰 SHOP NET FOOD EARNINGS",
   },
@@ -58,7 +58,7 @@ const i18n: Record<string, Record<string, string>> = {
     todayCash: "आज की कुल बिक्री",
     accept: "✅ स्वीकार करें (स्वीकार)",
     decline: "❌ मना करें",
-    markReady: "🛵 तैयार है (रवाना करें)",
+    markReady: "रवाना करें (OUT FOR DELIVERY)",
     markDelivered: "🎉 डिलिवर हो गया",
     completed: "✓ पूर्ण हुआ",
     rejected: "✕ आर्डर रद्द",
@@ -86,7 +86,7 @@ const i18n: Record<string, Record<string, string>> = {
     financialSummary: "🏦 वायु वित्तीय हिसाब और देय राशि",
     instantDeliveryTag: "⚡ तुरंत डिलिवरी शुल्क (₹10/आर्डर)",
     scheduledDeliveryTag: "🟢 निर्धारित डिलिवरी शुल्क (₹5/आर्डर)",
-    platformFeeTag: "🛵 वायु प्लेटफॉर्म शुल्क (₹5/आर्डर)",
+    platformFeeTag: "वायु प्लेटफॉर्म शुल्क (₹5/आर्डर)",
     totalOwedToVaayu: "💸 वायु को लौटाई जाने वाली कुल राशि",
     shopNetEarnings: "💰 दुकानदार की शुद्ध खाद्य कमाई",
   },
@@ -102,7 +102,7 @@ const i18n: Record<string, Record<string, string>> = {
     todayCash: "இன்றைய விற்பனை",
     accept: "✅ ஏற்றுக்கொள்",
     decline: "❌ நிராகரி",
-    markReady: "🛵 தயார் (அனுப்பு)",
+    markReady: "தயார் (OUT FOR DELIVERY)",
     markDelivered: "🎉 டெலிவரி செய்யப்பட்டது",
     completed: "✓ முடிந்தது",
     rejected: "✕ நிராகரிக்கப்பட்டது",
@@ -130,7 +130,7 @@ const i18n: Record<string, Record<string, string>> = {
     financialSummary: "🏦 வாயு நிதி கணக்கு விவரம்",
     instantDeliveryTag: "⚡ உடனடி டெலிவரி கட்டணம் (₹10/ஆர்டர்)",
     scheduledDeliveryTag: "🟢 திட்டமிடப்பட்ட டெலிவரி கட்டணம் (₹5/ஆர்டர்)",
-    platformFeeTag: "🛵 வாயு கட்டணம் (₹5/ஆர்டர்)",
+    platformFeeTag: "வாயு கட்டணம் (₹5/ஆர்டர்)",
     totalOwedToVaayu: "💸 வாயுவிற்கு செலுத்த வேண்டிய தொகை",
     shopNetEarnings: "💰 கடை நிகர வருமானம்",
   }
@@ -488,7 +488,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         }`}>
                           {order.status === 'incoming' ? '📥 NEW' :
                            order.status === 'preparing' || order.status === 'accepted' ? '🍳 COOK' :
-                           order.status === 'out_for_delivery' || order.status === 'delivering' ? '🛵 ROAD' : '✅ DONE'}
+                           order.status === 'out_for_delivery' || order.status === 'delivering' ? 'OUT FOR DELIVERY' : '✅ DONE'}
                         </span>
                       </div>
                     </div>
@@ -536,7 +536,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
                         <div className="flex justify-between items-center text-xs">
                           <span className="font-bold text-blue-700">
-                            🛵 {t.deliveryFee} ({bill.isInstant ? '⚡ Instant ₹10' : '🟢 Scheduled ₹5'})
+                            {t.deliveryFee} ({bill.isInstant ? '⚡ Instant ₹10' : '🟢 Scheduled ₹5'})
                           </span>
                           <span className="font-black text-blue-800">+₹{bill.deliveryFee}</span>
                         </div>

@@ -16,9 +16,9 @@ interface OrderDetailsModalProps {
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   delivered:        { label: 'Delivered',         color: '#16a34a', bg: '#dcfce7', dot: '#16a34a' },
   ready_for_pickup: { label: 'Collect Order',     color: '#9333ea', bg: '#f3e8ff', dot: '#9333ea' },
-  out_for_delivery: { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
-  delivering:       { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
-  preparing:        { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  out_for_delivery: { label: 'OUT FOR DELIVERY',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  delivering:       { label: 'OUT FOR DELIVERY',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  preparing:        { label: 'OUT FOR DELIVERY',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
   accepted:         { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
   incoming:         { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
   pending:          { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
@@ -173,7 +173,7 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
                 <View style={[tw`rounded-3xl p-5 border`, { backgroundColor: '#1a3a2a', borderColor: '#1a3a2a' }]}>
                   <Text style={tw`text-[10px] font-black uppercase tracking-widest text-[#8fda58] mb-3`}>Live Progress</Text>
                   <View style={tw`flex-row items-center`}>
-                    {['Order Confirmed', 'Out for Delivery', 'Collect Order', 'Delivered'].map((step, i) => {
+                    {['Order Confirmed', 'OUT FOR DELIVERY', 'Collect Order', 'Delivered'].map((step, i) => {
                       const done = i < currentStep
                       const active = i === currentStep
                       return (

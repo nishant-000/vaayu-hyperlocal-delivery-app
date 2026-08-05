@@ -64,7 +64,7 @@ BEGIN
         v_title := '🛍️ Ready for Pickup! #' || NEW.id;
         v_body := 'Your order is packed and ready for pickup at ' || COALESCE(NEW.shop_name, 'the shop') || '.';
       ELSIF (NEW.status = 'out_for_delivery' OR NEW.status = 'delivering') THEN
-        v_title := '🛵 Order On The Way! #' || NEW.id;
+        v_title := 'Order On The Way! #' || NEW.id;
         v_body := 'Your order is packed & heading towards ' || COALESCE(NEW.location, 'your hostel') || '.';
       ELSIF (NEW.status = 'delivered') THEN
         v_title := '🎉 Order Delivered! Enjoy your order 😋';

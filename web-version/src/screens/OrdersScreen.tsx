@@ -54,10 +54,12 @@ const orders = [
 ]
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
-  delivered:   { label: 'Delivered',    color: '#16a34a', bg: '#f0fdf4', dot: '#16a34a' },
-  on_the_way:  { label: 'On the way',  color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
-  preparing:   { label: 'Preparing',   color: '#d97706', bg: '#fffbeb', dot: '#d97706' },
-  cancelled:   { label: 'Cancelled',   color: '#dc2626', bg: '#fef2f2', dot: '#dc2626' },
+  delivered:        { label: 'Delivered',        color: '#16a34a', bg: '#f0fdf4', dot: '#16a34a' },
+  on_the_way:       { label: 'OUT FOR DELIVERY', color: '#ea580c', bg: '#fff7ed', dot: '#ea580c' },
+  out_for_delivery: { label: 'OUT FOR DELIVERY', color: '#ea580c', bg: '#fff7ed', dot: '#ea580c' },
+  delivering:       { label: 'OUT FOR DELIVERY', color: '#ea580c', bg: '#fff7ed', dot: '#ea580c' },
+  preparing:        { label: 'Preparing',        color: '#d97706', bg: '#fffbeb', dot: '#d97706' },
+  cancelled:        { label: 'Cancelled',        color: '#dc2626', bg: '#fef2f2', dot: '#dc2626' },
 }
 
 const tabs = ['All', 'Active', 'Past']
@@ -79,7 +81,7 @@ function LiveTracker() {
         </div>
         {/* Progress steps */}
         <div className="flex items-center gap-0 mt-4">
-          {['Placed', 'Preparing', 'On the way', 'Delivered'].map((step, i) => {
+          {['Placed', 'Preparing', 'OUT FOR DELIVERY', 'Delivered'].map((step, i) => {
             const done = i < 2
             const active = i === 2
             return (

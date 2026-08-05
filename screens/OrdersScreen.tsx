@@ -10,9 +10,9 @@ import OrderDetailsModal from '../components/OrderDetailsModal'
 const statusConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   delivered:        { label: 'Delivered',         color: '#16a34a', bg: '#dcfce7', dot: '#16a34a' },
   ready_for_pickup: { label: 'Collect Order',     color: '#9333ea', bg: '#f3e8ff', dot: '#9333ea' },
-  out_for_delivery: { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
-  delivering:       { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
-  preparing:        { label: 'Out for Delivery',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  out_for_delivery: { label: 'OUT FOR DELIVERY',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  delivering:       { label: 'OUT FOR DELIVERY',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
+  preparing:        { label: 'OUT FOR DELIVERY',  color: '#ea580c', bg: '#ffedd5', dot: '#ea580c' },
   accepted:         { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
   incoming:         { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
   pending:          { label: 'Order Confirmed',   color: '#2563eb', bg: '#eff6ff', dot: '#2563eb' },
@@ -151,9 +151,9 @@ function ActiveOrderTrackingCard({ order, onPress }: { order: any; onPress: () =
           </View>
         )}
 
-        {/* Progress steps: Order Confirmed -> Out for Delivery -> Collect Order -> Delivered */}
+        {/* Progress steps: Order Confirmed -> OUT FOR DELIVERY -> Collect Order -> Delivered */}
         <View style={tw`flex-row items-center mt-1 mb-2`}>
-          {['Order Confirmed', 'Out for Delivery', 'Collect Order', 'Delivered'].map((step, i) => {
+          {['Order Confirmed', 'OUT FOR DELIVERY', 'Collect Order', 'Delivered'].map((step, i) => {
             const done = i < currentStep
             const active = i === currentStep
             return (

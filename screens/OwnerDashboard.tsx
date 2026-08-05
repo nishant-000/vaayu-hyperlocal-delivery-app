@@ -23,8 +23,8 @@ const i18n: Record<string, Record<string, string>> = {
     todayCash: "TODAY'S CASH",
     accept: "✅ ACCEPT ORDER",
     decline: "❌ DECLINE",
-    markReady: "🛵 OUT FOR DELIVERY",
-    markOutForDelivery: "🛵 OUT FOR DELIVERY",
+    markReady: "OUT FOR DELIVERY",
+    markOutForDelivery: "OUT FOR DELIVERY",
     markCollectOrder: "📍 ASK TO COLLECT",
     markDelivered: "🎉 DELIVERED",
     completed: "✓ DELIVERED",
@@ -81,8 +81,8 @@ const i18n: Record<string, Record<string, string>> = {
     todayCash: "आज की कुल बिक्री",
     accept: "✅ स्वीकार करें",
     decline: "❌ मना करें",
-    markReady: "🛵 रवाना करें (आउट फॉर डिलीवरी)",
-    markOutForDelivery: "🛵 रवाना करें (आउट फॉर डिलीवरी)",
+    markReady: "रवाना करें (OUT FOR DELIVERY)",
+    markOutForDelivery: "रवाना करें (OUT FOR DELIVERY)",
     markCollectOrder: "📍 पहुंच गए: कलेक्ट आर्डर",
     markDelivered: "🎉 आर्डर सौंप दिया (डिलिवर)",
     completed: "✓ पूर्ण हुआ",
@@ -139,8 +139,8 @@ const i18n: Record<string, Record<string, string>> = {
     todayCash: "இன்றைய விற்பனை",
     accept: "✅ ஏற்றுக்கொள்",
     decline: "❌ நிராகரி",
-    markReady: "🛵 தயார் (அனுப்பு)",
-    markOutForDelivery: "🛵 டெலிவரிக்கு அனுப்பு",
+    markReady: "தயார் (OUT FOR DELIVERY)",
+    markOutForDelivery: "டெலிவரிக்கு அனுப்பு (OUT FOR DELIVERY)",
     markCollectOrder: "📍 ஆர்டர் ஒப்படைக்க",
     markDelivered: "🎉 டெலிவரி செய்யப்பட்டது",
     completed: "✓ முடிந்தது",
@@ -1613,7 +1613,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                             {late ? '⚠️ OVERDUE' :
                              order.status === 'incoming' ? '📥 NEW ORDER' :
                              order.status === 'accepted' ? '📥 ACCEPTED' :
-                             order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? '🛵 OUT FOR DELIVERY' :
+                             order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? 'OUT FOR DELIVERY' :
                              order.status === 'ready_for_pickup' ? '📍 COLLECT ORDER' :
                              order.status === 'delivered' ? '✅ DELIVERED' : '❌ CANCELLED'}
                           </Text>
@@ -1654,11 +1654,11 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         <Text style={[tw`text-[10px] font-bold uppercase`, {
                           color: order.status === 'delivered' ? '#16a34a' : order.status === 'ready_for_pickup' ? '#9333ea' : (order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing') ? '#ea580c' : '#2563eb'
                         }]}>
-                          {order.status === 'delivered' ? 'Delivered' : order.status === 'ready_for_pickup' ? 'Collect Order' : (order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing') ? 'Out for Delivery' : 'Order Confirmed'}
+                          {order.status === 'delivered' ? 'Delivered' : order.status === 'ready_for_pickup' ? 'Collect Order' : (order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing') ? 'OUT FOR DELIVERY' : 'Order Confirmed'}
                         </Text>
                       </View>
                       <View style={tw`flex-row items-center`}>
-                        {['Order Confirmed', 'Out for Delivery', 'Collect Order', 'Delivered'].map((step, i) => {
+                        {['Order Confirmed', 'OUT FOR DELIVERY', 'Collect Order', 'Delivered'].map((step, i) => {
                           const done = i < currentStep
                           const active = i === currentStep
                           return (

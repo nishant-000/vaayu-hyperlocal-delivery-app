@@ -70,6 +70,32 @@ export const DEFAULT_CONFIG: AppConfig = {
 const getStorageItem = (key: string) => CustomAsyncStorage.getItem(key);
 const setStorageItem = (key: string, value: string) => CustomAsyncStorage.setItem(key, value);
 
+export function getOptimizedImageUrl(url: string, width = 800): string {
+  if (!url || typeof url !== 'string') return '';
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    const parts = url.split('/upload/');
+    const baseUrl = parts[0] + '/upload/';
+    let rest = parts[1] || '';
+    
+    // Ensure image has a file extension
+    const hasExtension = /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(rest);
+    if (!hasExtension) {
+      rest = rest + '.jpg';
+    }
+
+    // Replace or insert format/quality and width transformations
+    if (rest.startsWith('f_auto') || rest.startsWith('w_') || rest.startsWith('c_') || rest.startsWith('q_')) {
+      const segIndex = rest.indexOf('/');
+      if (segIndex !== -1) {
+        const afterTransform = rest.substring(segIndex + 1);
+        return `${baseUrl}f_auto,q_auto,w_${width},c_limit/${afterTransform}`;
+      }
+    }
+    return `${baseUrl}f_auto,q_auto,w_${width},c_limit/${rest}`;
+  }
+  return url;
+}
+
 export async function fetchRemoteConfig(forceRefresh = false): Promise<AppConfig> {
   try {
     // 1. Check local cache validity
@@ -78,8 +104,9 @@ export async function fetchRemoteConfig(forceRefresh = false): Promise<AppConfig
     const now = Date.now();
 
     if (!forceRefresh && cachedData && cachedTs && now - parseInt(cachedTs, 10) < TTL_MS) {
-      console.log('[RemoteConfig] Returning cached config');
-      return JSON.parse(cachedData) as AppConfig;
+      const parsedCached = JSON.parse(cachedData) as AppConfig;
+      console.log('[RemoteConfig] Returning cached config. Banners:', JSON.stringify(parsedCached.banners, null, 2));
+      return parsedCached;
     }
 
     let config: AppConfig = DEFAULT_CONFIG;
@@ -98,6 +125,9 @@ export async function fetchRemoteConfig(forceRefresh = false): Promise<AppConfig
       });
       config = freshConfig as AppConfig;
     }
+
+    // Step 1: Log the banners array immediately after reading app_config
+    console.log('[RemoteConfig] 1. Banners array immediately after reading app_config:', JSON.stringify(config.banners, null, 2));
 
     // 3. Fetch from dedicated 'promos' table if available in Table Editor
     try {
