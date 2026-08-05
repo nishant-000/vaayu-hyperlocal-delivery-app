@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, RefreshControl, Linking } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, RefreshControl, Linking, Platform, StatusBar as RNStatusBar } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Line, Polyline } from 'react-native-svg'
 import {
@@ -213,8 +213,8 @@ export default function HomeScreen({
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       {/* Top Header */}
-      <View style={{ backgroundColor: '#8fda58', paddingBottom: 12 }}>
-        <View style={tw`flex-row items-center justify-between px-4 pt-3 pb-2`}>
+      <View style={{ backgroundColor: '#8fda58', paddingBottom: 12, paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 8 : 12 }}>
+        <View style={tw`flex-row items-center justify-between px-4 pt-1 pb-2`}>
           <View style={tw`flex-1 items-center justify-center px-4`}>
             <TouchableOpacity onPress={onOpenAddressPicker} style={tw`flex-row items-center gap-1`}>
               <Text style={tw`text-[14px] font-black text-white uppercase tracking-wider`}>IIIT TIRUCHIRAPPALLI</Text>

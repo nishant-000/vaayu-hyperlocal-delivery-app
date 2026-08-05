@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator, Platform, StatusBar as RNStatusBar } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Line, Polyline } from 'react-native-svg'
 import { fetchRemoteConfig, subscribeToRemoteConfig, validatePromoCodeServerSide, AppConfig, DEFAULT_CONFIG } from '../lib/remoteConfig'
@@ -315,7 +315,7 @@ export default function CartScreen({
   return (
     <View style={tw`flex-1`}>
       {/* Header */}
-      <View style={tw`bg-white border-b border-gray-100 px-4 pt-6 pb-4`}>
+      <View style={[tw`bg-white border-b border-gray-100 px-4 pb-4`, { paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 12 : 24 }]}>
         <Text style={tw`text-[24px] font-black text-gray-900`}>Your Cart</Text>
         <Text style={tw`text-[13px] text-gray-400 font-medium mt-0.5`}>
           {cartItems.reduce((s, i) => s + (i.quantity || i.qty), 0)} items from {cartShop?.name}

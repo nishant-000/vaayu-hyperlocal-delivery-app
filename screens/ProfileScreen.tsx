@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Linking, Platform, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, Image, TextInput, Linking, Platform, Alert, ActivityIndicator, StatusBar as RNStatusBar } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
@@ -27,7 +27,7 @@ function ChevronRight() {
 
 function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <View style={tw`flex-row items-center bg-white border-b border-gray-100 px-4 pt-6 pb-4`}>
+    <View style={[tw`flex-row items-center bg-white border-b border-gray-100 px-4 pb-4`, { paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 12 : 24 }]}>
       <TouchableOpacity onPress={onBack} style={tw`p-2 -ml-2 rounded-full bg-gray-100 mr-3`}>
         <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <Line x1="19" y1="12" x2="5" y2="12" />
@@ -493,7 +493,7 @@ export default function ProfileScreen({ user, onSignOut }: ProfileScreenProps) {
       )}
 
       {/* Header */}
-      <View style={tw`bg-white border-b border-gray-100 px-4 pt-6 pb-4`}>
+      <View style={[tw`bg-white border-b border-gray-100 px-4 pb-4`, { paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 12 : 24 }]}>
         <Text style={tw`text-[24px] font-black text-gray-900`}>Profile</Text>
       </View>
 

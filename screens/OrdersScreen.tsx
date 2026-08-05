@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Linking } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Linking, Platform, StatusBar as RNStatusBar } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Polyline } from 'react-native-svg'
 import { supabase } from '../lib/supabase'
@@ -308,7 +308,7 @@ export default function OrdersScreen({ orders: initialOrders, onReorder, onTrack
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       {/* Header */}
-      <View style={tw`bg-white border-b border-gray-100 px-4 pt-6 pb-3`}>
+      <View style={[tw`bg-white border-b border-gray-100 px-4 pb-3`, { paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 12 : 24 }]}>
         <View style={tw`flex-row items-center justify-between`}>
           <View>
             <Text style={tw`text-[24px] font-black text-gray-900`}>My Orders</Text>

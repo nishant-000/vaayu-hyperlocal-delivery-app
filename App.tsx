@@ -541,7 +541,7 @@ export default function App() {
   // Customer App Layout
   return (
     <ErrorBoundary>
-      <View style={[tw`flex-1 bg-gray-50`, styles.safeArea]}>
+      <View style={tw`flex-1 bg-gray-50`}>
       <StatusBar style="dark" />
 
       {/* Permission Pre-Prompt Modal */}
