@@ -596,13 +596,6 @@ export default function HomeScreen({
                         {shop.isLiveToday ? '🟢 OPEN TODAY' : '🔴 OFFLINE TODAY'}
                       </Text>
                     </View>
-
-                    <TouchableOpacity
-                      onPress={() => toggleSaveShop(shop.id)}
-                      style={tw`absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 items-center justify-center`}
-                    >
-                      <Text style={tw`text-sm`}>{savedShops.has(shop.id) ? '❤️' : '🤍'}</Text>
-                    </TouchableOpacity>
                   </View>
 
                   <View style={tw`p-4`}>
