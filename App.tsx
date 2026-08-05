@@ -170,10 +170,47 @@ export default function App() {
   // Toast / Alert State
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const lastBackPressRef = useRef<number>(0)
+  const processedNotifRef = useRef<Map<string, number>>(new Map())
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 2500)
+  }
+
+  // Push / In-App Notification Deduplication & State Manager
+  const addNotificationItem = (title: string, body: string, orderId?: string) => {
+    const dedupKey = `${orderId || 'general'}_${title.trim()}`
+    const now = Date.now()
+    const lastSeen = processedNotifRef.current.get(dedupKey) || 0
+
+    // Suppress identical notifications received within 8 seconds
+    if (now - lastSeen < 8000) {
+      return
+    }
+    processedNotifRef.current.set(dedupKey, now)
+
+    // Cleanup old cache entries
+    if (processedNotifRef.current.size > 50) {
+      processedNotifRef.current.clear()
+    }
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const newItem = {
+      id: `${now}_${Math.random().toString(36).slice(2, 6)}`,
+      title,
+      body,
+      orderId,
+      time: timeStr
+    }
+
+    setHasUnreadNotifications(true)
+    setNotificationsList(prev => {
+      // Filter out any duplicate with the same title & orderId
+      const filtered = prev.filter(n => !(n.title === title && (n as any).orderId === orderId))
+      const updated = [newItem, ...filtered].slice(0, 30)
+      AsyncStorage.setItem('@vaayu_notifications_list', JSON.stringify(updated)).catch(() => {})
+      return updated
+    })
   }
 
   // Android Hardware / Back Gesture Handler
@@ -317,19 +354,7 @@ export default function App() {
         const title = notification?.request?.content?.title || 'New Notification'
         const body = notification?.request?.content?.body || ''
         const notifData = notification?.request?.content?.data
-        setHasUnreadNotifications(true)
-        setNotificationsList(prev => {
-          const item = {
-            id: Date.now().toString(),
-            title,
-            body,
-            orderId: notifData?.orderId,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-          const updated = [item, ...prev.filter(n => n.id !== item.id)].slice(0, 30)
-          AsyncStorage.setItem('@vaayu_notifications_list', JSON.stringify(updated)).catch(() => {})
-          return updated
-        })
+        addNotificationItem(title, body, notifData?.orderId)
       }
     )
 
@@ -376,23 +401,8 @@ export default function App() {
               body = newOrder.cancel_reason || 'Your order was cancelled by the shop.'
             }
 
-            const notifItem = {
-              id: Date.now().toString(),
-              title,
-              body,
-              orderId: newOrder.id,
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }
-
-            setHasUnreadNotifications(true)
-            setNotificationsList(prev => {
-              const updated = [notifItem, ...prev.filter(n => n.id !== notifItem.id)].slice(0, 30)
-              AsyncStorage.setItem('@vaayu_notifications_list', JSON.stringify(updated)).catch(() => {})
-              return updated
-            })
-
+            addNotificationItem(title, body, newOrder.id)
             showToast(`${title}\n${body}`)
-            sendLocalNotification(title, body, { orderId: newOrder.id })
           }
         }
       )
@@ -678,13 +688,21 @@ export default function App() {
                         setHasUnreadNotifications(false)
                         setActiveTab('orders')
                       }}
-                      style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 gap-1`}
+                      style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 gap-1.5`}
                     >
-                      <View style={tw`flex-row justify-between items-center`}>
-                        <Text style={tw`text-[14px] font-bold text-gray-900`}>{notif.title}</Text>
-                        <Text style={tw`text-[11px] text-gray-400 font-medium`}>{notif.time}</Text>
+                      <View style={tw`flex-row justify-between items-start gap-2`}>
+                        <Text style={tw`flex-1 text-[14px] font-bold text-gray-900 leading-snug`} numberOfLines={2}>
+                          {notif.title}
+                        </Text>
+                        <Text style={tw`text-[11px] text-gray-400 font-semibold flex-shrink-0 pt-0.5`}>
+                          {notif.time}
+                        </Text>
                       </View>
-                      {notif.body ? <Text style={tw`text-[13px] text-gray-600 font-medium`}>{notif.body}</Text> : null}
+                      {notif.body ? (
+                        <Text style={tw`text-[13px] text-gray-600 font-medium leading-relaxed`}>
+                          {notif.body}
+                        </Text>
+                      ) : null}
                     </TouchableOpacity>
                   ))}
                 </View>
