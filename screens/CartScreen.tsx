@@ -322,7 +322,7 @@ export default function CartScreen({
         </Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-36`}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-56`}>
         {/* Items */}
         <View style={tw`px-4 pt-4 flex-col gap-3`}>
           {cartItems.map(item => (
