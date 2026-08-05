@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, StatusBar as RNStatusBar, Animated, Easing, Pressable, ScrollView, TextInput, ActivityIndicator } from 'react-native'
+import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, StatusBar as RNStatusBar, Animated, Easing, Pressable, ScrollView, TextInput, ActivityIndicator, BackHandler } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg'
@@ -169,11 +169,56 @@ export default function App() {
 
   // Toast / Alert State
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const lastBackPressRef = useRef<number>(0)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 2500)
   }
+
+  // Android Hardware / Back Gesture Handler
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+
+    const handleBackPress = () => {
+      // 1. If notification drawer is open, close it
+      if (showNotifications) {
+        setShowNotifications(false)
+        return true
+      }
+
+      // 2. If permission modal is open, close it
+      if (showPermissionPrePrompt) {
+        setShowPermissionPrePrompt(false)
+        return true
+      }
+
+      // 3. If a shop detail screen is open, close it and return to current tab
+      if (selectedShop) {
+        setSelectedShop(null)
+        return true
+      }
+
+      // 4. If on another tab (orders, cart, profile), return to Home
+      if (activeTab !== 'home') {
+        setActiveTab('home')
+        return true
+      }
+
+      // 5. Already on Home tab: double press within 2s to minimize/exit
+      const now = Date.now()
+      if (now - lastBackPressRef.current < 2000) {
+        return false // Allow default OS behavior (minimize app)
+      } else {
+        lastBackPressRef.current = now
+        showToast('Press back again to exit')
+        return true
+      }
+    }
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress)
+    return () => backSubscription.remove()
+  }, [showNotifications, showPermissionPrePrompt, selectedShop, activeTab])
 
   // Restore persisted Supabase auth session on app startup
   useEffect(() => {

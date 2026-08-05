@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator, BackHandler, Platform } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line, Circle, Rect } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -267,6 +267,30 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
       return () => clearTimeout(timer)
     }
   }, [resendCooldown, step])
+
+  // Android Back Handler for Signup / Login flow
+  const lastBackPressRef = useRef<number>(0)
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+
+    const handleBackPress = () => {
+      if (step !== 'carousel') {
+        setStep('carousel')
+        return true
+      }
+      const now = Date.now()
+      if (now - lastBackPressRef.current < 2000) {
+        return false // minimize/exit app
+      } else {
+        lastBackPressRef.current = now
+        Alert.alert('Exit App', 'Press back again to exit the app.')
+        return true
+      }
+    }
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', handleBackPress)
+    return () => sub.remove()
+  }, [step])
 
   const handleResendOtp = async () => {
     const cleanEmail = email.trim()

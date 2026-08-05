@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking } from 'react-native'
+import React, { useState, useEffect, useRef } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
 import * as ImagePicker from 'expo-image-picker'
@@ -306,6 +306,47 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [partialItemQuantities, setPartialItemQuantities] = useState<Record<string, number>>({})
   const [partialReason, setPartialReason] = useState<string>('Some items out of stock')
   const [isSubmittingPartial, setIsSubmittingPartial] = useState(false)
+
+  // Android Back Button / Gesture Navigation Handler
+  const lastBackPressRef = useRef<number>(0)
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+
+    const handleBackPress = () => {
+      // 1. Close modals if open
+      if (selectedOrderIdForDetails !== null) {
+        setSelectedOrderIdForDetails(null)
+        return true
+      }
+      if (partialOrderModalVisible) {
+        setPartialOrderModalVisible(false)
+        return true
+      }
+      if (showImagePickerModal) {
+        setShowImagePickerModal(false)
+        return true
+      }
+
+      // 2. If on other tabs (menu, settings, profile), navigate back to orders tab
+      if (activeTab !== 'orders') {
+        setActiveTab('orders')
+        return true
+      }
+
+      // 3. Already on main orders tab: double press within 2s to exit
+      const now = Date.now()
+      if (now - lastBackPressRef.current < 2000) {
+        return false // let app minimize
+      } else {
+        lastBackPressRef.current = now
+        showToast('Press back again to exit')
+        return true
+      }
+    }
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', handleBackPress)
+    return () => sub.remove()
+  }, [selectedOrderIdForDetails, partialOrderModalVisible, showImagePickerModal, activeTab])
 
   // Upload local URI to Supabase Storage bucket 'product-images' with compression and return public URL
   const uploadImageToSupabase = async (uri: string, target: 'item' | 'banner' = 'item'): Promise<string | null> => {
