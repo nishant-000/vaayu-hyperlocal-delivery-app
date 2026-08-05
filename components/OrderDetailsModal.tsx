@@ -190,7 +190,14 @@ export default function OrderDetailsModal({ visible, orderId, initialOrder, onCl
                             </View>
                             {i < 3 && <View style={[tw`flex-1 h-0.5`, { backgroundColor: done ? '#8fda58' : 'rgba(255,255,255,0.2)' }]} />}
                           </View>
-                          <Text style={[tw`text-[8px] font-bold mt-1.5 text-center`, { color: done || active ? '#ffffff' : 'rgba(255,255,255,0.4)' }]}>{step}</Text>
+                          <Text 
+                            style={[
+                              tw`text-[9px] font-bold mt-1.5 text-center leading-3`, 
+                              { color: done || active ? '#ffffff' : 'rgba(255,255,255,0.45)' }
+                            ]}
+                          >
+                            {step === 'Out for Delivery' ? 'Out for\nDelivery' : step === 'Order Confirmed' ? 'Order\nConfirmed' : step === 'Collect Order' ? 'Collect\nOrder' : 'Delivered'}
+                          </Text>
                         </View>
                       )
                     })}

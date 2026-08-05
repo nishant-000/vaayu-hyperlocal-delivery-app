@@ -1682,7 +1682,14 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                                 </View>
                                 {i < 3 && <View style={[tw`flex-1 h-0.5`, { backgroundColor: done ? '#8fda58' : '#e5e7eb' }]} />}
                               </View>
-                              <Text style={[tw`text-[8px] font-medium mt-1 text-center`, { color: done || active ? '#1f2937' : '#9ca3af' }]}>{step}</Text>
+                              <Text 
+                                style={[
+                                  tw`text-[9px] font-bold mt-1.5 text-center leading-3`, 
+                                  { color: done || active ? '#111827' : '#9ca3af' }
+                                ]}
+                              >
+                                {step === 'Out for Delivery' ? 'Out for\nDelivery' : step === 'Order Confirmed' ? 'Order\nConfirmed' : step === 'Collect Order' ? 'Collect\nOrder' : 'Delivered'}
+                              </Text>
                             </View>
                           )
                         })}
