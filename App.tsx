@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform, StatusBar as RNStatusBar, Animated, Easing, Pressable, ScrollView, TextInput, ActivityIndicator, BackHandler } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import tw from 'twrnc'
@@ -64,78 +64,138 @@ function IconUser({ active }: { active: boolean }) {
   )
 }
 
-const NAV_ITEMS: { id: TabId; label: string; Icon: React.FC<{ active: boolean }>; maxWidth: number }[] = [
-  { id: "home",    label: "Home",    Icon: IconHome,    maxWidth: 45 },
-  { id: "orders",  label: "Orders",  Icon: IconBag,     maxWidth: 56 },
-  { id: "cart",    label: "Cart",    Icon: IconCart,    maxWidth: 35 },
-  { id: "profile", label: "Profile", Icon: IconUser,    maxWidth: 52 },
+const NAV_ITEMS: { id: TabId; label: string; Icon: React.FC<{ active: boolean }> }[] = [
+  { id: "home",    label: "Home",    Icon: IconHome },
+  { id: "orders",  label: "Orders",  Icon: IconBag },
+  { id: "cart",    label: "Cart",    Icon: IconCart },
+  { id: "profile", label: "Profile", Icon: IconUser },
 ]
 
-function NavTab({
-  id, label, Icon, isActive, onPress, maxWidth,
+const NavTab = memo(function NavTab({
+  id,
+  label,
+  Icon,
+  isActive,
+  onPress,
 }: {
-  id: TabId; label: string
+  id: TabId
+  label: string
   Icon: React.FC<{ active: boolean }>
-  isActive: boolean; onPress: () => void
-  maxWidth: number
+  isActive: boolean
+  onPress: (id: TabId) => void
 }) {
-  const width  = useRef(new Animated.Value(isActive ? 1 : 0)).current
-  const opacity = useRef(new Animated.Value(isActive ? 1 : 0)).current
-  const scale  = useRef(new Animated.Value(isActive ? 1 : 0.95)).current
-  const translateY = useRef(new Animated.Value(isActive ? -1 : 0)).current
+  const anim = useRef(new Animated.Value(isActive ? 1 : 0)).current
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(width, {
-        toValue: isActive ? 1 : 0,
-        duration: 250,
-        easing: Easing.bezier(0.25, 1, 0.5, 1),
-        useNativeDriver: false
-      }),
-      Animated.timing(opacity, {
-        toValue: isActive ? 1 : 0,
-        duration: 200,
-        easing: Easing.bezier(0.25, 1, 0.5, 1),
-        useNativeDriver: true
-      }),
-      Animated.spring(scale, {
-        toValue: isActive ? 1 : 0.95,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 12
-      }),
-      Animated.spring(translateY, {
-        toValue: isActive ? -1 : 0,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 12
-      }),
-    ]).start()
+    Animated.spring(anim, {
+      toValue: isActive ? 1 : 0,
+      tension: 140,
+      friction: 12,
+      useNativeDriver: true,
+    }).start()
   }, [isActive])
 
-  const labelWidth = width.interpolate({ inputRange: [0, 1], outputRange: [0, maxWidth] })
-  const textMarginLeft = width.interpolate({ inputRange: [0, 1], outputRange: [0, 8] })
+  const handlePress = useCallback(() => {
+    onPress(id)
+  }, [onPress, id])
+
+  const scale = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.95, 1],
+  })
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -1],
+  })
+
+  const bgOpacity = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  })
+
+  const labelOpacity = anim.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0, 1],
+  })
+
+  const labelScale = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.8, 1],
+  })
 
   return (
-    <Pressable onPress={onPress} style={styles.tabPressable}>
+    <Pressable
+      onPress={handlePress}
+      style={styles.tabPressable}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+    >
       <Animated.View
         style={[
           styles.pill,
-          { backgroundColor: isActive ? "#8fda58" : "transparent", transform: [{ scale }] },
+          {
+            transform: [{ scale }],
+          },
         ]}
       >
+        {/* Hardware-accelerated background highlight pill (100% native driver) */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFillObject,
+            styles.activePillBackground,
+            {
+              opacity: bgOpacity,
+            },
+          ]}
+        />
+
         <Animated.View style={{ transform: [{ translateY }] }}>
           <Icon active={isActive} />
         </Animated.View>
-        <Animated.View style={{ width: labelWidth, marginLeft: textMarginLeft, overflow: "hidden" }}>
-          <Animated.Text style={[styles.label, { opacity }]} numberOfLines={1}>
-            {label}
-          </Animated.Text>
-        </Animated.View>
+
+        {isActive && (
+          <Animated.View
+            style={{
+              marginLeft: 6,
+              opacity: labelOpacity,
+              transform: [{ scale: labelScale }],
+            }}
+          >
+            <Text style={styles.label} numberOfLines={1}>
+              {label}
+            </Text>
+          </Animated.View>
+        )}
       </Animated.View>
     </Pressable>
   )
-}
+})
+
+const BottomNavigationBar = memo(function BottomNavigationBar({
+  activeTab,
+  onTabPress,
+}: {
+  activeTab: TabId
+  onTabPress: (tab: TabId) => void
+}) {
+  return (
+    <View style={styles.wrapper} pointerEvents="box-none">
+      <View style={styles.bar}>
+        {NAV_ITEMS.map((item) => (
+          <NavTab
+            key={item.id}
+            id={item.id}
+            label={item.label}
+            Icon={item.Icon}
+            isActive={activeTab === item.id}
+            onPress={onTabPress}
+          />
+        ))}
+      </View>
+    </View>
+  )
+})
 
 export default function App() {
   // App States
@@ -143,6 +203,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('home')
   const [savedShops, setSavedShops] = useState<Set<number>>(new Set([3]))
   const [selectedShop, setSelectedShop] = useState<any>(null)
+
+  const handleTabPress = useCallback((tab: TabId) => {
+    setActiveTab(tab)
+  }, [])
   
   // Cart State
   const [cartItems, setCartItems] = useState<any[]>([])
@@ -626,18 +690,10 @@ export default function App() {
           )}
 
           {/* Bottom Floating Navigation Capsule */}
-          <View style={styles.wrapper}>
-            <View style={styles.bar}>
-              {NAV_ITEMS.map((item) => (
-                <NavTab
-                  key={item.id}
-                  {...item}
-                  isActive={activeTab === item.id}
-                  onPress={() => setActiveTab(item.id)}
-                />
-              ))}
-            </View>
-          </View>
+          <BottomNavigationBar
+            activeTab={activeTab}
+            onTabPress={handleTabPress}
+          />
         </>
       )}
 
@@ -749,13 +805,20 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.97)",
     borderRadius: 28,
-    padding: 10,
-    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    gap: 4,
     borderWidth: 1,
     borderColor: "#e5e7eb",
     alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
   },
   tabPressable: {
     alignItems: "center",
@@ -764,14 +827,21 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     overflow: "hidden",
+    position: "relative",
+  },
+  activePillBackground: {
+    backgroundColor: "#8fda58",
+    borderRadius: 999,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#ffffff",
+    letterSpacing: -0.2,
   },
 })
