@@ -394,7 +394,7 @@ export default function App() {
               title = `🛵 Order On The Way! #${newOrder.id}`
               body = `Your order is packed & heading towards ${newOrder.location || 'IIIT Trichy'}.`
             } else if (newOrder.status === 'delivered') {
-              title = `🎉 Order Delivered! Enjoy your meal 😋`
+              title = `🎉 Order Delivered! Enjoy your order 😋`
               body = `Order #${newOrder.id} has reached ${newOrder.location || 'IIIT Trichy'}.`
             } else if (newOrder.status === 'cancelled') {
               title = `❌ Order Cancelled #${newOrder.id}`
