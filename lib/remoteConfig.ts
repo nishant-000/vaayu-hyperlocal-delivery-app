@@ -63,6 +63,14 @@ export const DEFAULT_CONFIG: AppConfig = {
       active: true,
       priority: 1,
       show_on: ["customer_home"]
+    },
+    {
+      id: "b2",
+      title: "Campus Delivery",
+      image_url: "https://res.cloudinary.com/nmfk77lu/image/upload/v1785939955/Untitled_6047_x_3024_px_1200_x_600_px_rvrphv.png",
+      active: true,
+      priority: 2,
+      show_on: ["customer_home"]
     }
   ]
 };

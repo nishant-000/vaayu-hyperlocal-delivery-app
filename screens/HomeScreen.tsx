@@ -93,6 +93,7 @@ export default function HomeScreen({
   const [shops, setShops] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0)
 
   const fetchFreshShops = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true)
@@ -296,6 +297,15 @@ export default function HomeScreen({
               contentContainerStyle={tw`px-4 gap-3`}
               decelerationRate="fast"
               snapToInterval={BANNER_WIDTH + 12}
+              snapToAlignment="start"
+              onScroll={(e) => {
+                const offsetX = e.nativeEvent.contentOffset.x
+                const index = Math.round(offsetX / (BANNER_WIDTH + 12))
+                if (index !== activeBannerIndex && index >= 0 && index < liveBanners.length) {
+                  setActiveBannerIndex(index)
+                }
+              }}
+              scrollEventThrottle={16}
             >
               {liveBanners.map((item) => {
                 const targetUrl = getOptimizedImageUrl(item.image_url, 800)
@@ -339,6 +349,23 @@ export default function HomeScreen({
                 )
               })}
             </ScrollView>
+
+            {/* Pagination Dots Indicator */}
+            {liveBanners.length > 1 && (
+              <View style={tw`flex-row justify-center items-center gap-1.5 mt-2.5`}>
+                {liveBanners.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      tw`h-1.5 rounded-full`,
+                      i === activeBannerIndex
+                        ? [tw`w-5`, { backgroundColor: '#8fda58' }]
+                        : [tw`w-1.5`, { backgroundColor: '#d1d5db' }]
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
           </View>
         )}
 
