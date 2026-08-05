@@ -71,7 +71,7 @@ const NAV_ITEMS: { id: TabId; label: string; Icon: React.FC<{ active: boolean }>
   { id: "profile", label: "Profile", Icon: IconUser,    maxWidth: 52 },
 ]
 
-function NavTab({
+const NavTab = React.memo(function NavTab({
   id, label, Icon, isActive, onPress, maxWidth,
 }: {
   id: TabId; label: string
@@ -79,54 +79,65 @@ function NavTab({
   isActive: boolean; onPress: () => void
   maxWidth: number
 }) {
-  const width  = useRef(new Animated.Value(isActive ? 1 : 0)).current
+  const width = useRef(new Animated.Value(isActive ? 1 : 0)).current
   const opacity = useRef(new Animated.Value(isActive ? 1 : 0)).current
-  const scale  = useRef(new Animated.Value(isActive ? 1 : 0.95)).current
-  const translateY = useRef(new Animated.Value(isActive ? -1 : 0)).current
+  const pressScale = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(width, {
         toValue: isActive ? 1 : 0,
-        duration: 250,
-        easing: Easing.bezier(0.25, 1, 0.5, 1),
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: false
       }),
       Animated.timing(opacity, {
         toValue: isActive ? 1 : 0,
-        duration: 200,
-        easing: Easing.bezier(0.25, 1, 0.5, 1),
+        duration: 140,
         useNativeDriver: true
-      }),
-      Animated.spring(scale, {
-        toValue: isActive ? 1 : 0.95,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 12
-      }),
-      Animated.spring(translateY, {
-        toValue: isActive ? -1 : 0,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 12
       }),
     ]).start()
   }, [isActive])
 
   const labelWidth = width.interpolate({ inputRange: [0, 1], outputRange: [0, maxWidth] })
-  const textMarginLeft = width.interpolate({ inputRange: [0, 1], outputRange: [0, 8] })
+  const textMarginLeft = width.interpolate({ inputRange: [0, 1], outputRange: [0, 6] })
+
+  const handlePressIn = () => {
+    Animated.spring(pressScale, {
+      toValue: 0.9,
+      useNativeDriver: true,
+      tension: 400,
+      friction: 25
+    }).start()
+  }
+
+  const handlePressOut = () => {
+    Animated.spring(pressScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 400,
+      friction: 25
+    }).start()
+  }
 
   return (
-    <Pressable onPress={onPress} style={styles.tabPressable}>
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.tabPressable}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+    >
       <Animated.View
         style={[
           styles.pill,
-          { backgroundColor: isActive ? "#8fda58" : "transparent", transform: [{ scale }] },
+          {
+            backgroundColor: isActive ? "#8fda58" : "transparent",
+            transform: [{ scale: pressScale }],
+          },
         ]}
       >
-        <Animated.View style={{ transform: [{ translateY }] }}>
-          <Icon active={isActive} />
-        </Animated.View>
+        <Icon active={isActive} />
         <Animated.View style={{ width: labelWidth, marginLeft: textMarginLeft, overflow: "hidden" }}>
           <Animated.Text style={[styles.label, { opacity }]} numberOfLines={1}>
             {label}
@@ -135,12 +146,24 @@ function NavTab({
       </Animated.View>
     </Pressable>
   )
-}
+})
 
 export default function App() {
   // App States
   const [user, setUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<TabId>('home')
+  const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(['home']))
+
+  const handleTabChange = (tab: TabId) => {
+    setActiveTab(tab)
+    setVisitedTabs(prev => {
+      if (prev.has(tab)) return prev
+      const next = new Set(prev)
+      next.add(tab)
+      return next
+    })
+  }
+
   const [savedShops, setSavedShops] = useState<Set<number>>(new Set([3]))
   const [selectedShop, setSelectedShop] = useState<any>(null)
   
@@ -568,61 +591,68 @@ export default function App() {
           onChangeQuantity={changeQuantity}
           onViewCart={() => {
             setSelectedShop(null)
-            setActiveTab('cart')
+            handleTabChange('cart')
           }}
         />
       ) : (
         <>
-          {activeTab === 'home' && (
+          {/* Keep screens mounted to eliminate remount lag and preserve 60fps animations */}
+          <View style={[tw`flex-1`, activeTab !== 'home' && { display: 'none' }]}>
             <HomeScreen
               onSelectShop={setSelectedShop}
               cartItems={cartItems}
-              onOpenCart={() => setActiveTab('cart')}
+              onOpenCart={() => handleTabChange('cart')}
               onOpenNotifications={() => {
                 setShowNotifications(true)
                 setHasUnreadNotifications(false)
               }}
               hasUnreadNotifications={hasUnreadNotifications}
               address={address}
-              onOpenAddressPicker={() => setActiveTab('profile')}
+              onOpenAddressPicker={() => handleTabChange('profile')}
             />
+          </View>
+
+          {visitedTabs.has('orders') && (
+            <View style={[tw`flex-1`, activeTab !== 'orders' && { display: 'none' }]}>
+              <OrdersScreen
+                orders={orders}
+                onReorder={(order) => {
+                  showToast("Items added from previous order!")
+                  handleTabChange('cart')
+                }}
+                onTrackOrder={(order) => {
+                  showToast(`Tracking #${order.id}`)
+                }}
+                user={user}
+              />
+            </View>
           )}
 
-          {activeTab === 'orders' && (
-            <OrdersScreen
-              orders={orders}
-              onReorder={(order) => {
-                showToast("Items added from previous order!")
-                setActiveTab('cart')
-              }}
-              onTrackOrder={(order) => {
-                showToast(`Tracking #${order.id}`)
-              }}
-              user={user}
-            />
+          {visitedTabs.has('cart') && (
+            <View style={[tw`flex-1`, activeTab !== 'cart' && { display: 'none' }]}>
+              <CartScreen
+                cartItems={cartItems}
+                cartShop={cartShop}
+                changeQuantity={changeQuantity}
+                placeOrder={handlePlaceOrder}
+                address={address}
+                setAddress={setAddress}
+                onContinueShopping={() => handleTabChange('home')}
+                user={user}
+              />
+            </View>
           )}
 
-          {activeTab === 'cart' && (
-            <CartScreen
-              cartItems={cartItems}
-              cartShop={cartShop}
-              changeQuantity={changeQuantity}
-              placeOrder={handlePlaceOrder}
-              address={address}
-              setAddress={setAddress}
-              onContinueShopping={() => setActiveTab('home')}
-              user={user}
-            />
-          )}
-
-          {activeTab === 'profile' && (
-            <ProfileScreen
-              user={user}
-              address={address}
-              setAddress={setAddress}
-              savedShops={savedShops}
-              onSignOut={handleSignOut}
-            />
+          {visitedTabs.has('profile') && (
+            <View style={[tw`flex-1`, activeTab !== 'profile' && { display: 'none' }]}>
+              <ProfileScreen
+                user={user}
+                address={address}
+                setAddress={setAddress}
+                savedShops={savedShops}
+                onSignOut={handleSignOut}
+              />
+            </View>
           )}
 
           {/* Bottom Floating Navigation Capsule */}
@@ -633,7 +663,7 @@ export default function App() {
                   key={item.id}
                   {...item}
                   isActive={activeTab === item.id}
-                  onPress={() => setActiveTab(item.id)}
+                  onPress={() => handleTabChange(item.id)}
                 />
               ))}
             </View>
