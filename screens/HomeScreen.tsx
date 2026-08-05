@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, RefreshControl, Linking, Platform, StatusBar as RNStatusBar, Dimensions, StyleSheet } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Line, Polyline } from 'react-native-svg'
@@ -94,6 +94,14 @@ export default function HomeScreen({
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [activeBannerIndex, setActiveBannerIndex] = useState(0)
+
+  const bannerScrollRef = useRef<ScrollView>(null)
+  const activeBannerIndexRef = useRef(0)
+  const isUserTouchingBanners = useRef(false)
+
+  useEffect(() => {
+    activeBannerIndexRef.current = activeBannerIndex
+  }, [activeBannerIndex])
 
   const fetchFreshShops = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true)
@@ -227,8 +235,34 @@ export default function HomeScreen({
       active: true,
       priority: 1,
       show_on: ["customer_home"]
+    },
+    {
+      id: "b2",
+      title: "Campus Delivery",
+      image_url: "https://res.cloudinary.com/nmfk77lu/image/upload/v1785939955/Untitled_6047_x_3024_px_1200_x_600_px_rvrphv.png",
+      active: true,
+      priority: 2,
+      show_on: ["customer_home"]
     }
   ]
+
+  // Auto-sliding banner loop
+  useEffect(() => {
+    if (liveBanners.length <= 1) return
+
+    const interval = setInterval(() => {
+      if (isUserTouchingBanners.current) return
+
+      const nextIndex = (activeBannerIndexRef.current + 1) % liveBanners.length
+      bannerScrollRef.current?.scrollTo({
+        x: nextIndex * (BANNER_WIDTH + 12),
+        animated: true
+      })
+      setActiveBannerIndex(nextIndex)
+    }, 3500)
+
+    return () => clearInterval(interval)
+  }, [liveBanners.length])
 
   // 7. Verify carousel is rendering at least one banner
   console.log(`[HomeScreen] 7. Carousel rendering banner count: ${liveBanners.length}, IDs: [${liveBanners.map(b => b.id).join(', ')}]`)
@@ -292,12 +326,29 @@ export default function HomeScreen({
         {liveBanners.length > 0 && (
           <View style={tw`pt-3 pb-2`}>
             <ScrollView
+              ref={bannerScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={tw`px-4 gap-3`}
               decelerationRate="fast"
               snapToInterval={BANNER_WIDTH + 12}
               snapToAlignment="start"
+              onTouchStart={() => {
+                isUserTouchingBanners.current = true
+              }}
+              onTouchEnd={() => {
+                setTimeout(() => {
+                  isUserTouchingBanners.current = false
+                }, 2000)
+              }}
+              onScrollBeginDrag={() => {
+                isUserTouchingBanners.current = true
+              }}
+              onScrollEndDrag={() => {
+                setTimeout(() => {
+                  isUserTouchingBanners.current = false
+                }, 2000)
+              }}
               onScroll={(e) => {
                 const offsetX = e.nativeEvent.contentOffset.x
                 const index = Math.round(offsetX / (BANNER_WIDTH + 12))
@@ -350,19 +401,31 @@ export default function HomeScreen({
               })}
             </ScrollView>
 
-            {/* Pagination Dots Indicator */}
+            {/* Pagination Dots Indicator with Click-to-Jump */}
             {liveBanners.length > 1 && (
-              <View style={tw`flex-row justify-center items-center gap-1.5 mt-2.5`}>
+              <View style={tw`flex-row justify-center items-center gap-1 mt-2.5`}>
                 {liveBanners.map((_, i) => (
-                  <View
+                  <TouchableOpacity
                     key={i}
-                    style={[
-                      tw`h-1.5 rounded-full`,
-                      i === activeBannerIndex
-                        ? [tw`w-5`, { backgroundColor: '#8fda58' }]
-                        : [tw`w-1.5`, { backgroundColor: '#d1d5db' }]
-                    ]}
-                  />
+                    onPress={() => {
+                      bannerScrollRef.current?.scrollTo({
+                        x: i * (BANNER_WIDTH + 12),
+                        animated: true
+                      })
+                      setActiveBannerIndex(i)
+                    }}
+                    activeOpacity={0.7}
+                    style={tw`p-1`}
+                  >
+                    <View
+                      style={[
+                        tw`h-1.5 rounded-full`,
+                        i === activeBannerIndex
+                          ? [tw`w-5`, { backgroundColor: '#8fda58' }]
+                          : [tw`w-1.5`, { backgroundColor: '#d1d5db' }]
+                      ]}
+                    />
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
