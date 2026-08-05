@@ -99,15 +99,11 @@ const NavTab = React.memo(function NavTab({
     inputRange: [0, 1],
     outputRange: ['rgba(143, 218, 88, 0)', 'rgba(143, 218, 88, 1)']
   })
-  const iconScale = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.95, 1.05]
-  })
 
   const handlePressIn = () => {
     Animated.spring(pressScale, {
       toValue: 0.92,
-      useNativeDriver: true,
+      useNativeDriver: false,
       tension: 400,
       friction: 25
     }).start()
@@ -116,7 +112,7 @@ const NavTab = React.memo(function NavTab({
   const handlePressOut = () => {
     Animated.spring(pressScale, {
       toValue: 1,
-      useNativeDriver: true,
+      useNativeDriver: false,
       tension: 400,
       friction: 25
     }).start()
@@ -139,9 +135,7 @@ const NavTab = React.memo(function NavTab({
           },
         ]}
       >
-        <Animated.View style={{ transform: [{ scale: iconScale }] }}>
-          <Icon active={isActive} />
-        </Animated.View>
+        <Icon active={isActive} />
         <Animated.View style={{ width: labelWidth, marginLeft: textMarginLeft, overflow: "hidden" }}>
           <Animated.Text style={[styles.label, { opacity }]} numberOfLines={1}>
             {label}
