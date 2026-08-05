@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, RefreshControl, Linking, Platform, StatusBar as RNStatusBar } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, RefreshControl, Linking, Platform, StatusBar as RNStatusBar, Dimensions, StyleSheet } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Line, Polyline } from 'react-native-svg'
 import {
@@ -11,6 +11,10 @@ import {
 import { fetchRemoteConfig, subscribeToRemoteConfig, AppConfig, DEFAULT_CONFIG, getOptimizedImageUrl } from '../lib/remoteConfig'
 import { supabase } from '../lib/supabase'
 import { getCache, setCache } from '../lib/cache'
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
+const BANNER_WIDTH = Math.round(SCREEN_WIDTH - 32)
+const BANNER_HEIGHT = Math.round(BANNER_WIDTH * 0.5)
 
 export const categories = [
   {
@@ -135,7 +139,7 @@ export default function HomeScreen({
     let unsubscribeConfig: (() => void) | null = null
 
     async function loadData() {
-      const initialConfig = await fetchRemoteConfig()
+      const initialConfig = await fetchRemoteConfig(true)
       setConfig(initialConfig)
       unsubscribeConfig = subscribeToRemoteConfig(setConfig)
 
@@ -274,60 +278,69 @@ export default function HomeScreen({
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => fetchFreshShops(true)}
+            onRefresh={() => {
+              fetchFreshShops(true)
+              fetchRemoteConfig(true).then(setConfig)
+            }}
             tintColor="#8fda58"
             colors={['#8fda58']}
           />
         }
       >
         {/* Remote Config Live Banners Carousel */}
-        <View style={tw`pt-4 pb-2`}>
-          <FlatList
-            data={liveBanners}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={tw`px-4 gap-3`}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => {
-              const targetUrl = getOptimizedImageUrl(item.image_url, 800)
-              // 4. Log exact image_url passed into React Native Image component
-              console.log(`[HomeScreen] 4. Exact image_url passed to Image component for [${item.id}]:`, targetUrl)
+        {liveBanners.length > 0 && (
+          <View style={tw`pt-3 pb-2`}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={tw`px-4 gap-3`}
+              decelerationRate="fast"
+              snapToInterval={BANNER_WIDTH + 12}
+            >
+              {liveBanners.map((item) => {
+                const targetUrl = getOptimizedImageUrl(item.image_url, 800)
+                console.log(`[HomeScreen] Rendering Banner [${item.id}]:`, targetUrl)
 
-              return (
-                <View style={tw`w-[85vw] h-40 rounded-3xl overflow-hidden relative shadow-md bg-gray-200`}>
-                  <Image
-                    source={{ uri: targetUrl }}
-                    style={tw`w-full h-full`}
-                    resizeMode="cover"
-                    // 5. onLoad callback logging
-                    onLoad={(e) => {
-                      console.log(`[HomeScreen] 5. Banner image [${item.id}] loaded successfully:`, {
-                        url: targetUrl,
-                        width: e.nativeEvent?.source?.width,
-                        height: e.nativeEvent?.source?.height
-                      })
-                    }}
-                    // 6. onError callback logging
-                    onError={(e) => {
-                      console.error(`[HomeScreen] 6. Banner image [${item.id}] failed to load:`, {
-                        url: targetUrl,
-                        error: e.nativeEvent?.error || e.nativeEvent
-                      })
-                    }}
-                  />
-                  {(item as any).show_overlay ? (
-                    <View style={[tw`absolute inset-0 p-4 justify-between`, { backgroundColor: 'rgba(0,0,0,0.35)' }]}>
-                      <Text style={tw`text-white font-black text-xl w-3/4`}>{item.title}</Text>
-                      <View style={tw`bg-white/90 rounded-full px-3 py-1 self-start`}>
-                        <Text style={tw`text-[10px] font-black text-gray-900 uppercase`}>Vaayu Express</Text>
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      tw`rounded-3xl overflow-hidden relative shadow-md bg-gray-200`,
+                      { width: BANNER_WIDTH, height: BANNER_HEIGHT }
+                    ]}
+                  >
+                    <Image
+                      source={{ uri: targetUrl }}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                      onLoad={(e) => {
+                        console.log(`[HomeScreen] 5. Banner image [${item.id}] loaded successfully:`, {
+                          url: targetUrl,
+                          width: e.nativeEvent?.source?.width,
+                          height: e.nativeEvent?.source?.height
+                        })
+                      }}
+                      onError={(e) => {
+                        console.error(`[HomeScreen] 6. Banner image [${item.id}] failed to load:`, {
+                          url: targetUrl,
+                          error: e.nativeEvent?.error || e.nativeEvent
+                        })
+                      }}
+                    />
+                    {(item as any).show_overlay ? (
+                      <View style={[tw`absolute inset-0 p-4 justify-between`, { backgroundColor: 'rgba(0,0,0,0.35)' }]}>
+                        <Text style={tw`text-white font-black text-xl w-3/4`}>{item.title}</Text>
+                        <View style={tw`bg-white/90 rounded-full px-3 py-1 self-start`}>
+                          <Text style={tw`text-[10px] font-black text-gray-900 uppercase`}>Vaayu Express</Text>
+                        </View>
                       </View>
-                    </View>
-                  ) : null}
-                </View>
-              )
-            }}
-          />
-        </View>
+                    ) : null}
+                  </View>
+                )
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Category Grid */}
         <View style={tw`p-4 gap-2.5`}>
