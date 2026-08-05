@@ -79,32 +79,34 @@ const NavTab = React.memo(function NavTab({
   isActive: boolean; onPress: () => void
   maxWidth: number
 }) {
-  const width = useRef(new Animated.Value(isActive ? 1 : 0)).current
-  const opacity = useRef(new Animated.Value(isActive ? 1 : 0)).current
+  const anim = useRef(new Animated.Value(isActive ? 1 : 0)).current
   const pressScale = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(width, {
-        toValue: isActive ? 1 : 0,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false
-      }),
-      Animated.timing(opacity, {
-        toValue: isActive ? 1 : 0,
-        duration: 140,
-        useNativeDriver: true
-      }),
-    ]).start()
+    Animated.spring(anim, {
+      toValue: isActive ? 1 : 0,
+      stiffness: 220,
+      damping: 22,
+      mass: 0.8,
+      useNativeDriver: false,
+    }).start()
   }, [isActive])
 
-  const labelWidth = width.interpolate({ inputRange: [0, 1], outputRange: [0, maxWidth] })
-  const textMarginLeft = width.interpolate({ inputRange: [0, 1], outputRange: [0, 6] })
+  const labelWidth = anim.interpolate({ inputRange: [0, 1], outputRange: [0, maxWidth] })
+  const textMarginLeft = anim.interpolate({ inputRange: [0, 1], outputRange: [0, 6] })
+  const opacity = anim.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 0, 1] })
+  const bgColor = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(143, 218, 88, 0)', 'rgba(143, 218, 88, 1)']
+  })
+  const iconScale = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.95, 1.05]
+  })
 
   const handlePressIn = () => {
     Animated.spring(pressScale, {
-      toValue: 0.9,
+      toValue: 0.92,
       useNativeDriver: true,
       tension: 400,
       friction: 25
@@ -126,18 +128,20 @@ const NavTab = React.memo(function NavTab({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={styles.tabPressable}
-      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
     >
       <Animated.View
         style={[
           styles.pill,
           {
-            backgroundColor: isActive ? "#8fda58" : "transparent",
+            backgroundColor: bgColor,
             transform: [{ scale: pressScale }],
           },
         ]}
       >
-        <Icon active={isActive} />
+        <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+          <Icon active={isActive} />
+        </Animated.View>
         <Animated.View style={{ width: labelWidth, marginLeft: textMarginLeft, overflow: "hidden" }}>
           <Animated.Text style={[styles.label, { opacity }]} numberOfLines={1}>
             {label}
@@ -779,13 +783,19 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.97)",
-    borderRadius: 28,
-    padding: 10,
-    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 32,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    gap: 4,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "rgba(229,231,235,0.9)",
     alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
   },
   tabPressable: {
     alignItems: "center",
@@ -794,9 +804,10 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
     overflow: "hidden",
   },
   label: {
