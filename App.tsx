@@ -644,11 +644,22 @@ export default function App() {
       {/* Campus Notifications Drawer */}
       {showNotifications && (
         <View style={tw`absolute inset-0 z-50 bg-black/60 justify-end`}>
-          <View style={tw`bg-white rounded-t-3xl p-6 pb-28 gap-4 shadow-2xl`}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {
+              setShowNotifications(false)
+              setHasUnreadNotifications(false)
+            }}
+            style={tw`flex-1`}
+          />
+          <View style={tw`bg-white rounded-t-[32px] p-5 pb-8 gap-3.5 shadow-2xl max-h-[80%]`}>
+            {/* Drag Pill */}
+            <View style={tw`w-12 h-1.5 bg-gray-200 rounded-full self-center mb-1`} />
+
             <View style={tw`flex-row justify-between items-center pb-3 border-b border-gray-100`}>
               <View style={tw`flex-row items-center gap-2`}>
                 <Text style={tw`text-2xl`}>🔔</Text>
-                <Text style={tw`text-[20px] font-black text-gray-900`}>Notifications</Text>
+                <Text style={tw`text-[18px] font-black text-gray-900`}>Notifications</Text>
               </View>
               <View style={tw`flex-row items-center gap-2`}>
                 {notificationsList.length > 0 && (
@@ -677,41 +688,39 @@ export default function App() {
 
             {/* Notifications Content */}
             {notificationsList.length > 0 ? (
-              <ScrollView style={tw`max-h-96`} showsVerticalScrollIndicator={false}>
-                <View style={tw`gap-2.5`}>
-                  {notificationsList.map(notif => (
-                    <TouchableOpacity
-                      key={notif.id}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        setShowNotifications(false)
-                        setHasUnreadNotifications(false)
-                        setActiveTab('orders')
-                      }}
-                      style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 gap-1.5`}
-                    >
-                      <View style={tw`flex-row justify-between items-start gap-2`}>
-                        <Text style={tw`flex-1 text-[14px] font-bold text-gray-900 leading-snug`} numberOfLines={2}>
-                          {notif.title}
-                        </Text>
-                        <Text style={tw`text-[11px] text-gray-400 font-semibold flex-shrink-0 pt-0.5`}>
-                          {notif.time}
-                        </Text>
-                      </View>
-                      {notif.body ? (
-                        <Text style={tw`text-[13px] text-gray-600 font-medium leading-relaxed`}>
-                          {notif.body}
-                        </Text>
-                      ) : null}
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`gap-2.5 pb-2`}>
+                {notificationsList.map(notif => (
+                  <TouchableOpacity
+                    key={notif.id}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setShowNotifications(false)
+                      setHasUnreadNotifications(false)
+                      setActiveTab('orders')
+                    }}
+                    style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-3.5 gap-1.5`}
+                  >
+                    <View style={tw`flex-row justify-between items-start gap-2`}>
+                      <Text style={tw`flex-1 text-[14px] font-bold text-gray-900 leading-snug`} numberOfLines={2}>
+                        {notif.title}
+                      </Text>
+                      <Text style={tw`text-[11px] text-gray-400 font-semibold flex-shrink-0 pt-0.5`}>
+                        {notif.time}
+                      </Text>
+                    </View>
+                    {notif.body ? (
+                      <Text style={tw`text-[12px] text-gray-600 font-medium leading-relaxed`}>
+                        {notif.body}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             ) : (
               /* Empty state */
-              <View style={tw`py-12 items-center justify-center gap-3`}>
-                <Text style={tw`text-5xl`}>🔕</Text>
-                <Text style={tw`text-[16px] font-black text-gray-800 mt-2`}>No notifications yet</Text>
+              <View style={tw`py-8 items-center justify-center gap-2`}>
+                <Text style={tw`text-4xl`}>🔕</Text>
+                <Text style={tw`text-[15px] font-black text-gray-800 mt-1`}>No notifications yet</Text>
                 <Text style={tw`text-[12px] text-gray-400 font-medium text-center px-6`}>
                   Live order updates and campus alerts will appear here.
                 </Text>
