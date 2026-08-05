@@ -216,9 +216,9 @@ export default function HomeScreen({
 
   const liveBanners = activeBanners.length > 0 ? activeBanners : [
     {
-      id: "b1_default",
-      title: "Gate 1 Express Delivery",
-      image_url: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop",
+      id: "b1",
+      title: "Launch Offer",
+      image_url: "https://res.cloudinary.com/nmfk77lu/image/upload/v1785937935/Untitled_6047_x_3024_px_1200_x_600_px_lyegcj.png",
       active: true,
       priority: 1,
       show_on: ["customer_home"]
@@ -315,12 +315,14 @@ export default function HomeScreen({
                       })
                     }}
                   />
-                  <View style={[tw`absolute inset-0 p-4 justify-between`, { backgroundColor: 'rgba(0,0,0,0.35)' }]}>
-                    <Text style={tw`text-white font-black text-xl w-3/4`}>{item.title}</Text>
-                    <View style={tw`bg-white/90 rounded-full px-3 py-1 self-start`}>
-                      <Text style={tw`text-[10px] font-black text-gray-900 uppercase`}>Vaayu Express</Text>
+                  {(item as any).show_overlay ? (
+                    <View style={[tw`absolute inset-0 p-4 justify-between`, { backgroundColor: 'rgba(0,0,0,0.35)' }]}>
+                      <Text style={tw`text-white font-black text-xl w-3/4`}>{item.title}</Text>
+                      <View style={tw`bg-white/90 rounded-full px-3 py-1 self-start`}>
+                        <Text style={tw`text-[10px] font-black text-gray-900 uppercase`}>Vaayu Express</Text>
+                      </View>
                     </View>
-                  </View>
+                  ) : null}
                 </View>
               )
             }}

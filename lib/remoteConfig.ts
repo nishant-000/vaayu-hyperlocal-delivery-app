@@ -58,8 +58,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   banners: [
     {
       id: "b1",
-      title: "Gate 1 Express Delivery",
-      image_url: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop",
+      title: "Launch Offer",
+      image_url: "https://res.cloudinary.com/nmfk77lu/image/upload/v1785937935/Untitled_6047_x_3024_px_1200_x_600_px_lyegcj.png",
       active: true,
       priority: 1,
       show_on: ["customer_home"]
