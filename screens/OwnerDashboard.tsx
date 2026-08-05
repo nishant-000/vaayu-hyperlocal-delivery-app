@@ -1596,19 +1596,19 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       {/* Right: Status Badge */}
                       <View style={tw`items-end shrink-0`}>
                         {/* Status Badge */}
-                        <View style={[tw`px-2.5 py-1 rounded-full shrink-0`, 
-                          late ? tw`bg-red-500` :
-                          order.status === 'incoming' || order.status === 'pending' || order.status === 'accepted' ? tw`bg-blue-100` :
-                          order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`bg-orange-100` :
-                          order.status === 'ready_for_pickup' ? tw`bg-purple-100` :
-                          order.status === 'delivered' ? tw`bg-green-100` : tw`bg-red-100`
+                        <View style={[tw`px-2.5 py-1 rounded-full shrink-0 border`, 
+                          late ? tw`bg-rose-50 border-rose-200` :
+                          order.status === 'incoming' || order.status === 'pending' || order.status === 'accepted' ? tw`bg-blue-50 border-blue-200` :
+                          order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`bg-amber-50 border-amber-200` :
+                          order.status === 'ready_for_pickup' ? tw`bg-purple-50 border-purple-200` :
+                          order.status === 'delivered' ? tw`bg-emerald-50 border-emerald-200` : tw`bg-gray-100 border-gray-200`
                         ]}>
                           <Text style={[tw`text-[10px] font-black uppercase text-center`,
-                            late ? tw`text-white` :
+                            late ? tw`text-rose-700` :
                             order.status === 'incoming' || order.status === 'pending' || order.status === 'accepted' ? tw`text-blue-700` :
-                            order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`text-orange-700` :
+                            order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`text-amber-800` :
                             order.status === 'ready_for_pickup' ? tw`text-purple-700` :
-                            order.status === 'delivered' ? tw`text-green-700` : tw`text-red-700`
+                            order.status === 'delivered' ? tw`text-emerald-700` : tw`text-gray-500`
                           ]}>
                             {late ? '⚠️ OVERDUE' :
                              order.status === 'incoming' ? '📥 NEW ORDER' :
@@ -1804,9 +1804,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         <>
                           <TouchableOpacity
                             onPress={() => handleUpdateStatus(order.id, 'accepted')}
-                            style={tw`w-full py-3.5 bg-green-600 rounded-2xl items-center justify-center shadow-md active:scale-95 px-2`}
+                            activeOpacity={0.7}
+                            style={tw`w-full py-3 bg-emerald-50 border border-emerald-200 rounded-2xl items-center justify-center active:scale-98 px-2`}
                           >
-                            <Text style={tw`text-white font-black text-[12px] uppercase text-center tracking-tight`}>
+                            <Text style={tw`text-emerald-800 font-black text-[13px] uppercase text-center tracking-tight`}>
                               {t.accept} (₹{bill.grandTotal})
                             </Text>
                           </TouchableOpacity>
@@ -1814,18 +1815,20 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                           {/* Accept Partial Order Option */}
                           <TouchableOpacity
                             onPress={() => openPartialOrderModal(order)}
-                            style={tw`w-full py-3 bg-amber-50 border border-amber-300 rounded-2xl flex-row items-center justify-center gap-2 active:scale-95 px-2`}
+                            activeOpacity={0.7}
+                            style={tw`w-full py-2.5 bg-amber-50/70 border border-amber-200 rounded-2xl flex-row items-center justify-center gap-2 active:scale-98 px-2`}
                           >
-                            <Text style={tw`text-amber-800 font-black text-[12px] uppercase text-center tracking-tight`}>
+                            <Text style={tw`text-amber-800 font-bold text-[12px] uppercase text-center tracking-tight`}>
                               ✏️ Accept Partial Order
                             </Text>
                           </TouchableOpacity>
 
                           <TouchableOpacity
                             onPress={() => handleUpdateStatus(order.id, 'cancelled', 'Shop declined order')}
-                            style={tw`w-full py-3 bg-red-100 rounded-2xl items-center justify-center active:scale-95 px-2`}
+                            activeOpacity={0.7}
+                            style={tw`w-full py-2.5 bg-rose-50/70 border border-rose-200 rounded-2xl items-center justify-center active:scale-98 px-2`}
                           >
-                            <Text style={tw`text-red-700 font-black text-[12px] uppercase text-center tracking-tight`}>
+                            <Text style={tw`text-rose-700 font-bold text-[12px] uppercase text-center tracking-tight`}>
                               {t.decline}
                             </Text>
                           </TouchableOpacity>
@@ -1835,9 +1838,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       {(order.status === 'accepted' || order.status === 'preparing') && (
                         <TouchableOpacity
                           onPress={() => handleUpdateStatus(order.id, 'out_for_delivery')}
-                          style={tw`w-full py-3.5 bg-orange-500 rounded-2xl items-center justify-center shadow-md active:scale-95 px-2`}
+                          activeOpacity={0.7}
+                          style={tw`w-full py-3 bg-blue-50 border border-blue-200 rounded-2xl items-center justify-center active:scale-98 px-2`}
                         >
-                          <Text style={tw`text-white font-black text-[12px] uppercase text-center tracking-tight`}>
+                          <Text style={tw`text-blue-800 font-black text-[13px] uppercase text-center tracking-tight`}>
                             {t.markOutForDelivery}
                           </Text>
                         </TouchableOpacity>
@@ -1846,9 +1850,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       {(order.status === 'out_for_delivery' || order.status === 'delivering') && (
                         <TouchableOpacity
                           onPress={() => handleUpdateStatus(order.id, 'ready_for_pickup')}
-                          style={tw`w-full py-3.5 bg-purple-600 rounded-2xl items-center justify-center shadow-md active:scale-95 px-2`}
+                          activeOpacity={0.7}
+                          style={tw`w-full py-3 bg-purple-50 border border-purple-200 rounded-2xl items-center justify-center active:scale-98 px-2`}
                         >
-                          <Text style={tw`text-white font-black text-[12px] uppercase text-center tracking-tight`}>
+                          <Text style={tw`text-purple-800 font-black text-[13px] uppercase text-center tracking-tight`}>
                             {t.markCollectOrder}
                           </Text>
                         </TouchableOpacity>
@@ -1857,23 +1862,24 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       {order.status === 'ready_for_pickup' && (
                         <TouchableOpacity
                           onPress={() => handleUpdateStatus(order.id, 'delivered')}
-                          style={tw`w-full py-3.5 bg-green-700 rounded-2xl items-center justify-center shadow-md active:scale-95 px-2`}
+                          activeOpacity={0.7}
+                          style={tw`w-full py-3 bg-emerald-50 border border-emerald-200 rounded-2xl items-center justify-center active:scale-98 px-2`}
                         >
-                          <Text style={tw`text-white font-black text-[13px] uppercase text-center tracking-tight`}>
+                          <Text style={tw`text-emerald-800 font-black text-[13px] uppercase text-center tracking-tight`}>
                             {t.markDelivered}
                           </Text>
                         </TouchableOpacity>
                       )}
 
                       {order.status === 'delivered' && (
-                        <View style={tw`w-full py-3 bg-green-50 rounded-2xl items-center border border-green-200`}>
-                          <Text style={tw`text-green-800 font-black text-[13px]`}>{t.completed}</Text>
+                        <View style={tw`w-full py-2.5 bg-emerald-50/40 rounded-2xl items-center border border-emerald-100`}>
+                          <Text style={tw`text-emerald-700 font-bold text-[12px]`}>{t.completed}</Text>
                         </View>
                       )}
 
                       {order.status === 'cancelled' && (
-                        <View style={tw`w-full py-3 bg-red-50 rounded-2xl items-center border border-red-200`}>
-                          <Text style={tw`text-red-700 font-black text-[13px]`}>{t.rejected}</Text>
+                        <View style={tw`w-full py-2.5 bg-gray-50 rounded-2xl items-center border border-gray-200`}>
+                          <Text style={tw`text-gray-400 font-bold text-[12px]`}>{t.rejected}</Text>
                         </View>
                       )}
                     </View>
