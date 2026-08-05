@@ -64,57 +64,46 @@ function IconUser({ active }: { active: boolean }) {
   )
 }
 
-const NAV_ITEMS: { id: TabId; label: string; Icon: React.FC<{ active: boolean }>; maxWidth: number }[] = [
-  { id: "home",    label: "Home",    Icon: IconHome,    maxWidth: 45 },
-  { id: "orders",  label: "Orders",  Icon: IconBag,     maxWidth: 56 },
-  { id: "cart",    label: "Cart",    Icon: IconCart,    maxWidth: 35 },
-  { id: "profile", label: "Profile", Icon: IconUser,    maxWidth: 52 },
+const NAV_ITEMS: { id: TabId; label: string; Icon: React.FC<{ active: boolean }> }[] = [
+  { id: "home",    label: "Home",    Icon: IconHome },
+  { id: "orders",  label: "Orders",  Icon: IconBag },
+  { id: "cart",    label: "Cart",    Icon: IconCart },
+  { id: "profile", label: "Profile", Icon: IconUser },
 ]
 
 const NavTab = React.memo(function NavTab({
-  id, label, Icon, isActive, onPress, maxWidth,
+  id, label, Icon, isActive, onPress
 }: {
   id: TabId; label: string
   Icon: React.FC<{ active: boolean }>
   isActive: boolean; onPress: () => void
-  maxWidth: number
 }) {
-  const anim = useRef(new Animated.Value(isActive ? 1 : 0)).current
-  const pressScale = useRef(new Animated.Value(1)).current
+  const scale = useRef(new Animated.Value(isActive ? 1.04 : 1)).current
 
   useEffect(() => {
-    Animated.spring(anim, {
-      toValue: isActive ? 1 : 0,
-      stiffness: 220,
-      damping: 22,
-      mass: 0.8,
-      useNativeDriver: false,
+    Animated.spring(scale, {
+      toValue: isActive ? 1.04 : 1,
+      tension: 320,
+      friction: 20,
+      useNativeDriver: true,
     }).start()
   }, [isActive])
 
-  const labelWidth = anim.interpolate({ inputRange: [0, 1], outputRange: [0, maxWidth] })
-  const textMarginLeft = anim.interpolate({ inputRange: [0, 1], outputRange: [0, 6] })
-  const opacity = anim.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 0, 1] })
-  const bgColor = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['rgba(143, 218, 88, 0)', 'rgba(143, 218, 88, 1)']
-  })
-
   const handlePressIn = () => {
-    Animated.spring(pressScale, {
+    Animated.spring(scale, {
       toValue: 0.92,
-      useNativeDriver: false,
       tension: 400,
-      friction: 25
+      friction: 20,
+      useNativeDriver: true,
     }).start()
   }
 
   const handlePressOut = () => {
-    Animated.spring(pressScale, {
-      toValue: 1,
-      useNativeDriver: false,
+    Animated.spring(scale, {
+      toValue: isActive ? 1.04 : 1,
       tension: 400,
-      friction: 25
+      friction: 20,
+      useNativeDriver: true,
     }).start()
   }
 
@@ -124,23 +113,21 @@ const NavTab = React.memo(function NavTab({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={styles.tabPressable}
-      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+      hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
     >
       <Animated.View
         style={[
           styles.pill,
-          {
-            backgroundColor: bgColor,
-            transform: [{ scale: pressScale }],
-          },
+          isActive && styles.activePill,
+          { transform: [{ scale }] },
         ]}
       >
         <Icon active={isActive} />
-        <Animated.View style={{ width: labelWidth, marginLeft: textMarginLeft, overflow: "hidden" }}>
-          <Animated.Text style={[styles.label, { opacity }]} numberOfLines={1}>
+        {isActive && (
+          <Text style={styles.label} numberOfLines={1}>
             {label}
-          </Animated.Text>
-        </Animated.View>
+          </Text>
+        )}
       </Animated.View>
     </Pressable>
   )
@@ -768,23 +755,24 @@ const styles = StyleSheet.create({
   },
   wrapper: {
     position: "absolute",
-    bottom: 28,
-    left: 0,
-    right: 0,
+    bottom: 24,
+    left: 20,
+    right: 20,
     alignItems: "center",
     zIndex: 40,
   },
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 32,
-    paddingVertical: 7,
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255,255,255,0.98)",
+    borderRadius: 36,
+    paddingVertical: 6,
     paddingHorizontal: 8,
-    gap: 4,
+    width: "100%",
+    maxWidth: 380,
     borderWidth: 1,
     borderColor: "rgba(229,231,235,0.9)",
-    alignSelf: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -792,8 +780,10 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tabPressable: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 2,
   },
   pill: {
     flexDirection: "row",
@@ -801,12 +791,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 999,
     paddingVertical: 9,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  activePill: {
+    backgroundColor: "#8fda58",
     paddingHorizontal: 14,
-    overflow: "hidden",
+    shadowColor: "#8fda58",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#ffffff",
   },
 })
