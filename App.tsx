@@ -123,7 +123,7 @@ const NavTab = React.memo(function NavTab({
       <Animated.View
         style={[
           styles.pill,
-          { backgroundColor: isActive ? "#8fda58" : "transparent", transform: [{ scale }] },
+          { backgroundColor: isActive ? "#0e9f3e" : "transparent", transform: [{ scale }] },
         ]}
       >
         <Animated.View style={{ transform: [{ translateY }] }}>

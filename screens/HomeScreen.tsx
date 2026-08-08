@@ -75,6 +75,8 @@ interface HomeScreenProps {
     landmark: string
   }
   onOpenAddressPicker: () => void
+  onAddToCart?: (item: any, shop: any) => void
+  onChangeQuantity?: (itemId: string, diff: number) => void
 }
 
 export default function HomeScreen({
@@ -270,7 +272,7 @@ export default function HomeScreen({
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       {/* Top Header */}
-      <View style={{ backgroundColor: '#8fda58', paddingBottom: 12, paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 8 : 12 }}>
+      <View style={{ backgroundColor: '#0e9f3e', paddingBottom: 12, paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) + 8 : 12 }}>
         <View style={tw`flex-row items-center justify-between px-4 pt-1 pb-2`}>
           <View style={tw`flex-1 items-center justify-center px-4`}>
             <TouchableOpacity onPress={onOpenAddressPicker} style={tw`flex-row items-center gap-1`}>
@@ -317,8 +319,8 @@ export default function HomeScreen({
               fetchFreshShops(true)
               fetchRemoteConfig(true).then(setConfig)
             }}
-            tintColor="#8fda58"
-            colors={['#8fda58']}
+            tintColor="#0e9f3e"
+            colors={['#0e9f3e']}
           />
         }
       >
@@ -421,7 +423,7 @@ export default function HomeScreen({
                       style={[
                         tw`h-1.5 rounded-full`,
                         i === activeBannerIndex
-                          ? [tw`w-5`, { backgroundColor: '#8fda58' }]
+                          ? [tw`w-5`, { backgroundColor: '#0e9f3e' }]
                           : [tw`w-1.5`, { backgroundColor: '#d1d5db' }]
                       ]}
                     />
@@ -446,7 +448,7 @@ export default function HomeScreen({
                   style={[
                     tw`flex-1 bg-white rounded-3xl p-4 justify-between border relative overflow-hidden`,
                     {
-                      borderColor: isSelected ? '#8fda58' : '#f3f4f6',
+                      borderColor: isSelected ? '#0e9f3e' : '#f3f4f6',
                       borderWidth: isSelected ? 2.5 : 1,
                       minHeight: 155,
                     }
@@ -482,7 +484,7 @@ export default function HomeScreen({
                     style={[
                       tw`flex-1 bg-white rounded-2xl p-2.5 flex-row items-center justify-between border relative overflow-hidden`,
                       {
-                        borderColor: isSelected ? '#8fda58' : '#f3f4f6',
+                        borderColor: isSelected ? '#0e9f3e' : '#f3f4f6',
                         borderWidth: isSelected ? 2.5 : 1,
                       }
                     ]}
@@ -510,7 +512,7 @@ export default function HomeScreen({
                   style={[
                     tw`flex-1 bg-white rounded-3xl p-4 justify-between border relative overflow-hidden`,
                     {
-                      borderColor: isSelected ? '#8fda58' : '#f3f4f6',
+                      borderColor: isSelected ? '#0e9f3e' : '#f3f4f6',
                       borderWidth: isSelected ? 2.5 : 1,
                       minHeight: 110,
                     }
@@ -541,7 +543,7 @@ export default function HomeScreen({
                   style={[
                     tw`flex-1 bg-white rounded-3xl p-4 justify-between border relative overflow-hidden`,
                     {
-                      borderColor: isSelected ? '#8fda58' : '#f3f4f6',
+                      borderColor: isSelected ? '#0e9f3e' : '#f3f4f6',
                       borderWidth: isSelected ? 2.5 : 1,
                       minHeight: 110,
                     }
@@ -569,7 +571,7 @@ export default function HomeScreen({
 
           {loading ? (
             <View style={tw`py-14 items-center justify-center`}>
-              <ActivityIndicator size="large" color="#8fda58" />
+              <ActivityIndicator size="large" color="#0e9f3e" />
               <Text style={tw`text-xs font-bold text-gray-400 mt-3`}>Fetching campus shops...</Text>
             </View>
           ) : filteredShops.length === 0 ? (
@@ -601,8 +603,8 @@ export default function HomeScreen({
                   <View style={tw`p-4`}>
                     <View style={tw`flex-row justify-between items-center mb-1`}>
                       <Text style={tw`text-[18px] font-black text-gray-900 flex-1 mr-2`} numberOfLines={1}>{shop.name}</Text>
-                      <View style={tw`bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200`}>
-                        <Text style={tw`text-[11px] font-bold text-emerald-800 uppercase`}>{shop.category || 'Shop'}</Text>
+                      <View style={tw`bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 max-w-[45%]`}>
+                        <Text style={tw`text-[11px] font-bold text-emerald-800 uppercase`} numberOfLines={1}>{shop.category || 'Shop'}</Text>
                       </View>
                     </View>
 
