@@ -278,6 +278,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [ordersFilter, setOrdersFilter] = useState<'active' | 'all'>('active')
   const [menuOpen, setMenuOpen] = useState(false)
   const [isAddItemOpen, setIsAddItemOpen] = useState(false)
+  const [expandedOthers, setExpandedOthers] = useState<Record<string, boolean>>({})
   const [menuItems, setMenuItems] = useState<any[]>([])
 
   const toggleAddItemForm = () => {
@@ -1465,9 +1466,14 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               </View>
             </TouchableOpacity>
 
-            <Text style={[tw`font-extrabold tracking-wide text-[17px]`, { color: '#22a447' }]}>
-              Partner Hub
-            </Text>
+            <View style={tw`flex-col justify-center`}>
+              <Text style={[tw`font-extrabold tracking-wide text-[17px] leading-tight`, { color: '#22a447' }]}>
+                Partner Hub
+              </Text>
+              <Text style={tw`text-[11px] font-extrabold text-gray-500 leading-tight mt-0.5`}>
+                {user?.shop_name || shopName || 'Royal Foods & Cafe'}
+              </Text>
+            </View>
           </View>
 
           {/* Quick Language Toggle */}
@@ -1595,7 +1601,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                             {order.delivery_mode === 'instant' ? 'Instant Delivery' : 'Scheduled Delivery'}
                           </Text>
                           <View style={tw`flex-row items-center gap-1.5 mt-0.5 flex-wrap`}>
-                            <Text style={tw`text-[11px] font-bold text-gray-400`}>#{order.id}</Text>
                             <TouchableOpacity 
                               onPress={() => setSelectedOrderIdForDetails(order.id)}
                               activeOpacity={0.7}
@@ -1690,32 +1695,27 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                     )}
 
                     {/* Expected Delivery Time or Slot Box */}
-                    {order.delivery_mode === 'instant' ? (
-                      <View style={tw`bg-gray-50 border border-gray-200 rounded-2xl p-3 flex-row items-center justify-between shadow-xs`}>
-                        <View style={tw`flex-1 mr-2`}>
-                          <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>Expected Delivery Time</Text>
-                          <Text style={tw`text-[13px] font-semibold text-gray-800 mt-0.5`}>
-                            Deliver by {getExpectedDeliveryTime(order)} <Text style={tw`text-[11px] text-gray-500 font-normal`}>(within 20 mins)</Text>
-                          </Text>
-                        </View>
-                        <View style={tw`bg-gray-200 px-2.5 py-1 rounded-xl`}>
-                          <Text style={tw`text-gray-800 font-bold text-[11px]`}>By {getExpectedDeliveryTime(order)}</Text>
-                        </View>
+                    <View style={tw`bg-green-50 border border-green-200 rounded-2xl p-2.5 flex-row items-center justify-between shadow-xs`}>
+                      <View style={tw`flex-row items-center gap-1.5 shrink-0`}>
+                        <Svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22a447" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <Circle cx="12" cy="12" r="10" />
+                          <Path d="M12 6v6l4 2" />
+                        </Svg>
+                        <Text style={tw`text-[11px] font-black text-[#22a447] uppercase tracking-wider`}>DELIVERY TIME</Text>
                       </View>
-                    ) : (
-                      <View style={tw`bg-gray-50 border border-gray-200 rounded-2xl p-3 flex-row items-center justify-between shadow-xs`}>
-                        <View style={tw`flex-1 mr-2`}>
-                          <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>Scheduled Delivery Slot</Text>
-                          <Text style={tw`text-[13px] font-semibold text-gray-800 mt-0.5`}>
-                            {order.selected_slot_label || '12:40 PM – 1:40 PM'}
-                          </Text>
-                          <Text style={tw`text-[11px] text-gray-500 font-normal mt-0.5`}>Deliver to drop point during this scheduled slot window</Text>
-                        </View>
-                        <View style={tw`bg-gray-200 px-2.5 py-1 rounded-xl`}>
-                          <Text style={tw`text-gray-800 font-bold text-[11px]`}>SLOT TIME</Text>
-                        </View>
+                      <View style={tw`items-end flex-1 min-w-0 ml-2`}>
+                        <Text style={tw`text-[13px] font-black text-gray-900 leading-tight`} numberOfLines={1}>
+                          {order.delivery_mode === 'instant' 
+                            ? 'Within 20 Mins' 
+                            : ((order.selected_slot_label || '8:00 PM – 9:00 PM').replace(/\s*\([^)]*\)/gi, '').trim())}
+                        </Text>
+                        <Text style={tw`text-[9.5px] font-semibold text-gray-500 mt-0.5 leading-tight`} numberOfLines={1}>
+                          {order.delivery_mode === 'instant' 
+                            ? '(Instant Slot)' 
+                            : `(${order.slot_name || order.delivery_slot_name || ((order.selected_slot_label || '').toLowerCase().includes('dinner') || (order.selected_slot_label || '').includes('8:') || (order.selected_slot_label || '').includes('9:') ? 'Dinner Slot' : 'Lunch Slot')})`}
+                        </Text>
                       </View>
-                    )}
+                    </View>
 
                     {/* Items & Fees Breakdown */}
                     <View style={tw`bg-gray-50 rounded-2xl p-3 gap-2 border border-gray-200`}>
@@ -1755,19 +1755,36 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                           <Text style={tw`text-[12px] font-semibold text-gray-700`}>₹{bill.itemsSubtotal}</Text>
                         </View>
 
-                        <View style={tw`flex-row justify-between items-center`}>
-                          <Text style={tw`text-[12px] font-normal text-gray-500`}>
-                            {t.deliveryFee} ({bill.isInstant ? 'Instant ₹10' : 'Scheduled ₹5'})
+                        {/* Others Dropdown Accordion */}
+                        <TouchableOpacity
+                          onPress={() => setExpandedOthers(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
+                          activeOpacity={0.7}
+                          style={tw`flex-row items-center justify-between py-1`}
+                        >
+                          <View style={tw`flex-row items-center gap-1 flex-wrap`}>
+                            <Text style={tw`text-[13px] font-bold text-gray-800`}>Others</Text>
+                            <Text style={tw`text-[10px] text-gray-600`}>{expandedOthers[order.id] ? '▲' : '▼'}</Text>
+                            <Text style={tw`text-[12px] text-gray-400`}> (Delivery & Platform Fee)</Text>
+                          </View>
+                          <Text style={tw`text-[12px] font-semibold text-gray-700`}>
+                            +₹{bill.deliveryFee + bill.platformFee}
                           </Text>
-                          <Text style={tw`text-[12px] font-semibold text-gray-700`}>+₹{bill.deliveryFee}</Text>
-                        </View>
+                        </TouchableOpacity>
 
-                        <View style={tw`flex-row justify-between items-center`}>
-                          <Text style={tw`text-[12px] font-normal text-gray-500`}>{t.platformFee}</Text>
-                          <Text style={[tw`text-[12px] font-semibold`, bill.isFreePlatformFee || bill.platformFee === 0 ? tw`text-green-600 font-bold` : tw`text-gray-700`]}>
-                            {bill.isFreePlatformFee || bill.platformFee === 0 ? 'FREE (₹0)' : `+₹${bill.platformFee}`}
-                          </Text>
-                        </View>
+                        {expandedOthers[order.id] && (
+                          <View style={tw`pl-3 py-1 gap-1 border-l-2 border-green-400 ml-1 my-1`}>
+                            <View style={tw`flex-row justify-between items-center`}>
+                              <Text style={tw`text-[12px] text-gray-500`}>Delivery Fee ({bill.isInstant ? 'Instant' : 'Scheduled'})</Text>
+                              <Text style={tw`text-[12px] font-semibold text-gray-700`}>₹{bill.deliveryFee}</Text>
+                            </View>
+                            <View style={tw`flex-row justify-between items-center`}>
+                              <Text style={tw`text-[12px] text-gray-500`}>Platform Fee (Vaayu)</Text>
+                              <Text style={[tw`text-[12px] font-semibold`, bill.isFreePlatformFee || bill.platformFee === 0 ? tw`text-green-600 font-bold` : tw`text-gray-700`]}>
+                                {bill.isFreePlatformFee || bill.platformFee === 0 ? 'FREE (₹0)' : `₹${bill.platformFee}`}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
 
                         {bill.promoDiscount > 0 && (
                           <View style={tw`flex-row justify-between items-center bg-emerald-50 px-2.5 py-1.5 rounded-xl border border-emerald-200`}>

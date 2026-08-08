@@ -521,7 +521,10 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               )}
             </div>
 
-            <span className="font-bold text-black tracking-wide" style={{ fontFamily: 'Outfit, sans-serif', fontSize: '16px', color: 'rgb(34, 164, 71)', textShadow: '0 0 8px rgba(34,164,71,0.6), 0 0 20px rgba(34,164,71,0.35)', animation: 'partnerPulse 2.5s ease-in-out infinite' }}>Partner Hub</span>
+            <div className="flex flex-col justify-center leading-tight">
+              <span className="font-bold text-black tracking-wide" style={{ fontFamily: 'Outfit, sans-serif', fontSize: '16px', color: 'rgb(34, 164, 71)', textShadow: '0 0 8px rgba(34,164,71,0.6), 0 0 20px rgba(34,164,71,0.35)', animation: 'partnerPulse 2.5s ease-in-out infinite' }}>Partner Hub</span>
+              <span className="text-[11px] font-bold text-gray-500 mt-0.5">{user?.shop_name || shopName || 'Royal Foods & Cafe'}</span>
+            </div>
           </div>
 
           {/* Language Switcher Pill */}
@@ -702,19 +705,23 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                     {/* Delivery Time Slot Banner */}
                     <div className="mx-4 my-3 bg-green-50 border border-green-200 rounded-xl p-2.5">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <svg className="w-4 h-4 text-[#22a447] shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <svg className="w-3.5 h-3.5 text-[#22a447] shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
                           </svg>
-                          <span className="text-xs font-bold text-[#22a447] uppercase tracking-wider">Delivery Time</span>
+                          <span className="text-[11px] font-bold text-[#22a447] uppercase tracking-wider">DELIVERY TIME</span>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-semibold text-gray-900 leading-tight">
-                            {order.selected_slot_label || (order.delivery_mode === 'instant' ? 'Within 15 Mins' : '8:00 PM – 9:00 PM')}
+                        <div className="text-right flex-1 min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-gray-900 leading-tight truncate">
+                            {order.delivery_mode === 'instant' 
+                              ? 'Within 15 Mins' 
+                              : ((order.selected_slot_label || '8:00 PM – 9:00 PM').replace(/\s*\([^)]*\)/gi, '').trim())}
                           </div>
-                          {order.delivery_mode !== 'instant' && (
-                            <div className="text-xs font-medium text-gray-600">(Dinner Slot)</div>
-                          )}
+                          <div className="text-[10px] font-medium text-gray-500 mt-0.5 leading-tight truncate">
+                            {order.delivery_mode === 'instant' 
+                              ? '(Instant Slot)' 
+                              : `(${order.slot_name || order.delivery_slot_name || ((order.selected_slot_label || '').toLowerCase().includes('dinner') || (order.selected_slot_label || '').includes('8:') || (order.selected_slot_label || '').includes('9:') ? 'Dinner Slot' : 'Lunch Slot')})`}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -764,12 +771,12 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         </div>
 
                         {/* Others Accordion */}
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between py-1">
                           <button
                             onClick={() => setOthersExpanded(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
-                            className="flex items-center gap-1 text-xs text-gray-600 font-medium cursor-pointer"
+                            className="flex items-center gap-1 text-xs text-gray-600 font-medium cursor-pointer hover:text-gray-900 transition-colors"
                           >
-                            <span className="font-bold">Others</span>
+                            <span className="font-bold text-gray-800">Others</span>
                             <span className="text-[10px]">{othersExpanded[order.id] ? '▲' : '▼'}</span>
                             <span className="text-gray-400">(Delivery & Platform Fee)</span>
                           </button>
@@ -777,14 +784,16 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         </div>
 
                         {othersExpanded[order.id] && (
-                          <div className="pl-2 space-y-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                            <div className="flex justify-between">
-                              <span className="text-xs text-gray-500">Delivery Fee ({bill.isInstant ? 'Instant' : 'Scheduled'})</span>
-                              <span className="text-xs text-gray-700 font-semibold">₹{bill.deliveryFee}</span>
+                          <div className="pl-3 py-1 space-y-1.5 border-l-2 border-green-400 ml-1 my-1 text-xs transition-all">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">Delivery Fee ({bill.isInstant ? 'Instant' : 'Scheduled'})</span>
+                              <span className="font-semibold text-gray-700">₹{bill.deliveryFee}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-xs text-gray-500">Platform Fee (Vaayu)</span>
-                              <span className="text-xs text-gray-700 font-semibold">₹{bill.platformFee}</span>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">Platform Fee (Vaayu)</span>
+                              <span className={`font-semibold ${bill.isFreePlatformFee || bill.platformFee === 0 ? 'text-green-600 font-bold' : 'text-gray-700'}`}>
+                                {bill.isFreePlatformFee || bill.platformFee === 0 ? 'FREE (₹0)' : `₹${bill.platformFee}`}
+                              </span>
                             </div>
                           </div>
                         )}
