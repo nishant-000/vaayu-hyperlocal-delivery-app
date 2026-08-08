@@ -184,6 +184,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   // Real Database State (No Mock Data!)
   const [orders, setOrders] = useState<any[]>([])
   const [ordersFilter, setOrdersFilter] = useState<'active' | 'all'>('active')
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false)
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [workers, setWorkers] = useState<any[]>([])
 
@@ -857,39 +858,60 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         {/* ── 2. FOOD STOCK TAB ── */}
         {activeTab === 'menu' && (
           <div className="flex flex-col gap-4">
-            <div className="bg-white rounded-2xl p-5 border border-gray-200 flex flex-col gap-4 shadow-xs">
-              <h2 className="text-lg font-bold text-gray-900">{t.addFood}</h2>
-              
+            {/* Add Item Collapsible Section */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs transition-all duration-300">
               <button
-                onClick={() => showToast("Photo attached!")}
-                className="w-full h-24 bg-green-50 border-2 border-dashed border-[#22a447] rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-green-100 transition-colors"
+                onClick={() => setIsAddItemOpen(!isAddItemOpen)}
+                className="w-full p-4 flex items-center justify-between bg-white cursor-pointer hover:bg-gray-50 transition-colors"
               >
-                <span className="text-3xl">📷</span>
-                <span className="text-[#22a447] font-bold text-xs">{t.photoButton}</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base font-bold text-gray-900">{t.addFood}</span>
+                </div>
+
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                  isAddItemOpen ? 'bg-gray-100 text-gray-700' : 'bg-[#22a447] text-white shadow-xs'
+                }`}>
+                  <span className="text-lg font-bold leading-none">{isAddItemOpen ? '−' : '+'}</span>
+                </div>
               </button>
 
-              <input
-                type="text"
-                placeholder={t.namePlaceholder}
-                value={newItemName}
-                onChange={e => setNewItemName(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
-              />
+              {isAddItemOpen && (
+                <div className="p-5 pt-0 border-t border-gray-100 flex flex-col gap-4 transition-all duration-300">
+                  <button
+                    onClick={() => showToast("Photo attached!")}
+                    className="w-full h-24 bg-green-50 border-2 border-dashed border-[#22a447] rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-green-100 transition-colors mt-4"
+                  >
+                    <span className="text-3xl">📷</span>
+                    <span className="text-[#22a447] font-bold text-xs">{t.photoButton}</span>
+                  </button>
 
-              <input
-                type="number"
-                placeholder={t.pricePlaceholder}
-                value={newItemPrice}
-                onChange={e => setNewItemPrice(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
-              />
+                  <input
+                    type="text"
+                    placeholder={t.namePlaceholder}
+                    value={newItemName}
+                    onChange={e => setNewItemName(e.target.value)}
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
+                  />
 
-              <button
-                onClick={handleAddItem}
-                className="w-full h-12 bg-[#22a447] hover:bg-green-700 text-white font-bold text-sm rounded-xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
-              >
-                {t.saveFood}
-              </button>
+                  <input
+                    type="number"
+                    placeholder={t.pricePlaceholder}
+                    value={newItemPrice}
+                    onChange={e => setNewItemPrice(e.target.value)}
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
+                  />
+
+                  <button
+                    onClick={() => {
+                      handleAddItem()
+                      if (newItemName.trim() && newItemPrice.trim()) setIsAddItemOpen(false)
+                    }}
+                    className="w-full h-12 bg-[#22a447] hover:bg-green-700 text-white font-bold text-sm rounded-xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+                  >
+                    {t.saveFood}
+                  </button>
+                </div>
+              )}
             </div>
 
             <h2 className="text-lg font-bold text-gray-900 mt-2">{t.menu} ({menuItems.length})</h2>
@@ -1039,7 +1061,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       </div>
 
       {/* Sliding Bottom Nav Capsule */}
-      <div className="fixed left-1/2 -translate-x-1/2 z-40" style={{ bottom: 'calc(1.75rem + env(safe-area-inset-bottom, 0px))', width: 'calc(100% - 32px)', maxWidth: 390 }}>
+      <div className="fixed left-1/2 -translate-x-1/2 z-40" style={{ bottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))', width: 'calc(100% - 32px)', maxWidth: 390 }}>
         <div className="bg-white/95 backdrop-blur-md rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-white/60 p-1">
           <div className="flex items-center justify-around relative px-2 py-1.5">
             {[

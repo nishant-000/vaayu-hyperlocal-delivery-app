@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler, LayoutAnimation, UIManager } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -277,7 +277,17 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [orders, setOrders] = useState<any[]>([])
   const [ordersFilter, setOrdersFilter] = useState<'active' | 'all'>('active')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false)
   const [menuItems, setMenuItems] = useState<any[]>([])
+
+  const toggleAddItemForm = () => {
+    triggerHaptic()
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true)
+    }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setIsAddItemOpen(prev => !prev)
+  }
   const [workers, setWorkers] = useState<any[]>([])
   const [platformFees, setPlatformFees] = useState<any[]>([])
   const [promosList, setPromosList] = useState<any[]>([])
@@ -1865,81 +1875,99 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         {/* ── 2. FOOD STOCK SCREEN (Backed by Supabase menu_items) ────── */}
         {activeTab === 'menu' && (
           <View style={tw`gap-3`}>
-            {/* Add Item Form */}
-            <View style={tw`bg-white rounded-2xl p-4 border border-gray-200 gap-3`}>
-              <Text style={tw`text-[14px] font-black text-gray-900 uppercase tracking-wide`}>Add New Item</Text>
-
-              {!activeShopId && (
-                <View style={tw`flex-row items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200`}>
-                  <ActivityIndicator size="small" color="#6b7280" />
-                  <Text style={tw`text-[12px] font-medium text-gray-500 flex-1`}>Loading shop...</Text>
+            {/* Add Item Collapsible Section */}
+            <View style={tw`bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs`}>
+              <TouchableOpacity
+                onPress={toggleAddItemForm}
+                activeOpacity={0.7}
+                style={tw`p-4 flex-row items-center justify-between bg-white`}
+              >
+                <View style={tw`flex-row items-center gap-2.5`}>
+                  <Text style={tw`text-[15px] font-black text-gray-900 uppercase tracking-wide`}>Add New Item</Text>
                 </View>
-              )}
 
-              {/* Photo Area */}
-              {newItemImg && !newItemImg.includes('unsplash') ? (
-                <View style={tw`w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative`}>
-                  <Image source={{ uri: newItemImg }} style={tw`w-full h-36`} resizeMode="cover" />
-                  <View style={tw`absolute bottom-2 left-2 right-2 flex-row gap-2`}>
+                <View style={[tw`w-8 h-8 rounded-full items-center justify-center`, isAddItemOpen ? tw`bg-gray-100` : tw`bg-[#22a447]`]}>
+                  <Text style={[tw`text-lg font-bold leading-none`, isAddItemOpen ? tw`text-gray-700` : tw`text-white`]}>
+                    {isAddItemOpen ? '−' : '+'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {isAddItemOpen && (
+                <View style={tw`px-4 pb-4 gap-3 border-t border-gray-100 pt-3`}>
+                  {!activeShopId && (
+                    <View style={tw`flex-row items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200`}>
+                      <ActivityIndicator size="small" color="#6b7280" />
+                      <Text style={tw`text-[12px] font-medium text-gray-500 flex-1`}>Loading shop...</Text>
+                    </View>
+                  )}
+
+                  {/* Photo Area */}
+                  {newItemImg && !newItemImg.includes('unsplash') ? (
+                    <View style={tw`w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative`}>
+                      <Image source={{ uri: newItemImg }} style={tw`w-full h-36`} resizeMode="cover" />
+                      <View style={tw`absolute bottom-2 left-2 right-2 flex-row gap-2`}>
+                        <TouchableOpacity
+                          onPress={() => { setImagePickerTarget('item'); setShowImagePickerModal(true) }}
+                          disabled={isUploadingPhoto || !activeShopId}
+                          style={tw`flex-1 bg-black/70 py-2 rounded-lg items-center justify-center active:opacity-70`}
+                        >
+                          <Text style={tw`text-white text-[12px] font-bold`}>Change Photo</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => { setNewItemImg('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200'); showToast('Photo removed') }}
+                          style={tw`bg-black/70 px-3 py-2 rounded-lg items-center justify-center active:opacity-70`}
+                        >
+                          <Text style={tw`text-white text-[12px] font-bold`}>Remove</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
                     <TouchableOpacity
                       onPress={() => { setImagePickerTarget('item'); setShowImagePickerModal(true) }}
                       disabled={isUploadingPhoto || !activeShopId}
-                      style={tw`flex-1 bg-black/70 py-2 rounded-lg items-center justify-center active:opacity-70`}
+                      style={[tw`w-full h-20 bg-gray-50 border border-dashed border-gray-300 rounded-xl items-center justify-center gap-1 active:opacity-70`, !activeShopId && tw`opacity-40`]}
                     >
-                      <Text style={tw`text-white text-[12px] font-bold`}>Change Photo</Text>
+                      {isUploadingPhoto ? (
+                        <View style={tw`items-center gap-1`}>
+                          <ActivityIndicator size="small" color="#6b7280" />
+                          <Text style={tw`text-gray-500 text-[11px] font-medium`}>Uploading...</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={tw`text-gray-400 font-bold text-[13px]`}>Add Photo (optional)</Text>
+                          <Text style={tw`text-gray-300 text-[11px]`}>Camera or Gallery</Text>
+                        </>
+                      )}
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => { setNewItemImg('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200'); showToast('Photo removed') }}
-                      style={tw`bg-black/70 px-3 py-2 rounded-lg items-center justify-center active:opacity-70`}
-                    >
-                      <Text style={tw`text-white text-[12px] font-bold`}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => { setImagePickerTarget('item'); setShowImagePickerModal(true) }}
-                  disabled={isUploadingPhoto || !activeShopId}
-                  style={[tw`w-full h-20 bg-gray-50 border border-dashed border-gray-300 rounded-xl items-center justify-center gap-1 active:opacity-70`, !activeShopId && tw`opacity-40`]}
-                >
-                  {isUploadingPhoto ? (
-                    <View style={tw`items-center gap-1`}>
-                      <ActivityIndicator size="small" color="#6b7280" />
-                      <Text style={tw`text-gray-500 text-[11px] font-medium`}>Uploading...</Text>
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={tw`text-gray-400 font-bold text-[13px]`}>Add Photo (optional)</Text>
-                      <Text style={tw`text-gray-300 text-[11px]`}>Camera or Gallery</Text>
-                    </>
                   )}
-                </TouchableOpacity>
-              )}
 
-              <TextInput
-                placeholder={t.namePlaceholder}
-                placeholderTextColor="#6b7280"
-                value={newItemName}
-                onChangeText={setNewItemName}
-                editable={!!activeShopId}
-                style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
-              />
-              <TextInput
-                placeholder={t.pricePlaceholder}
-                placeholderTextColor="#6b7280"
-                keyboardType="number-pad"
-                value={newItemPrice}
-                onChangeText={setNewItemPrice}
-                editable={!!activeShopId}
-                style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
-              />
-              <TouchableOpacity
-                onPress={handleAddItem}
-                disabled={!activeShopId}
-                style={[tw`w-full h-12 bg-gray-900 rounded-xl items-center justify-center active:opacity-70`, !activeShopId && tw`opacity-40`]}
-              >
-                <Text style={tw`text-white font-bold text-[14px]`}>Add to Menu</Text>
-              </TouchableOpacity>
+                  <TextInput
+                    placeholder={t.namePlaceholder}
+                    placeholderTextColor="#6b7280"
+                    value={newItemName}
+                    onChangeText={setNewItemName}
+                    editable={!!activeShopId}
+                    style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
+                  />
+                  <TextInput
+                    placeholder={t.pricePlaceholder}
+                    placeholderTextColor="#6b7280"
+                    keyboardType="number-pad"
+                    value={newItemPrice}
+                    onChangeText={setNewItemPrice}
+                    editable={!!activeShopId}
+                    style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
+                  />
+                  <TouchableOpacity
+                    onPress={handleAddItem}
+                    disabled={!activeShopId}
+                    style={[tw`w-full h-12 bg-gray-900 rounded-xl items-center justify-center active:opacity-70`, !activeShopId && tw`opacity-40`]}
+                  >
+                    <Text style={tw`text-white font-bold text-[14px]`}>Add to Menu</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
 
@@ -2285,7 +2313,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       </ScrollView>
 
       {/* Sliding Bottom Nav Capsule */}
-      <View style={tw`absolute bottom-4 left-4 right-4 z-40`}>
+      <View style={tw`absolute bottom-8 left-4 right-4 z-40`}>
         <View style={[tw`rounded-[28px] p-1 border shadow-xl`, { backgroundColor: 'rgba(255, 255, 255, 0.96)', borderColor: 'rgba(255, 255, 255, 0.6)' }]}>
           <View style={tw`flex-row items-center justify-around py-1 px-1`}>
             {([
