@@ -2471,25 +2471,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 </View>
               </View>
 
-              <View style={tw`h-px bg-gray-100`} />
-
-              <View style={tw`gap-2.5`}>
-                <View style={tw`bg-gray-50 p-3 rounded-2xl border border-gray-200 flex-row justify-between items-center`}>
-                  <Text style={tw`text-[12px] font-bold text-gray-500`}>Phone Number</Text>
-                  <Text style={tw`text-[13px] font-bold text-gray-900`}>📱 {user?.phone_number || '7906651669'}</Text>
-                </View>
-
-                <View style={tw`bg-gray-50 p-3 rounded-2xl border border-gray-200 flex-row justify-between items-center`}>
-                  <Text style={tw`text-[12px] font-bold text-gray-500`}>Account Role</Text>
-                  <Text style={tw`text-[13px] font-bold text-green-700 uppercase`}>{user?.role || 'Shop Owner'}</Text>
-                </View>
-
-                <View style={tw`bg-gray-50 p-3 rounded-2xl border border-gray-200 flex-row justify-between items-center`}>
-                  <Text style={tw`text-[12px] font-bold text-gray-500`}>Shop ID</Text>
-                  <Text style={tw`text-[12px] font-mono text-gray-700`}>{activeShopId || 'shop_demo_01'}</Text>
-                </View>
-              </View>
-
               <TouchableOpacity
                 onPress={() => {
                   triggerHaptic()

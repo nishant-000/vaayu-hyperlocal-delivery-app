@@ -1213,25 +1213,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 </div>
               </div>
 
-              <div className="h-px bg-gray-100" />
-
-              <div className="flex flex-col gap-2.5">
-                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200 flex justify-between items-center text-xs">
-                  <span className="font-bold text-gray-500">Phone Number</span>
-                  <span className="font-bold text-gray-900">📱 {user?.phone || '7906651669'}</span>
-                </div>
-
-                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200 flex justify-between items-center text-xs">
-                  <span className="font-bold text-gray-500">Account Role</span>
-                  <span className="font-bold text-green-700 uppercase">Shop Owner</span>
-                </div>
-
-                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200 flex justify-between items-center text-xs">
-                  <span className="font-bold text-gray-500">Shop ID</span>
-                  <span className="font-mono text-gray-700">{activeShopId || 'shop_demo_01'}</span>
-                </div>
-              </div>
-
               <button
                 onClick={onSignOut}
                 className="w-full h-12 bg-red-50 border border-red-200 text-red-700 font-bold text-sm rounded-xl cursor-pointer hover:bg-red-100 transition-colors mt-1"
