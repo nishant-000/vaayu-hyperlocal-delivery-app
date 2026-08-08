@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const i18n: Record<string, Record<string, string>> = {
@@ -6,16 +6,16 @@ const i18n: Record<string, Record<string, string>> = {
     orders: "Orders",
     menu: "Food Stock",
     settings: "Settings",
-    shopOpen: "🟢 SHOP IS OPEN FOR ORDERS",
-    shopClosed: "🔴 SHOP IS CLOSED FOR TODAY",
-    tapToClose: "(Tap to Close)",
-    tapToOpen: "(Tap to Open)",
+    shopOpen: "SHOP IS OPEN FOR ORDERS (TAP TO CLOSE)",
+    shopClosed: "SHOP IS CLOSED (TAP TO OPEN)",
+    tapToClose: "(TAP TO CLOSE)",
+    tapToOpen: "(TAP TO OPEN)",
     newWaiting: "NEW ORDERS WAITING",
     todayCash: "TODAY'S CASH",
     accept: "✅ ACCEPT ORDER",
     decline: "❌ DECLINE",
-    markReady: "OUT FOR DELIVERY",
-    markDelivered: "🎉 MARK DELIVERED",
+    markReady: "🚀 OUT FOR DELIVERY",
+    markDelivered: "✓ DELIVERED",
     completed: "✓ DELIVERED",
     rejected: "✕ REJECTED",
     inStock: "🟢 IN STOCK",
@@ -33,9 +33,9 @@ const i18n: Record<string, Record<string, string>> = {
     logout: "LOG OUT PARTNER PORTAL",
     language: "🌐 SELECT APP LANGUAGE",
     timeLeft: "TIME LEFT TO ACCEPT",
-    scheduled: "🟢 SCHEDULED ORDER",
-    instant: "⚡ INSTANT DELIVERY",
-    subtotal: "Food Items Subtotal",
+    scheduled: "Scheduled Delivery",
+    instant: "Instant Delivery",
+    subtotal: "Items Subtotal",
     deliveryFee: "Delivery Fee",
     platformFee: "Platform Fee (Vaayu)",
     grandTotal: "TOTAL FROM CUSTOMER",
@@ -50,16 +50,16 @@ const i18n: Record<string, Record<string, string>> = {
     orders: "आर्डर",
     menu: "खाना स्टॉक",
     settings: "सेटिंग्स",
-    shopOpen: "🟢 दुकान चालू है (आर्डर आ रहे हैं)",
-    shopClosed: "🔴 दुकान आज बंद है",
+    shopOpen: "दुकान चालू है (बंद करने के लिए दबाएं)",
+    shopClosed: "दुकान बंद है (चालू करने के लिए दबाएं)",
     tapToClose: "(बंद करने के लिए दबाएं)",
     tapToOpen: "(चालू करने के लिए दबाएं)",
     newWaiting: "नए आर्डर प्रतिक्षा में",
     todayCash: "आज की कुल बिक्री",
-    accept: "✅ स्वीकार करें (स्वीकार)",
+    accept: "✅ स्वीकार करें",
     decline: "❌ मना करें",
     markReady: "रवाना करें (OUT FOR DELIVERY)",
-    markDelivered: "🎉 डिलिवर हो गया",
+    markDelivered: "✓ डिलिवर हो गया",
     completed: "✓ पूर्ण हुआ",
     rejected: "✕ आर्डर रद्द",
     inStock: "🟢 उपलब्ध है",
@@ -77,8 +77,8 @@ const i18n: Record<string, Record<string, string>> = {
     logout: "लॉग आउट करें",
     language: "🌐 भाषा चुनें / SELECT LANGUAGE",
     timeLeft: "स्वीकार करने का समय",
-    scheduled: "🟢 निर्धारित आर्डर",
-    instant: "⚡ तुरंत डिलिवरी",
+    scheduled: "निर्धारित आर्डर",
+    instant: "तुरंत डिलिवरी",
     subtotal: "खाद्य सामग्री कुल",
     deliveryFee: "डिलिवरी शुल्क",
     platformFee: "वायु प्लेटफॉर्म शुल्क",
@@ -94,8 +94,8 @@ const i18n: Record<string, Record<string, string>> = {
     orders: "ஆர்டர்கள்",
     menu: "உணவு இருப்பு",
     settings: "அமைப்புகள்",
-    shopOpen: "🟢 கடை திறக்கப்பட்டுள்ளது",
-    shopClosed: "🔴 கடை இன்று மூடப்பட்டுள்ளது",
+    shopOpen: "கடை திறக்கப்பட்டுள்ளது (மூட தட்டவும்)",
+    shopClosed: "கடை மூடப்பட்டுள்ளது (திறக்க தட்டவும்)",
     tapToClose: "(மூட தட்டவும்)",
     tapToOpen: "(திறக்க தட்டவும்)",
     newWaiting: "புதிய ஆர்டர்கள்",
@@ -103,7 +103,7 @@ const i18n: Record<string, Record<string, string>> = {
     accept: "✅ ஏற்றுக்கொள்",
     decline: "❌ நிராகரி",
     markReady: "தயார் (OUT FOR DELIVERY)",
-    markDelivered: "🎉 டெலிவரி செய்யப்பட்டது",
+    markDelivered: "✓ டெலிவரி செய்யப்பட்டது",
     completed: "✓ முடிந்தது",
     rejected: "✕ நிராகரிக்கப்பட்டது",
     inStock: "🟢 இருப்பில் உள்ளது",
@@ -121,8 +121,8 @@ const i18n: Record<string, Record<string, string>> = {
     logout: "வெளியேறு",
     language: "🌐 மொழியைத் தேர்ந்தெடுக்கவும்",
     timeLeft: "ஏற்றுக்கொள்ள நேரம்",
-    scheduled: "🟢 திட்டமிடப்பட்ட ஆர்டர்",
-    instant: "⚡ உடனடி டெலிவரி",
+    scheduled: "திட்டமிடப்பட்ட ஆர்டர்",
+    instant: "உடனடி டெலிவரி",
     subtotal: "உணவு மொத்தம்",
     deliveryFee: "டெலிவரி கட்டணம்",
     platformFee: "வாயு பிளாட்ஃபார்ம் கட்டணம்",
@@ -147,6 +147,21 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [lang, setLang] = useState<'en' | 'hi' | 'ta'>('en')
   const [loading, setLoading] = useState(true)
 
+  // Header Hamburger & Dropdown state
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Expandable fees breakdown state per order
+  const [othersExpanded, setOthersExpanded] = useState<Record<string, boolean>>({})
+
+  // Pull to refresh gesture state
+  const [pullY, setPullY] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const touchStartY = useRef(0)
+  const pulling = useRef(false)
+  const THRESHOLD = 80
+
   const t = i18n[lang] || i18n['en']
 
   const triggerBeep = () => {
@@ -155,8 +170,20 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     } catch {}
   }
 
+  // Close menu on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   // Real Database State (No Mock Data!)
   const [orders, setOrders] = useState<any[]>([])
+  const [ordersFilter, setOrdersFilter] = useState<'active' | 'all'>('active')
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [workers, setWorkers] = useState<any[]>([])
 
@@ -176,51 +203,51 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   }
 
   // Load Real Data from Supabase & Subscribe to Realtime Updates
-  useEffect(() => {
-    async function loadShopData() {
-      setLoading(true)
+  const loadShopData = async () => {
+    setLoading(true)
 
-      // Fetch Orders
-      const { data: ordersData } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false })
+    // Fetch Orders
+    const { data: ordersData } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-      if (ordersData) setOrders(ordersData)
+    if (ordersData) setOrders(ordersData)
 
-      // Fetch Menu Items
-      const { data: menuData } = await supabase
-        .from('menu_items')
-        .select('*')
-        .order('created_at', { ascending: false })
+    // Fetch Menu Items
+    const { data: menuData } = await supabase
+      .from('menu_items')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-      if (menuData) {
-        setMenuItems(menuData.map(m => ({
-          id: m.id,
-          name: m.name,
-          price: m.price,
-          available: m.is_available,
-          img: m.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'
-        })))
-      }
-
-      // Fetch Shop Workers
-      const { data: workersData } = await supabase
-        .from('shop_workers')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (workersData) {
-        setWorkers(workersData.map(w => ({
-          id: w.id,
-          name: w.worker_name,
-          phone: w.worker_phone
-        })))
-      }
-
-      setLoading(false)
+    if (menuData) {
+      setMenuItems(menuData.map(m => ({
+        id: m.id,
+        name: m.name,
+        price: m.price,
+        available: m.is_available,
+        img: m.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'
+      })))
     }
 
+    // Fetch Shop Workers
+    const { data: workersData } = await supabase
+      .from('shop_workers')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (workersData) {
+      setWorkers(workersData.map(w => ({
+        id: w.id,
+        name: w.worker_name,
+        phone: w.worker_phone
+      })))
+    }
+
+    setLoading(false)
+  }
+
+  useEffect(() => {
     loadShopData()
 
     // Realtime Orders Subscription
@@ -242,6 +269,37 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       supabase.removeChannel(ordersSub)
     }
   }, [])
+
+  // Pull-to-refresh Handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (scrollRef.current && scrollRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY
+      pulling.current = true
+    }
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!pulling.current || isRefreshing) return
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (dy > 0) {
+      setPullY(Math.min(dy * 0.45, THRESHOLD))
+    }
+  }
+
+  const onTouchEnd = () => {
+    pulling.current = false
+    if (pullY >= THRESHOLD) {
+      setIsRefreshing(true)
+      setPullY(THRESHOLD)
+      loadShopData().then(() => {
+        setIsRefreshing(false)
+        setPullY(0)
+        showToast('Orders Synced!')
+      })
+    } else {
+      setPullY(0)
+    }
+  }
 
   // Timer Tick
   const [now, setNow] = useState(Date.now())
@@ -284,7 +342,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
     const deliveryFee = order.delivery_fee || (isInstant ? 10 : 5)
     const platformFee = order.platform_fee || 5
     const itemsSubtotal = order.items_subtotal || (Array.isArray(order.items)
-      ? order.items.reduce((s: number, i: any) => s + (i.price * i.quantity), 0)
+      ? order.items.reduce((s: number, i: any) => s + ((i.price || 0) * (i.quantity || i.qty || 1)), 0)
       : 0)
     const grandTotal = order.grand_total || (itemsSubtotal + deliveryFee + platformFee)
     return { isInstant, itemsSubtotal, deliveryFee, platformFee, grandTotal }
@@ -369,6 +427,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
   const incomingCount = orders.filter(o => o.status === 'incoming').length
   const validOrders = orders.filter(o => o.status !== 'cancelled')
+  const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+  const displayedOrders = ordersFilter === 'active' ? activeOrders : orders
   const totalOrdersCount = validOrders.length
 
   const instantOrdersCount = validOrders.filter(o => o.delivery_mode === 'instant').length
@@ -385,198 +445,375 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const shopNetFoodEarnings = todayTotalCashCollected - totalAmountOwedToVaayu
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100 pb-28 max-w-[430px] mx-auto relative select-none">
+    <div className="flex flex-col min-h-screen bg-[#f0f2f5] pb-28 max-w-[430px] mx-auto relative select-none">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-black text-white px-6 py-3 rounded-2xl font-black text-sm shadow-xl flex items-center gap-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-xl flex items-center gap-2">
           <span>✨</span> {toastMessage}
         </div>
       )}
 
       {/* Header */}
-      <div className="bg-white px-5 pt-6 pb-4 border-b border-gray-200 sticky top-0 z-30">
-        <div className="flex justify-between items-center mb-2">
-          <div>
-            <p className="text-[12px] font-black text-green-700 uppercase tracking-widest">
-              {user?.role === 'worker' ? 'WORKER PORTAL' : 'SHOP OWNER'}
-            </p>
-            <h1 className="text-[26px] font-black text-gray-900 leading-tight">{user?.name || 'Campus Bites Cafe'}</h1>
+      <div className="bg-white px-4 pt-5 pb-3 border-b border-gray-100 sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center justify-between">
+          {/* Hamburger + Brand Title */}
+          <div className="flex items-center gap-3" ref={menuRef}>
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="w-9 h-9 flex flex-col justify-center items-center gap-1.5 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                aria-label="Open menu"
+              >
+                <span className={`block w-5 h-0.5 bg-gray-800 rounded-full transition-all duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+                <span className={`block w-5 h-0.5 bg-gray-800 rounded-full transition-all duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
+                <span className={`block w-5 h-0.5 bg-gray-800 rounded-full transition-all duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {menuOpen && (
+                <div className="absolute top-11 left-0 z-50 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                  <div className="bg-[#22a447] px-4 py-3">
+                    <p className="text-[10px] font-bold text-green-100 tracking-widest uppercase">Shop Owner Portal</p>
+                    <p className="text-lg font-extrabold text-white leading-tight">{user?.name || 'Campus Bites Cafe'}</p>
+                  </div>
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                      </svg>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{user?.ownerName || user?.name || 'Shobha Singh'}</p>
+                        <p className="text-xs text-gray-500">📱 {user?.phone || '7906651669'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 py-2 space-y-1">
+                    {[
+                      { icon: '📦', label: 'My Orders', tab: 'orders', filter: 'active' },
+                      { icon: '📜', label: 'Old Orders', tab: 'orders', filter: 'all' },
+                      { icon: '🏪', label: 'Shop Settings', tab: 'settings' },
+                      { icon: '📊', label: 'Reports', action: () => showToast(`Reports: ${totalOrdersCount} Total Orders Today`) },
+                      { icon: '🔔', label: 'Notifications', action: () => showToast('Notifications: Active') },
+                      { icon: '🚪', label: 'Logout', action: onSignOut },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => {
+                          if (item.action) {
+                            item.action()
+                          } else {
+                            if (item.tab) setActiveTab(item.tab as any)
+                            if (item.filter) setOrdersFilter(item.filter as any)
+                          }
+                          setMenuOpen(false)
+                        }}
+                        className={`w-full flex items-center gap-3 px-2 py-2 text-sm hover:text-[#22a447] hover:bg-green-50 rounded-xl transition-colors ${
+                          item.tab && activeTab === item.tab && (!item.filter || ordersFilter === item.filter) ? 'text-[#22a447] font-bold bg-green-50' : 'text-gray-700 font-medium'
+                        }`}
+                      >
+                        <span className="text-base">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <span className="font-bold text-black tracking-wide" style={{ fontFamily: 'Outfit, sans-serif', fontSize: '16px', color: 'rgb(34, 164, 71)', textShadow: '0 0 8px rgba(34,164,71,0.6), 0 0 20px rgba(34,164,71,0.35)', animation: 'partnerPulse 2.5s ease-in-out infinite' }}>Partner Hub</span>
           </div>
 
-          {/* Language Toggle */}
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+          {/* Language Switcher Pill */}
+          <div className="flex items-center bg-gray-100 rounded-full p-0.5 gap-0.5">
             {(['en', 'hi', 'ta'] as const).map((l) => (
               <button
                 key={l}
-                onClick={() => {
-                  setLang(l)
-                  triggerBeep()
-                }}
-                className={`px-2.5 py-1 rounded-lg font-black text-[11px] uppercase cursor-pointer ${
-                  lang === l ? 'bg-green-700 text-white' : 'text-gray-600 hover:text-gray-900'
+                onClick={() => { setLang(l); triggerBeep() }}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  lang === l
+                    ? 'bg-[#22a447] text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                {l === 'en' ? 'EN' : l === 'hi' ? 'हिंदी' : 'தமி'}
+                {l === 'hi' ? 'हिंदी' : l === 'ta' ? 'தமிழ்' : 'EN'}
               </button>
             ))}
           </div>
         </div>
 
-        {/* GIANT GO-LIVE BUTTON */}
+        {/* Shop Status Toggle Button */}
         <button
           onClick={() => {
             const next = !isLiveToday
             setIsLiveToday(next)
             showToast(next ? t.shopOpen : t.shopClosed)
           }}
-          className={`w-full h-14 rounded-2xl font-black text-[17px] tracking-wide text-white uppercase shadow-md transition-transform active:scale-[0.98] cursor-pointer flex items-center justify-center border-2 ${
-            isLiveToday ? 'bg-green-600 border-green-700' : 'bg-red-600 border-red-700'
+          className={`mt-4 w-full py-3.5 rounded-2xl font-extrabold text-sm tracking-wide flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer ${
+            isLiveToday ? 'bg-[#22a447] text-white' : 'bg-red-500 text-white'
           }`}
         >
-          {isLiveToday ? `${t.shopOpen} ${t.tapToClose}` : `${t.shopClosed} ${t.tapToOpen}`}
+          <span className="text-base">{isLiveToday ? '🟢' : '🔴'}</span>
+          {isLiveToday ? t.shopOpen : t.shopClosed}
         </button>
       </div>
 
-      {/* 2 Summary Cards */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3 p-4">
         <div className={`rounded-2xl p-4 border ${incomingCount > 0 ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200'}`}>
-          <p className="text-[12px] font-black uppercase text-gray-500">{t.newWaiting}</p>
-          <p className={`text-[32px] font-black mt-0.5 ${incomingCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>{incomingCount}</p>
+          <p className="text-[12px] font-bold uppercase text-gray-500">{t.newWaiting}</p>
+          <p className={`text-[32px] font-extrabold mt-0.5 ${incomingCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>{incomingCount}</p>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-gray-200">
-          <p className="text-[12px] font-black uppercase text-gray-500">{t.todayCash}</p>
-          <p className="text-[32px] font-black text-gray-900 mt-0.5">₹{todayTotalCashCollected}</p>
+          <p className="text-[12px] font-bold uppercase text-gray-500">{t.todayCash}</p>
+          <p className="text-[32px] font-extrabold text-gray-900 mt-0.5">₹{todayTotalCashCollected}</p>
         </div>
       </div>
 
       <div className="px-4 flex-1">
         {/* ── 1. ORDERS TAB ── */}
         {activeTab === 'orders' && (
-          <div className="flex flex-col gap-4">
-            <h2 className="text-[18px] font-black text-gray-900">{t.orders} ({orders.length})</h2>
+          <div
+            ref={scrollRef}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            className="flex flex-col gap-4 relative"
+          >
+            {/* Pull-to-refresh indicator */}
+            <div
+              className="flex items-center justify-center overflow-hidden transition-all duration-300"
+              style={{ height: pullY > 0 || isRefreshing ? pullY || THRESHOLD : 0 }}
+            >
+              <div className={`flex flex-col items-center gap-1 ${pullY >= THRESHOLD || isRefreshing ? 'opacity-100' : 'opacity-50'}`}>
+                <svg
+                  className={`w-7 h-7 text-[#22a447] ${isRefreshing ? 'animate-spin' : ''}`}
+                  style={{ transform: isRefreshing ? undefined : `rotate(${(pullY / THRESHOLD) * 360}deg)` }}
+                  fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="text-[10px] font-semibold text-[#22a447]">
+                  {isRefreshing ? 'Syncing orders...' : pullY >= THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
+                </span>
+              </div>
+            </div>
+
+            {/* Orders Section Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">{t.orders} ({displayedOrders.length})</h2>
+              <div className="flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-[#22a447] animate-pulse" />
+                <span className="text-xs font-semibold text-gray-700">LIVE</span>
+                <span className="w-2 h-2 rounded-full bg-[#22a447] animate-pulse" />
+              </div>
+            </div>
+
 
             {loading ? (
               <div className="py-10 text-center text-xs text-gray-400 font-medium">Loading orders from Supabase...</div>
-            ) : orders.length === 0 ? (
-              <div className="bg-white rounded-3xl p-8 text-center border border-gray-200 shadow-sm">
+            ) : displayedOrders.length === 0 ? (
+              <div className="bg-white rounded-3xl p-8 text-center border border-gray-200 shadow-xs">
                 <span className="text-4xl block mb-2">📋</span>
-                <p className="text-base font-bold text-gray-900">No orders yet today</p>
-                <p className="text-xs text-gray-400 font-medium mt-1">New customer orders will appear here automatically.</p>
+                <p className="text-base font-bold text-gray-900">
+                  {ordersFilter === 'active' ? 'No existing active orders' : 'No orders yet today'}
+                </p>
+                <p className="text-xs text-gray-400 font-medium mt-1">
+                  {ordersFilter === 'active' ? 'New ongoing customer orders will appear here automatically.' : 'New customer orders will appear here automatically.'}
+                </p>
               </div>
             ) : (
-              orders.map(order => {
+              displayedOrders.map(order => {
                 const timer = getTimerDetails(order.expire_at)
                 const bill = getOrderBill(order)
 
                 return (
-                  <div key={order.id} className="bg-white rounded-3xl p-5 border-2 border-gray-300 shadow-md flex flex-col gap-3">
-                    <div className="flex justify-between items-start border-b border-gray-100 pb-3">
-                      <div>
-                        <span className="text-[28px] font-black text-gray-900 block leading-none">#{order.id}</span>
-                        <span className="text-[20px] font-black text-green-700 mt-1 block">📍 {order.location}</span>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span className="bg-gray-100 px-3 py-1.5 rounded-full text-2xl">
-                          {order.payment_mode === 'cod' ? '💵' : '📱'}
-                        </span>
-                        <span className={`text-[12px] font-black px-3 py-1 rounded-full uppercase ${
-                          order.status === 'incoming' ? 'bg-red-100 text-red-700' :
-                          order.status === 'preparing' || order.status === 'accepted' ? 'bg-orange-100 text-orange-700' :
-                          order.status === 'out_for_delivery' || order.status === 'delivering' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                  <div key={order.id} className="bg-white rounded-2xl shadow-xs border border-gray-100 overflow-hidden flex flex-col">
+                    {/* Scheduled / Delivery Mode & Status */}
+                    <div className="px-4 pt-4 pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xl">{order.delivery_mode === 'instant' ? '⚡' : '📅'}</span>
+                          <span className="text-base font-bold text-gray-800">
+                            {order.delivery_mode === 'instant' ? t.instant : t.scheduled}
+                          </span>
+                        </div>
+                        <span className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap uppercase ${
+                          order.status === 'delivered' ? 'bg-green-50 text-[#22a447] border border-green-200' :
+                          order.status === 'incoming' ? 'bg-red-50 text-red-600 border border-red-200' :
+                          order.status === 'preparing' || order.status === 'accepted' ? 'bg-orange-50 text-orange-600 border border-orange-200' :
+                          'bg-purple-50 text-purple-600 border border-purple-200'
                         }`}>
-                          {order.status === 'incoming' ? '📥 NEW' :
-                           order.status === 'preparing' || order.status === 'accepted' ? '🍳 COOK' :
-                           order.status === 'out_for_delivery' || order.status === 'delivering' ? 'OUT FOR DELIVERY' : '✅ DONE'}
+                          {order.status === 'delivered' ? '✅ DELIVERED' :
+                           order.status === 'incoming' ? '📥 NEW ORDER' :
+                           order.status === 'preparing' || order.status === 'accepted' ? '🍳 PREPARING' :
+                           '🚀 OUT FOR DELIVERY'}
                         </span>
                       </div>
                     </div>
 
+                    <div className="h-px bg-gray-100 mx-4" />
+
+                    {/* Customer Info & Phone Call Action Button */}
+                    <div className="px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Customer</p>
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                          </svg>
+                          <span className="text-sm font-semibold text-gray-800">{order.customer_name || order.user_name || 'Nishant singh'}</span>
+                        </div>
+                      </div>
+                      <a
+                        href={`tel:${order.customer_phone || order.user_phone || '7906651669'}`}
+                        className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 active:scale-[0.97] transition-all cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                        {order.customer_phone || order.user_phone || '7906651669'}
+                      </a>
+                    </div>
+
+                    <div className="h-px bg-gray-100 mx-4" />
+
                     {/* Progress Timer */}
                     {order.status === 'incoming' && (
-                      <div className={`rounded-2xl p-3 border flex flex-col gap-1.5 ${timer.bgClass} ${timer.borderClass}`}>
+                      <div className={`mx-4 my-2 rounded-xl p-3 border flex flex-col gap-1.5 ${timer.bgClass} ${timer.borderClass}`}>
                         <div className="flex justify-between items-center">
-                          <span className={`text-[13px] font-black ${timer.textClass}`}>⏱️ {t.timeLeft}:</span>
-                          <span className={`text-[18px] font-black font-mono ${timer.textClass}`}>{timer.timeStr}</span>
+                          <span className={`text-[12px] font-bold ${timer.textClass}`}>⏱️ {t.timeLeft}:</span>
+                          <span className={`text-[16px] font-extrabold font-mono ${timer.textClass}`}>{timer.timeStr}</span>
                         </div>
-                        <div className="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all duration-500 ${timer.colorClass}`} style={{ width: `${Math.max(5, Math.min(100, timer.ratio * 100))}%` }} />
                         </div>
                       </div>
                     )}
 
-                    {/* Delivery Mode Badge */}
-                    {order.delivery_mode === 'instant' ? (
-                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 flex justify-between items-center text-xs">
-                        <span className="font-black text-blue-700 uppercase">{t.instant}</span>
-                        <span className="font-bold text-blue-800">Within 15 Mins</span>
+                    {/* Delivery Time Slot Banner */}
+                    <div className="mx-4 my-3 bg-green-50 border border-green-200 rounded-xl p-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-[#22a447] shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
+                          </svg>
+                          <span className="text-xs font-bold text-[#22a447] uppercase tracking-wider">Delivery Time</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-gray-900 leading-tight">
+                            {order.selected_slot_label || (order.delivery_mode === 'instant' ? 'Within 15 Mins' : '8:00 PM – 9:00 PM')}
+                          </div>
+                          {order.delivery_mode !== 'instant' && (
+                            <div className="text-xs font-medium text-gray-600">(Dinner Slot)</div>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 flex justify-between items-center text-xs">
-                        <span className="font-black text-green-700 uppercase">{t.scheduled}</span>
-                        <span className="font-bold text-green-800">{order.selected_slot_label || '12:00 PM – 2:00 PM'}</span>
-                      </div>
-                    )}
+                    </div>
 
-                    {/* Items & Fees Breakdown */}
-                    <div className="bg-gray-50 rounded-2xl p-3 flex flex-col gap-2 border border-gray-200">
-                      {Array.isArray(order.items) && order.items.map((it: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center text-[15px]">
-                          <span className="font-black text-gray-900">{it.name} x {it.quantity || it.qty}</span>
-                          <span className="font-black text-gray-900">₹{(it.price || 0) * (it.quantity || it.qty)}</span>
+                    {/* Order Items Breakdown & Fees Accordion */}
+                    <div className={`mx-4 mb-3 border rounded-xl overflow-hidden ${
+                      order.is_partially_accepted ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white'
+                    }`}>
+                      {order.is_partially_accepted && (
+                        <div className="px-3 py-2 flex items-center justify-between border-b border-yellow-200">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">⚠️</span>
+                            <span className="text-[10px] font-bold text-yellow-700 uppercase tracking-wide">Partially Accepted</span>
+                          </div>
+                          <span className="text-[10px] font-semibold text-gray-500">Total Adjusted</span>
                         </div>
-                      ))}
+                      )}
+                      <div className="px-3 py-2.5 bg-white space-y-2">
+                        {Array.isArray(order.items) && order.items.map((it: any, idx: number) => {
+                          const isOutOfStock = it.out_of_stock || (it.quantity === 0)
+                          return (
+                            <div key={idx} className="flex items-center justify-between">
+                              {isOutOfStock ? (
+                                <>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-bold text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded uppercase">Out of Stock</span>
+                                    <span className="text-xs text-gray-400 line-through">{it.name} × 0 (ordered {it.ordered_qty || 1})</span>
+                                  </div>
+                                  <span className="text-xs text-gray-400">₹0</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-sm text-gray-800 font-medium">{it.name} × {it.quantity || it.qty || 1}</span>
+                                  <span className="text-sm font-semibold text-gray-800">₹{(it.price || 0) * (it.quantity || it.qty || 1)}</span>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })}
 
-                      <div className="border-t border-gray-200 pt-2 flex flex-col gap-1.5">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-gray-600">{t.subtotal}</span>
-                          <span className="font-black text-gray-800">₹{bill.itemsSubtotal}</span>
+                        <div className="h-px bg-gray-100" />
+
+                        {/* Items Subtotal */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-500">{t.subtotal}</span>
+                          <span className="text-xs font-semibold text-gray-700">₹{bill.itemsSubtotal}</span>
                         </div>
 
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-blue-700">
-                            {t.deliveryFee} ({bill.isInstant ? '⚡ Instant ₹10' : '🟢 Scheduled ₹5'})
-                          </span>
-                          <span className="font-black text-blue-800">+₹{bill.deliveryFee}</span>
+                        {/* Others Accordion */}
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => setOthersExpanded(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
+                            className="flex items-center gap-1 text-xs text-gray-600 font-medium cursor-pointer"
+                          >
+                            <span className="font-bold">Others</span>
+                            <span className="text-[10px]">{othersExpanded[order.id] ? '▲' : '▼'}</span>
+                            <span className="text-gray-400">(Delivery & Platform Fee)</span>
+                          </button>
+                          <span className="text-xs font-semibold text-gray-700">+₹{bill.deliveryFee + bill.platformFee}</span>
                         </div>
 
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-purple-700">⚡ {t.platformFee}</span>
-                          <span className="font-black text-purple-800">+₹{bill.platformFee}</span>
-                        </div>
+                        {othersExpanded[order.id] && (
+                          <div className="pl-2 space-y-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Delivery Fee ({bill.isInstant ? 'Instant' : 'Scheduled'})</span>
+                              <span className="text-xs text-gray-700 font-semibold">₹{bill.deliveryFee}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Platform Fee (Vaayu)</span>
+                              <span className="text-xs text-gray-700 font-semibold">₹{bill.platformFee}</span>
+                            </div>
+                          </div>
+                        )}
 
-                        <div className="border-t border-gray-300 pt-2 mt-1 flex justify-between items-center">
-                          <span className="text-[15px] font-black text-gray-900">{t.grandTotal}</span>
-                          <span className="text-[20px] font-black text-green-700">₹{bill.grandTotal}</span>
+                        <div className="h-px bg-gray-200" />
+
+                        {/* Grand Total */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">{t.grandTotal}</span>
+                          <span className="text-base font-extrabold text-gray-900">₹{bill.grandTotal}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col gap-2.5 mt-1">
+                    <div className="px-4 pb-4 space-y-2">
                       {order.status === 'incoming' && (
-                        <>
+                        <div className="flex gap-2">
                           <button
                             onClick={() => handleUpdateStatus(order.id, 'accepted')}
-                            className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-black text-[17px] uppercase rounded-2xl shadow-lg transition-transform active:scale-[0.98] cursor-pointer"
+                            className="flex-1 py-3.5 bg-[#22a447] text-white font-bold text-sm rounded-xl hover:bg-green-700 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
                           >
                             {t.accept} (₹{bill.grandTotal})
                           </button>
-
                           <button
-                            onClick={() => handleUpdateStatus(order.id, 'cancelled', 'Shop declined order')}
-                            className="w-full h-12 bg-red-100 hover:bg-red-200 text-red-700 font-black text-[14px] rounded-2xl cursor-pointer"
+                            onClick={() => handleUpdateStatus(order.id, 'cancelled', 'Declined by shop')}
+                            className="py-3.5 px-4 bg-red-100 text-red-700 font-bold text-sm rounded-xl hover:bg-red-200 transition-all cursor-pointer"
                           >
                             {t.decline}
                           </button>
-                        </>
+                        </div>
                       )}
 
                       {(order.status === 'accepted' || order.status === 'preparing') && (
                         <button
                           onClick={() => handleUpdateStatus(order.id, 'out_for_delivery')}
-                          className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-black text-[17px] uppercase rounded-2xl shadow-lg transition-transform active:scale-[0.98] cursor-pointer"
+                          className="w-full py-3.5 bg-orange-500 text-white font-bold text-sm rounded-xl hover:bg-orange-600 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
                         >
                           {t.markReady}
                         </button>
@@ -585,21 +822,21 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       {(order.status === 'out_for_delivery' || order.status === 'delivering') && (
                         <button
                           onClick={() => handleUpdateStatus(order.id, 'delivered')}
-                          className="w-full h-14 bg-green-700 hover:bg-green-800 text-white font-black text-[17px] uppercase rounded-2xl shadow-lg transition-transform active:scale-[0.98] cursor-pointer"
+                          className="w-full py-3.5 bg-green-50 border-2 border-green-200 text-[#22a447] font-bold text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-green-100 active:scale-[0.98] transition-all cursor-pointer"
                         >
                           {t.markDelivered}
                         </button>
                       )}
 
                       {order.status === 'delivered' && (
-                        <div className="w-full py-3 bg-green-50 rounded-2xl text-center">
-                          <span className="text-green-800 font-black text-[14px]">{t.completed}</span>
-                        </div>
+                        <button className="w-full py-3.5 bg-green-50 border-2 border-green-200 text-[#22a447] font-bold text-sm rounded-xl flex items-center justify-center gap-2 cursor-default">
+                          {t.completed}
+                        </button>
                       )}
 
                       {order.status === 'cancelled' && (
-                        <div className="w-full py-3 bg-red-50 rounded-2xl text-center">
-                          <span className="text-red-700 font-black text-[14px]">{t.rejected}</span>
+                        <div className="w-full py-3 bg-red-50 rounded-xl text-center border border-red-200">
+                          <span className="text-red-700 font-bold text-sm">{t.rejected}</span>
                         </div>
                       )}
                     </div>
@@ -610,18 +847,18 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           </div>
         )}
 
-        {/* ── 2. FOOD STOCK SCREEN ── */}
+        {/* ── 2. FOOD STOCK TAB ── */}
         {activeTab === 'menu' && (
           <div className="flex flex-col gap-4">
-            <div className="bg-white rounded-3xl p-5 border-2 border-gray-300 flex flex-col gap-4 shadow-sm">
-              <h2 className="text-[18px] font-black text-gray-900">{t.addFood}</h2>
+            <div className="bg-white rounded-2xl p-5 border border-gray-200 flex flex-col gap-4 shadow-xs">
+              <h2 className="text-lg font-bold text-gray-900">{t.addFood}</h2>
               
               <button
                 onClick={() => showToast("Photo attached!")}
-                className="w-full h-24 bg-green-50 border-2 border-dashed border-green-500 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-green-100 transition-colors"
+                className="w-full h-24 bg-green-50 border-2 border-dashed border-[#22a447] rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-green-100 transition-colors"
               >
                 <span className="text-3xl">📷</span>
-                <span className="text-green-800 font-black text-[13px]">{t.photoButton}</span>
+                <span className="text-[#22a447] font-bold text-xs">{t.photoButton}</span>
               </button>
 
               <input
@@ -629,7 +866,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 placeholder={t.namePlaceholder}
                 value={newItemName}
                 onChange={e => setNewItemName(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900 outline-none"
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
               />
 
               <input
@@ -637,32 +874,32 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 placeholder={t.pricePlaceholder}
                 value={newItemPrice}
                 onChange={e => setNewItemPrice(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900 outline-none"
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
               />
 
               <button
                 onClick={handleAddItem}
-                className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-black text-[16px] rounded-2xl shadow-md cursor-pointer"
+                className="w-full h-12 bg-[#22a447] hover:bg-green-700 text-white font-bold text-sm rounded-xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
               >
                 {t.saveFood}
               </button>
             </div>
 
-            <h2 className="text-[18px] font-black text-gray-900 mt-2">{t.menu} ({menuItems.length})</h2>
+            <h2 className="text-lg font-bold text-gray-900 mt-2">{t.menu} ({menuItems.length})</h2>
             <div className="flex flex-col gap-3">
               {menuItems.map(item => (
-                <div key={item.id} className="bg-white rounded-2xl p-4 border-2 border-gray-200 flex items-center justify-between gap-3 shadow-xs">
-                  <img src={item.img} alt={item.name} className="w-16 h-16 rounded-xl object-cover" />
+                <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-200 flex items-center justify-between gap-3 shadow-xs">
+                  <img src={item.img} alt={item.name} className="w-14 h-14 rounded-xl object-cover" />
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-[16px] font-black text-gray-900">{item.name}</h3>
-                    <p className="text-[15px] font-black text-green-700 mt-0.5">₹{item.price}</p>
+                    <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
+                    <p className="text-sm font-bold text-[#22a447] mt-0.5">₹{item.price}</p>
                   </div>
 
                   <button
                     onClick={() => handleToggleStock(item.id, item.available)}
-                    className={`px-5 h-12 rounded-2xl font-black text-[14px] uppercase text-white shadow-sm cursor-pointer border-2 ${
-                      item.available ? 'bg-green-600 border-green-700' : 'bg-red-600 border-red-700'
+                    className={`px-4 h-10 rounded-xl font-bold text-xs uppercase text-white shadow-xs cursor-pointer transition-all active:scale-[0.97] ${
+                      item.available ? 'bg-[#22a447]' : 'bg-red-500'
                     }`}
                   >
                     {item.available ? t.inStock : t.soldOut}
@@ -673,40 +910,40 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           </div>
         )}
 
-        {/* ── 3. SETTINGS & VAAYU FINANCIAL VAULT ── */}
+        {/* ── 3. SETTINGS & VAAYU FINANCIAL VAULT TAB ── */}
         {activeTab === 'settings' && (
           <div className="flex flex-col gap-4">
-            <div className="bg-white rounded-3xl p-5 border-2 border-purple-300 flex flex-col gap-4 shadow-sm">
-              <h2 className="text-[16px] font-black text-purple-900 uppercase">{t.financialSummary}</h2>
+            <div className="bg-white rounded-2xl p-5 border border-purple-200 flex flex-col gap-4 shadow-xs">
+              <h2 className="text-sm font-bold text-purple-900 uppercase tracking-wider">{t.financialSummary}</h2>
               
-              <div className="bg-purple-50 rounded-2xl p-4 border border-purple-200 flex flex-col gap-2.5">
+              <div className="bg-purple-50 rounded-xl p-4 border border-purple-200 flex flex-col gap-2.5">
                 <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs flex-wrap gap-1">
-                  <span className="font-bold text-purple-800 flex-1 min-w-[120px]">{t.instantDeliveryTag}</span>
-                  <span className="font-black text-purple-900 text-right">{instantOrdersCount} × ₹10 = ₹{instantDeliveryFeesTotal}</span>
+                  <span className="font-semibold text-purple-800 flex-1 min-w-[120px]">{t.instantDeliveryTag}</span>
+                  <span className="font-bold text-purple-900 text-right">{instantOrdersCount} × ₹10 = ₹{instantDeliveryFeesTotal}</span>
                 </div>
 
                 <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs flex-wrap gap-1">
-                  <span className="font-bold text-purple-800 flex-1 min-w-[120px]">{t.scheduledDeliveryTag}</span>
-                  <span className="font-black text-purple-900 text-right">{scheduledOrdersCount} × ₹5 = ₹{scheduledDeliveryFeesTotal}</span>
+                  <span className="font-semibold text-purple-800 flex-1 min-w-[120px]">{t.scheduledDeliveryTag}</span>
+                  <span className="font-bold text-purple-900 text-right">{scheduledOrdersCount} × ₹5 = ₹{scheduledDeliveryFeesTotal}</span>
                 </div>
 
                 <div className="flex justify-between items-center pb-2 border-b border-purple-200 text-xs flex-wrap gap-1">
-                  <span className="font-bold text-purple-800 flex-1 min-w-[120px]">{t.platformFeeTag}</span>
-                  <span className="font-black text-purple-900 text-right">{totalOrdersCount} × ₹5 = ₹{totalPlatformFeesToVaayu}</span>
+                  <span className="font-semibold text-purple-800 flex-1 min-w-[120px]">{t.platformFeeTag}</span>
+                  <span className="font-bold text-purple-900 text-right">{totalOrdersCount} × ₹5 = ₹{totalPlatformFeesToVaayu}</span>
                 </div>
 
                 <div className="bg-purple-200/60 rounded-xl p-3 mt-1">
-                  <p className="text-[12px] font-black text-purple-900 uppercase">{t.totalOwedToVaayu}</p>
-                  <p className="text-[22px] font-black text-purple-950 mt-0.5">₹{totalAmountOwedToVaayu}</p>
-                  <p className="text-[11px] font-bold text-purple-800 mt-1">
+                  <p className="text-[11px] font-bold text-purple-900 uppercase">{t.totalOwedToVaayu}</p>
+                  <p className="text-xl font-extrabold text-purple-950 mt-0.5">₹{totalAmountOwedToVaayu}</p>
+                  <p className="text-[10px] font-semibold text-purple-800 mt-1">
                     (₹{totalDeliveryFeesCollected} Delivery + ₹{totalPlatformFeesToVaayu} Platform Fee)
                   </p>
                 </div>
 
                 <div className="bg-green-100 rounded-xl p-3 border border-green-300 mt-1">
-                  <p className="text-[12px] font-black text-green-900 uppercase">{t.shopNetEarnings}</p>
-                  <p className="text-[22px] font-black text-green-900 mt-0.5">₹{shopNetFoodEarnings}</p>
-                  <p className="text-[11px] font-bold text-green-800 mt-1">
+                  <p className="text-[11px] font-bold text-green-900 uppercase">{t.shopNetEarnings}</p>
+                  <p className="text-xl font-extrabold text-green-900 mt-0.5">₹{shopNetFoodEarnings}</p>
+                  <p className="text-[10px] font-semibold text-green-800 mt-1">
                     Total Cash ₹{todayTotalCashCollected} - Vaayu Return ₹{totalAmountOwedToVaayu}
                   </p>
                 </div>
@@ -714,8 +951,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             </div>
 
             {/* Language Selector */}
-            <div className="bg-white rounded-3xl p-5 border-2 border-gray-300 flex flex-col gap-3 shadow-sm">
-              <h2 className="text-[16px] font-black text-gray-900">{t.language}</h2>
+            <div className="bg-white rounded-2xl p-5 border border-gray-200 flex flex-col gap-3 shadow-xs">
+              <h2 className="text-sm font-bold text-gray-900">{t.language}</h2>
               
               <div className="flex flex-col gap-2">
                 {[
@@ -729,28 +966,28 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       setLang(l.code as any)
                       showToast(`Language set to ${l.name}`)
                     }}
-                    className={`w-full h-14 rounded-2xl border-2 flex items-center justify-between px-4 font-black text-[16px] cursor-pointer ${
-                      lang === l.code ? 'bg-green-50 border-green-600 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-800'
+                    className={`w-full h-12 rounded-xl border flex items-center justify-between px-4 font-bold text-sm cursor-pointer ${
+                      lang === l.code ? 'bg-green-50 border-[#22a447] text-[#22a447]' : 'bg-gray-50 border-gray-200 text-gray-800'
                     }`}
                   >
                     <span>{l.name}</span>
-                    {lang === l.code && <span className="text-green-700 text-lg">✓</span>}
+                    {lang === l.code && <span className="text-[#22a447] text-base">✓</span>}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Staff Worker Access */}
-            <div className="bg-white rounded-3xl p-5 border-2 border-gray-300 flex flex-col gap-3 shadow-sm">
-              <h2 className="text-[16px] font-black text-gray-900">{t.addWorker}</h2>
-              <p className="text-[13px] text-gray-500 font-medium">{t.workerHelp}</p>
+            <div className="bg-white rounded-2xl p-5 border border-gray-200 flex flex-col gap-3 shadow-xs">
+              <h2 className="text-sm font-bold text-gray-900">{t.addWorker}</h2>
+              <p className="text-xs text-gray-500 font-medium">{t.workerHelp}</p>
 
               <input
                 type="text"
                 placeholder={t.workerName}
                 value={newWorkerName}
                 onChange={e => setNewWorkerName(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900 outline-none"
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
               />
 
               <input
@@ -758,12 +995,12 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 placeholder={t.workerPhone}
                 value={newWorkerPhone}
                 onChange={e => setNewWorkerPhone(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-2xl px-4 h-14 text-[16px] font-bold text-gray-900 outline-none"
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-sm font-semibold text-gray-900 outline-none focus:border-[#22a447]"
               />
 
               <button
                 onClick={handleAddWorker}
-                className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-black text-[16px] rounded-2xl shadow-md cursor-pointer"
+                className="w-full h-12 bg-[#22a447] hover:bg-green-700 text-white font-bold text-sm rounded-xl shadow-xs cursor-pointer"
               >
                 {t.saveWorker}
               </button>
@@ -771,15 +1008,15 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               {workers.map(w => (
                 <div key={w.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-200">
                   <div>
-                    <p className="font-bold text-gray-900 text-[14px]">{w.name}</p>
-                    <p className="text-gray-500 text-[12px]">{w.phone}</p>
+                    <p className="font-bold text-gray-900 text-xs">{w.name}</p>
+                    <p className="text-gray-500 text-[11px]">{w.phone}</p>
                   </div>
                   <button
                     onClick={async () => {
                       setWorkers(prev => prev.filter(x => x.id !== w.id))
                       await supabase.from('shop_workers').delete().eq('id', w.id)
                     }}
-                    className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer"
+                    className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer hover:bg-red-200"
                   >
                     Remove
                   </button>
@@ -787,7 +1024,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               ))}
             </div>
 
-            <button onClick={onSignOut} className="w-full h-14 bg-red-100 text-red-700 font-black text-[16px] rounded-2xl cursor-pointer">
+            <button onClick={onSignOut} className="w-full h-12 bg-red-100 text-red-700 font-bold text-sm rounded-xl cursor-pointer hover:bg-red-200">
               {t.logout}
             </button>
           </div>
@@ -795,7 +1032,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       </div>
 
       {/* Sliding Bottom Nav Capsule */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40" style={{ width: 'calc(100% - 32px)', maxWidth: 390 }}>
+      <div className="fixed left-1/2 -translate-x-1/2 z-40" style={{ bottom: 'calc(1.75rem + env(safe-area-inset-bottom, 0px))', width: 'calc(100% - 32px)', maxWidth: 390 }}>
         <div className="bg-white/95 backdrop-blur-md rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-white/60 p-1">
           <div className="flex items-center justify-around relative px-2 py-1.5">
             {[
@@ -813,13 +1050,13 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   }}
                   className="relative flex items-center gap-1.5 py-2.5 px-4 rounded-full overflow-hidden transition-colors cursor-pointer select-none"
                   style={{
-                    backgroundColor: isActive ? '#1a3a2a' : 'transparent',
+                    backgroundColor: isActive ? '#22a447' : 'transparent',
                     color: isActive ? '#ffffff' : '#6b7280'
                   }}
                 >
                   <span className="text-base">{icon}</span>
                   {isActive && (
-                    <span className="text-[14px] font-black text-white whitespace-nowrap">
+                    <span className="text-xs font-bold text-white whitespace-nowrap">
                       {label}
                     </span>
                   )}
