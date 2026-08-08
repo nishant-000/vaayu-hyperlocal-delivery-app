@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler, LayoutAnimation, UIManager, RefreshControl } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
+import { LinearGradient } from 'expo-linear-gradient'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
 import { supabase } from '../lib/supabase'
@@ -228,6 +229,16 @@ function IconUser({ active }: { active: boolean }) {
   )
 }
 
+function IconBell({ active }: { active: boolean }) {
+  const c = active ? "#ffffff" : "#6b7280"
+  return (
+    <Svg width="26" height="26" viewBox="0 0 24 24" fill={active ? "#ffffff" : "none"} stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </Svg>
+  )
+}
+
 const KNOWN_CATEGORIES = ['Food', 'Grocery', 'Pharmacy', 'Stationery', 'Others']
 
 // DB stores category as lowercase or comma-separated (e.g. "food, others").
@@ -274,7 +285,21 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
   // Real Database State (No Mock Data!)
   const [orders, setOrders] = useState<any[]>([])
+  const [ordersFilter, setOrdersFilter] = useState<'active' | 'all'>('active')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false)
+  const [expandedOthers, setExpandedOthers] = useState<Record<string, boolean>>({})
   const [menuItems, setMenuItems] = useState<any[]>([])
+  const [itemSearchQuery, setItemSearchQuery] = useState('')
+
+  const toggleAddItemForm = () => {
+    triggerHaptic()
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true)
+    }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setIsAddItemOpen(prev => !prev)
+  }
   const [workers, setWorkers] = useState<any[]>([])
   const [platformFees, setPlatformFees] = useState<any[]>([])
   const [promosList, setPromosList] = useState<any[]>([])
@@ -1384,6 +1409,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
   const incomingCount = orders.filter(o => o.status === 'incoming').length
   const validOrders = orders.filter(o => o.status !== 'cancelled')
+  const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+  const displayedOrders = ordersFilter === 'active' ? activeOrders : orders
   const totalOrdersCount = validOrders.length
 
   const instantOrdersCount = validOrders.filter(o => o.delivery_mode === 'instant').length
@@ -1416,16 +1443,48 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
       )}
 
       {/* Top Header */}
-      <View style={tw`bg-white px-4 pt-8 pb-3 border-b border-gray-200`}>
+      <View style={tw`bg-white px-4 pt-8 pb-3 border-b border-gray-200 z-40`}>
         <View style={tw`flex-row justify-between items-center mb-1`}>
-          <View style={tw`flex-1 mr-2`}>
-            <Text style={tw`text-[11px] font-black text-green-700 uppercase tracking-widest`}>
-              {user?.role === 'worker' ? 'WORKER PORTAL' : 'SHOP OWNER PORTAL'}
-            </Text>
-            <Text style={tw`text-[22px] font-black text-gray-900`} numberOfLines={1}>{shopName}</Text>
-            <Text style={tw`text-[12px] font-bold text-gray-700`}>
-              👤 {user?.name || user?.full_name || user?.email?.split('@')[0] || 'Owner'} {user?.phone_number ? `• 📱 ${user?.phone_number}` : ''}
-            </Text>
+          {/* Hamburger + Partner Hub Title */}
+          <View style={tw`flex-row items-center gap-3`}>
+            <TouchableOpacity
+              onPress={() => {
+                triggerHaptic()
+                setMenuOpen(!menuOpen)
+              }}
+              activeOpacity={0.7}
+              style={tw`w-9 h-9 items-center justify-center rounded-xl bg-gray-100 active:bg-gray-200`}
+            >
+              <View style={tw`w-5 h-4 justify-between items-center py-0.5`}>
+                <View
+                  style={[
+                    tw`w-5 h-0.5 bg-gray-800 rounded-full`,
+                    menuOpen ? { transform: [{ translateY: 5 }, { rotate: '45deg' }] } : {}
+                  ]}
+                />
+                <View
+                  style={[
+                    tw`w-5 h-0.5 bg-gray-800 rounded-full`,
+                    menuOpen ? { opacity: 0 } : {}
+                  ]}
+                />
+                <View
+                  style={[
+                    tw`w-5 h-0.5 bg-gray-800 rounded-full`,
+                    menuOpen ? { transform: [{ translateY: -5 }, { rotate: '-45deg' }] } : {}
+                  ]}
+                />
+              </View>
+            </TouchableOpacity>
+
+            <View style={tw`flex-col justify-center`}>
+              <Text style={[tw`font-extrabold tracking-wide text-[17px] leading-tight`, { color: '#22a447' }]}>
+                Partner Hub
+              </Text>
+              <Text style={tw`text-[11px] font-extrabold text-gray-500 leading-tight mt-0.5`}>
+                {user?.shop_name || shopName || 'Royal Foods & Cafe'}
+              </Text>
+            </View>
           </View>
 
           {/* Quick Language Toggle */}
@@ -1489,156 +1548,156 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         )}
       </View>
 
-      <ScrollView contentContainerStyle={tw`p-4 pb-36`}>
+      <ScrollView
+        contentContainerStyle={tw`p-4 pb-36`}
+        refreshControl={
+          <RefreshControl
+            refreshing={isSyncingOrders}
+            onRefresh={() => fetchFreshOrders(true)}
+            colors={['#22a447']}
+            tintColor="#22a447"
+            title="Syncing orders..."
+            titleColor="#22a447"
+          />
+        }
+      >
         {/* ── 1. ORDERS TAB ────── */}
         {activeTab === 'orders' && (
           <View style={tw`gap-4`}>
             <View style={tw`flex-row items-center justify-between`}>
-              <Text style={tw`text-[18px] font-black text-gray-900`}>{t.orders} ({orders.length})</Text>
+              <Text style={tw`text-[18px] font-black text-gray-900`}>{t.orders} ({displayedOrders.length})</Text>
               <TouchableOpacity
                 onPress={() => fetchFreshOrders(true)}
                 disabled={isSyncingOrders}
-                style={tw`flex-row items-center gap-1.5 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full`}
+                style={tw`flex-row items-center gap-2 bg-green-50 border border-green-200 px-3.5 py-1.5 rounded-full shadow-xs active:scale-95`}
               >
                 {isSyncingOrders ? (
                   <ActivityIndicator size="small" color="#16a34a" />
                 ) : (
-                  <View style={tw`w-2 h-2 rounded-full bg-green-500`} />
+                  <View style={tw`relative flex-row items-center justify-center`}>
+                    <View style={tw`w-2.5 h-2.5 rounded-full bg-green-500 opacity-75`} />
+                    <View style={tw`absolute w-1.5 h-1.5 rounded-full bg-green-600`} />
+                  </View>
                 )}
-                <Text style={tw`text-[11px] font-black text-green-800 uppercase`}>
-                  {isSyncingOrders ? 'Syncing...' : 'Live Sync 🟢'}
+                <Text style={tw`text-[11px] font-black text-green-800 uppercase tracking-wide`}>
+                  {isSyncingOrders ? 'Syncing...' : 'Live Sync'}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Campus Base Delivery Header (Persistent across all orders) */}
-            <View style={tw`bg-gray-50 border border-gray-200 rounded-2xl p-3 flex-row items-center justify-between`}>
-              <View style={tw`flex-row items-center gap-2 flex-1 mr-2`}>
-                <Text style={tw`text-base`}>🏫</Text>
-                <View style={tw`flex-1`}>
-                  <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>Campus Delivery Zone</Text>
-                  <Text style={tw`text-[12px] font-semibold text-gray-800`} numberOfLines={1}>
-                    IIIT Tiruchirappalli, Sethurapatti, Trichy
-                  </Text>
-                </View>
-              </View>
-              <View style={tw`bg-gray-200 px-2.5 py-1 rounded-full`}>
-                <Text style={tw`text-gray-700 text-[10px] font-bold uppercase`}>Hyperlocal</Text>
-              </View>
-            </View>
 
             {loading ? (
               <View style={tw`py-12 items-center justify-center`}>
                 <ActivityIndicator size="large" color="#8fda58" />
               </View>
-            ) : orders.length === 0 ? (
+            ) : displayedOrders.length === 0 ? (
               <View style={tw`bg-white rounded-3xl p-8 items-center justify-center text-center shadow-xs border border-gray-200`}>
                 <Text style={tw`text-4xl mb-2`}>📋</Text>
-                <Text style={tw`text-base font-bold text-gray-900`}>No orders yet today</Text>
-                <Text style={tw`text-xs text-gray-400 font-medium mt-1`}>New customer orders will appear here automatically.</Text>
+                <Text style={tw`text-base font-bold text-gray-900`}>
+                  {ordersFilter === 'active' ? 'No existing active orders' : 'No orders yet today'}
+                </Text>
+                <Text style={tw`text-xs text-gray-400 font-medium mt-1`}>
+                  {ordersFilter === 'active' ? 'New ongoing customer orders will appear here automatically.' : 'New customer orders will appear here automatically.'}
+                </Text>
               </View>
             ) : (
-              orders.map(order => {
+              displayedOrders.map(order => {
                 const timer = getTimerDetails(order.expire_at)
                 const bill = getOrderBill(order)
                 const late = isOrderLate(order)
-                const currentStep = order.status === 'delivered' ? 3 : order.status === 'ready_for_pickup' ? 2 : (order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing') ? 1 : 0
 
                 // Customer Contact & Location data
                 const prof = customerProfiles[order.user_id] || (order.user_id ? customerProfiles[order.user_id.toLowerCase()] : null)
                 const customerName = order.customer_name || prof?.full_name || 'Campus Student'
                 const customerPhone = order.customer_phone || prof?.phone_number || ''
-                const compactLoc = getCompactLocation(order.location)
+                const isInstant = order.delivery_mode === 'instant'
+                const ContainerComponent: any = LinearGradient
+                const containerProps = isInstant
+                  ? { colors: ['#f97736', '#ffffff'], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 }, style: tw`rounded-3xl overflow-hidden border border-gray-100 shadow-sm` }
+                  : { colors: ['#90D5FF', '#ffffff', '#ffffff'], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 }, style: tw`rounded-3xl overflow-hidden border border-gray-100 shadow-sm` }
 
                 return (
-                  <View key={order.id} style={tw`bg-white rounded-3xl p-4 border border-gray-200 shadow-sm gap-3`}>
-                    {/* Top Row: Order ID, Drop Point & Status Badge */}
-                    <View style={tw`flex-row justify-between items-start border-b border-gray-100 pb-3`}>
-                      <View style={tw`flex-1 mr-2`}>
-                        <View style={tw`flex-row items-center gap-2 mb-1 flex-wrap`}>
-                          <Text style={tw`text-[22px] font-black text-gray-900 leading-none`}>#{order.id}</Text>
-                          <TouchableOpacity 
-                            onPress={() => setSelectedOrderIdForDetails(order.id)}
-                            activeOpacity={0.7}
-                            style={tw`bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-md`}
-                          >
-                            <Text style={tw`text-[10px] font-bold text-gray-600`}>Details ➔</Text>
-                          </TouchableOpacity>
-                        </View>
-
-                        {/* Delivery Mode Type (Instant vs Scheduled Delivery) & Promo Badge */}
-                        <View style={tw`flex-row items-center gap-1.5 mt-0.5 flex-wrap`}>
-                          <TouchableOpacity 
-                            onPress={() => setSelectedOrderIdForDetails(order.id)}
-                            activeOpacity={0.7}
-                          >
-                            {order.delivery_mode === 'instant' ? (
-                              <Text style={tw`text-[13px] font-bold text-gray-700`}>
-                                ⚡ Instant Delivery
-                              </Text>
-                            ) : (
-                              <Text style={tw`text-[13px] font-bold text-gray-700`}>
-                                📅 Scheduled Delivery
-                              </Text>
+                  <ContainerComponent key={order.id} {...containerProps}>
+                    {/* Top Row: Delivery type heading + Status Badge */}
+                    <View style={tw`px-4 pt-4 pb-3 flex-row items-start justify-between gap-2`}>
+                      <View style={tw`flex-row items-center gap-1.5 flex-1 mr-2`}>
+                        <Text style={tw`text-xl`}>{order.delivery_mode === 'instant' ? '⚡' : '📅'}</Text>
+                        <View style={tw`flex-1`}>
+                          <Text style={tw`text-[17px] font-black text-gray-800 leading-tight`}>
+                            {order.delivery_mode === 'instant' ? 'Instant Delivery' : 'Scheduled Delivery'}
+                          </Text>
+                          <View style={tw`flex-row items-center gap-1.5 mt-0.5 flex-wrap`}>
+                            <TouchableOpacity 
+                              onPress={() => setSelectedOrderIdForDetails(order.id)}
+                              activeOpacity={0.7}
+                              style={tw`bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-md`}
+                            >
+                              <Text style={tw`text-[10px] font-bold text-gray-600`}>Details ➔</Text>
+                            </TouchableOpacity>
+                            {order.applied_promo && (
+                              <View style={tw`bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md flex-row items-center gap-1`}>
+                                <Text style={tw`text-[10px] font-black text-emerald-800 uppercase`}>
+                                  🏷️ {order.applied_promo} (-₹{order.promo_discount || 0})
+                                </Text>
+                              </View>
                             )}
-                          </TouchableOpacity>
-
-                          {order.applied_promo && (
-                            <View style={tw`bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md flex-row items-center gap-1`}>
-                              <Text style={tw`text-[10px] font-black text-emerald-800 uppercase`}>
-                                🏷️ {order.applied_promo} (-₹{order.promo_discount || 0})
-                              </Text>
-                            </View>
-                          )}
+                          </View>
                         </View>
                       </View>
 
-                      {/* Right: Status Badge */}
-                      <View style={tw`items-end shrink-0`}>
-                        {/* Status Badge */}
-                        <View style={[tw`px-2.5 py-1 rounded-full shrink-0`, 
-                          late ? tw`bg-red-500` :
-                          order.status === 'incoming' || order.status === 'pending' || order.status === 'accepted' ? tw`bg-blue-100` :
-                          order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`bg-orange-100` :
-                          order.status === 'ready_for_pickup' ? tw`bg-purple-100` :
-                          order.status === 'delivered' ? tw`bg-green-100` : tw`bg-red-100`
+                      {/* Status Badge */}
+                      <View style={[tw`px-2.5 py-1 rounded-full shrink-0 items-center justify-center`, 
+                        late ? tw`bg-red-500` :
+                        order.status === 'incoming' || order.status === 'pending' || order.status === 'accepted' ? tw`bg-blue-100` :
+                        order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`bg-orange-100` :
+                        order.status === 'ready_for_pickup' ? tw`bg-purple-100` :
+                        order.status === 'delivered' ? tw`bg-green-50 border border-green-200` : tw`bg-red-100`
+                      ]}>
+                        <Text style={[tw`text-[10px] font-black uppercase text-center`,
+                          late ? tw`text-white` :
+                          order.status === 'incoming' || order.status === 'pending' || order.status === 'accepted' ? tw`text-blue-700` :
+                          order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`text-orange-700` :
+                          order.status === 'ready_for_pickup' ? tw`text-purple-700` :
+                          order.status === 'delivered' ? tw`text-[#22a447]` : tw`text-red-700`
                         ]}>
-                          <Text style={[tw`text-[10px] font-black uppercase text-center`,
-                            late ? tw`text-white` :
-                            order.status === 'incoming' || order.status === 'pending' || order.status === 'accepted' ? tw`text-blue-700` :
-                            order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? tw`text-orange-700` :
-                            order.status === 'ready_for_pickup' ? tw`text-purple-700` :
-                            order.status === 'delivered' ? tw`text-green-700` : tw`text-red-700`
-                          ]}>
-                            {late ? '⚠️ OVERDUE' :
-                             order.status === 'incoming' ? '📥 NEW ORDER' :
-                             order.status === 'accepted' ? '📥 ACCEPTED' :
-                             order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? 'OUT FOR DELIVERY' :
-                             order.status === 'ready_for_pickup' ? '📍 COLLECT ORDER' :
-                             order.status === 'delivered' ? '✅ DELIVERED' : '❌ CANCELLED'}
-                          </Text>
-                        </View>
+                          {late ? '⚠️ OVERDUE' :
+                           order.status === 'incoming' ? '📥 NEW ORDER' :
+                           order.status === 'accepted' ? '📥 ACCEPTED' :
+                           order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing' ? 'OUT FOR DELIVERY' :
+                           order.status === 'ready_for_pickup' ? '📍 COLLECT ORDER' :
+                           order.status === 'delivered' ? '✅ DELIVERED' : '❌ CANCELLED'}
+                        </Text>
                       </View>
                     </View>
 
+                    {/* Divider */}
+                    <View style={tw`h-px bg-gray-100 mx-4`} />
+
+                    {/* Rest of card content with padding */}
+                    <View style={tw`px-4 pb-4 pt-3 gap-3`}>
+
                     {/* Customer Contact & Direct Dial Button */}
-                    <View style={tw`bg-gray-50 border border-gray-200 rounded-2xl p-3 flex-row items-center justify-between shadow-xs`}>
-                      <View style={tw`flex-1 mr-2`}>
-                        <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-wider`}>Customer</Text>
-                        <Text style={tw`text-[14px] font-bold text-gray-900 mt-0.5`} numberOfLines={1}>👤 {customerName}</Text>
+                    <View style={tw`flex-row items-center justify-between`}>
+                      <View style={tw`flex-row items-center gap-1.5 flex-1 mr-2`}>
+                        <Svg width="16" height="16" viewBox="0 0 24 24" fill="#9ca3af">
+                          <Path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                        </Svg>
+                        <View>
+                          <Text style={tw`text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5`}>Customer</Text>
+                          <Text style={tw`text-[14px] font-bold text-gray-900`} numberOfLines={1}>{customerName}</Text>
+                        </View>
                       </View>
 
                       {customerPhone ? (
                         <TouchableOpacity
                           onPress={() => Linking.openURL(`tel:${customerPhone}`)}
                           activeOpacity={0.8}
-                          style={tw`flex-row items-center gap-2 bg-gray-900 px-3.5 py-2 rounded-xl shadow-sm`}
+                          style={tw`flex-row items-center gap-2 bg-gray-900 px-4 py-2.5 rounded-xl shadow-sm`}
                         >
-                          <Text style={tw`text-base`}>📞</Text>
-                          <View>
-                            <Text style={tw`text-[9px] font-bold text-gray-300 uppercase tracking-widest leading-tight`}>TAP TO CALL</Text>
-                            <Text style={tw`text-[14px] font-black text-white leading-none tracking-wide`}>{customerPhone}</Text>
-                          </View>
+                          <Svg width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
+                            <Path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                          </Svg>
+                          <Text style={tw`text-[13px] font-black text-white tracking-wide`}>{customerPhone}</Text>
                         </TouchableOpacity>
                       ) : (
                         <View style={tw`bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200`}>
@@ -1647,47 +1706,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       )}
                     </View>
 
-                    {/* Checkpoint Stepper Visualizer (Order Confirmed -> Out for Delivery -> Collect Order -> Delivered) */}
-                    <View style={tw`bg-gray-50 rounded-2xl p-2.5 border border-gray-200`}>
-                      <View style={tw`flex-row items-center justify-between mb-1.5`}>
-                        <Text style={tw`text-[9px] font-bold uppercase tracking-widest text-gray-400`}>Order Checkpoint</Text>
-                        <Text style={[tw`text-[10px] font-bold uppercase`, {
-                          color: order.status === 'delivered' ? '#16a34a' : order.status === 'ready_for_pickup' ? '#9333ea' : (order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing') ? '#ea580c' : '#2563eb'
-                        }]}>
-                          {order.status === 'delivered' ? 'Delivered' : order.status === 'ready_for_pickup' ? 'Collect Order' : (order.status === 'out_for_delivery' || order.status === 'delivering' || order.status === 'preparing') ? 'OUT FOR DELIVERY' : 'Order Confirmed'}
-                        </Text>
-                      </View>
-                      <View style={tw`flex-row items-center`}>
-                        {['Order Confirmed', 'OUT FOR DELIVERY', 'Collect Order', 'Delivered'].map((step, i) => {
-                          const done = i < currentStep
-                          const active = i === currentStep
-                          return (
-                            <View key={step} style={tw`flex-1 items-center`}>
-                              <View style={tw`flex-row items-center w-full`}>
-                                {i > 0 && <View style={[tw`flex-1 h-0.5`, { backgroundColor: done || active ? '#8fda58' : '#e5e7eb' }]} />}
-                                <View
-                                  style={[
-                                    tw`w-3.5 h-3.5 rounded-full items-center justify-center`,
-                                    {
-                                      backgroundColor: done ? '#8fda58' : active ? '#1a3a2a' : '#e5e7eb',
-                                    }
-                                  ]}
-                                >
-                                  {done && (
-                                    <Svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                                      <Polyline points="20 6 9 17 4 12"/>
-                                    </Svg>
-                                  )}
-                                  {active && <View style={tw`w-1 h-1 rounded-full bg-[#8fda58]`} />}
-                                </View>
-                                {i < 3 && <View style={[tw`flex-1 h-0.5`, { backgroundColor: done ? '#8fda58' : '#e5e7eb' }]} />}
-                              </View>
-                              <Text style={[tw`text-[8px] font-medium mt-1 text-center`, { color: done || active ? '#1f2937' : '#9ca3af' }]}>{step}</Text>
-                            </View>
-                          )
-                        })}
-                      </View>
-                    </View>
 
                     {/* Progress Timer — Shown ONLY for Instant Delivery while pending acceptance */}
                     {order.status === 'incoming' && order.delivery_mode === 'instant' && (
@@ -1703,32 +1721,27 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                     )}
 
                     {/* Expected Delivery Time or Slot Box */}
-                    {order.delivery_mode === 'instant' ? (
-                      <View style={tw`bg-gray-50 border border-gray-200 rounded-2xl p-3 flex-row items-center justify-between shadow-xs`}>
-                        <View style={tw`flex-1 mr-2`}>
-                          <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>Expected Delivery Time</Text>
-                          <Text style={tw`text-[13px] font-semibold text-gray-800 mt-0.5`}>
-                            Deliver by {getExpectedDeliveryTime(order)} <Text style={tw`text-[11px] text-gray-500 font-normal`}>(within 20 mins)</Text>
-                          </Text>
-                        </View>
-                        <View style={tw`bg-gray-200 px-2.5 py-1 rounded-xl`}>
-                          <Text style={tw`text-gray-800 font-bold text-[11px]`}>By {getExpectedDeliveryTime(order)}</Text>
-                        </View>
+                    <View style={tw`bg-green-50 border border-green-200 rounded-2xl p-2.5 flex-row items-center justify-between shadow-xs`}>
+                      <View style={tw`flex-row items-center gap-1.5 shrink-0`}>
+                        <Svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22a447" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <Circle cx="12" cy="12" r="10" />
+                          <Path d="M12 6v6l4 2" />
+                        </Svg>
+                        <Text style={tw`text-[11px] font-black text-[#22a447] uppercase tracking-wider`}>DELIVERY TIME</Text>
                       </View>
-                    ) : (
-                      <View style={tw`bg-gray-50 border border-gray-200 rounded-2xl p-3 flex-row items-center justify-between shadow-xs`}>
-                        <View style={tw`flex-1 mr-2`}>
-                          <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>Scheduled Delivery Slot</Text>
-                          <Text style={tw`text-[13px] font-semibold text-gray-800 mt-0.5`}>
-                            {order.selected_slot_label || '12:40 PM – 1:40 PM'}
-                          </Text>
-                          <Text style={tw`text-[11px] text-gray-500 font-normal mt-0.5`}>Deliver to drop point during this scheduled slot window</Text>
-                        </View>
-                        <View style={tw`bg-gray-200 px-2.5 py-1 rounded-xl`}>
-                          <Text style={tw`text-gray-800 font-bold text-[11px]`}>SLOT TIME</Text>
-                        </View>
+                      <View style={tw`items-end flex-1 min-w-0 ml-2`}>
+                        <Text style={tw`text-[13px] font-black text-gray-900 leading-tight`} numberOfLines={1}>
+                          {order.delivery_mode === 'instant' 
+                            ? 'Within 20 Mins' 
+                            : ((order.selected_slot_label || '8:00 PM – 9:00 PM').replace(/\s*\([^)]*\)/gi, '').trim())}
+                        </Text>
+                        <Text style={tw`text-[9.5px] font-semibold text-gray-500 mt-0.5 leading-tight`} numberOfLines={1}>
+                          {order.delivery_mode === 'instant' 
+                            ? '(Instant Slot)' 
+                            : `(${order.slot_name || order.delivery_slot_name || ((order.selected_slot_label || '').toLowerCase().includes('dinner') || (order.selected_slot_label || '').includes('8:') || (order.selected_slot_label || '').includes('9:') ? 'Dinner Slot' : 'Lunch Slot')})`}
+                        </Text>
                       </View>
-                    )}
+                    </View>
 
                     {/* Items & Fees Breakdown */}
                     <View style={tw`bg-gray-50 rounded-2xl p-3 gap-2 border border-gray-200`}>
@@ -1768,19 +1781,36 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                           <Text style={tw`text-[12px] font-semibold text-gray-700`}>₹{bill.itemsSubtotal}</Text>
                         </View>
 
-                        <View style={tw`flex-row justify-between items-center`}>
-                          <Text style={tw`text-[12px] font-normal text-gray-500`}>
-                            {t.deliveryFee} ({bill.isInstant ? 'Instant ₹10' : 'Scheduled ₹5'})
+                        {/* Others Dropdown Accordion */}
+                        <TouchableOpacity
+                          onPress={() => setExpandedOthers(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
+                          activeOpacity={0.7}
+                          style={tw`flex-row items-center justify-between py-1`}
+                        >
+                          <View style={tw`flex-row items-center gap-1 flex-wrap`}>
+                            <Text style={tw`text-[13px] font-bold text-gray-800`}>Others</Text>
+                            <Text style={tw`text-[10px] text-gray-600`}>{expandedOthers[order.id] ? '▲' : '▼'}</Text>
+                            <Text style={tw`text-[12px] text-gray-400`}> (Delivery & Platform Fee)</Text>
+                          </View>
+                          <Text style={tw`text-[12px] font-semibold text-gray-700`}>
+                            +₹{bill.deliveryFee + bill.platformFee}
                           </Text>
-                          <Text style={tw`text-[12px] font-semibold text-gray-700`}>+₹{bill.deliveryFee}</Text>
-                        </View>
+                        </TouchableOpacity>
 
-                        <View style={tw`flex-row justify-between items-center`}>
-                          <Text style={tw`text-[12px] font-normal text-gray-500`}>{t.platformFee}</Text>
-                          <Text style={[tw`text-[12px] font-semibold`, bill.isFreePlatformFee || bill.platformFee === 0 ? tw`text-green-600 font-bold` : tw`text-gray-700`]}>
-                            {bill.isFreePlatformFee || bill.platformFee === 0 ? 'FREE (₹0)' : `+₹${bill.platformFee}`}
-                          </Text>
-                        </View>
+                        {expandedOthers[order.id] && (
+                          <View style={tw`pl-3 py-1 gap-1 border-l-2 border-green-400 ml-1 my-1`}>
+                            <View style={tw`flex-row justify-between items-center`}>
+                              <Text style={tw`text-[12px] text-gray-500`}>Delivery Fee ({bill.isInstant ? 'Instant' : 'Scheduled'})</Text>
+                              <Text style={tw`text-[12px] font-semibold text-gray-700`}>₹{bill.deliveryFee}</Text>
+                            </View>
+                            <View style={tw`flex-row justify-between items-center`}>
+                              <Text style={tw`text-[12px] text-gray-500`}>Platform Fee (Vaayu)</Text>
+                              <Text style={[tw`text-[12px] font-semibold`, bill.isFreePlatformFee || bill.platformFee === 0 ? tw`text-green-600 font-bold` : tw`text-gray-700`]}>
+                                {bill.isFreePlatformFee || bill.platformFee === 0 ? 'FREE (₹0)' : `₹${bill.platformFee}`}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
 
                         {bill.promoDiscount > 0 && (
                           <View style={tw`flex-row justify-between items-center bg-emerald-50 px-2.5 py-1.5 rounded-xl border border-emerald-200`}>
@@ -1866,8 +1896,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       )}
 
                       {order.status === 'delivered' && (
-                        <View style={tw`w-full py-3 bg-green-50 rounded-2xl items-center border border-green-200`}>
-                          <Text style={tw`text-green-800 font-black text-[13px]`}>{t.completed}</Text>
+                        <View style={tw`w-full py-3.5 bg-green-50 border-2 border-green-200 rounded-xl items-center justify-center flex-row gap-2`}>
+                          <Text style={tw`text-[#22a447] font-black text-[14px] uppercase tracking-wide`}>✓ DELIVERED</Text>
                         </View>
                       )}
 
@@ -1877,7 +1907,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                         </View>
                       )}
                     </View>
-                  </View>
+                    </View>
+                  </ContainerComponent>
                 )
               })
             )}
@@ -1887,6 +1918,231 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         {/* ── 2. FOOD STOCK SCREEN (Backed by Supabase menu_items) ────── */}
         {activeTab === 'menu' && (
           <View style={tw`gap-3`}>
+            {/* Add Item Collapsible Section */}
+            <View style={tw`bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs`}>
+              <TouchableOpacity
+                onPress={toggleAddItemForm}
+                activeOpacity={0.7}
+                style={tw`p-4 flex-row items-center justify-between bg-white`}
+              >
+                <View style={tw`flex-row items-center gap-2.5`}>
+                  <Text style={tw`text-[15px] font-black text-gray-900 uppercase tracking-wide`}>Add New Item</Text>
+                </View>
+
+                <View style={[tw`w-8 h-8 rounded-full items-center justify-center`, isAddItemOpen ? tw`bg-gray-100` : tw`bg-[#22a447]`]}>
+                  <Text style={[tw`text-lg font-bold leading-none`, isAddItemOpen ? tw`text-gray-700` : tw`text-white`]}>
+                    {isAddItemOpen ? '−' : '+'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {isAddItemOpen && (
+                <View style={tw`px-4 pb-4 gap-3 border-t border-gray-100 pt-3`}>
+                  {!activeShopId && (
+                    <View style={tw`flex-row items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200`}>
+                      <ActivityIndicator size="small" color="#6b7280" />
+                      <Text style={tw`text-[12px] font-medium text-gray-500 flex-1`}>Loading shop...</Text>
+                    </View>
+                  )}
+
+                  {/* Photo Area */}
+                  {newItemImg && !newItemImg.includes('unsplash') ? (
+                    <View style={tw`w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative`}>
+                      <Image source={{ uri: newItemImg }} style={tw`w-full h-36`} resizeMode="cover" />
+                      <View style={tw`absolute bottom-2 left-2 right-2 flex-row gap-2`}>
+                        <TouchableOpacity
+                          onPress={() => { setImagePickerTarget('item'); setShowImagePickerModal(true) }}
+                          disabled={isUploadingPhoto || !activeShopId}
+                          style={tw`flex-1 bg-black/70 py-2 rounded-lg items-center justify-center active:opacity-70`}
+                        >
+                          <Text style={tw`text-white text-[12px] font-bold`}>Change Photo</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => { setNewItemImg('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200'); showToast('Photo removed') }}
+                          style={tw`bg-black/70 px-3 py-2 rounded-lg items-center justify-center active:opacity-70`}
+                        >
+                          <Text style={tw`text-white text-[12px] font-bold`}>Remove</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => { setImagePickerTarget('item'); setShowImagePickerModal(true) }}
+                      disabled={isUploadingPhoto || !activeShopId}
+                      style={[tw`w-full h-20 bg-gray-50 border border-dashed border-gray-300 rounded-xl items-center justify-center gap-1 active:opacity-70`, !activeShopId && tw`opacity-40`]}
+                    >
+                      {isUploadingPhoto ? (
+                        <View style={tw`items-center gap-1`}>
+                          <ActivityIndicator size="small" color="#6b7280" />
+                          <Text style={tw`text-gray-500 text-[11px] font-medium`}>Uploading...</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={tw`text-gray-400 font-bold text-[13px]`}>Add Photo (optional)</Text>
+                          <Text style={tw`text-gray-300 text-[11px]`}>Camera or Gallery</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
+                  <TextInput
+                    placeholder={t.namePlaceholder}
+                    placeholderTextColor="#6b7280"
+                    value={newItemName}
+                    onChangeText={setNewItemName}
+                    editable={!!activeShopId}
+                    style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
+                  />
+                  <TextInput
+                    placeholder={t.pricePlaceholder}
+                    placeholderTextColor="#6b7280"
+                    keyboardType="number-pad"
+                    value={newItemPrice}
+                    onChangeText={setNewItemPrice}
+                    editable={!!activeShopId}
+                    style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
+                  />
+                  <TouchableOpacity
+                    onPress={handleAddItem}
+                    disabled={!activeShopId}
+                    style={[tw`w-full h-12 bg-gray-900 rounded-xl items-center justify-center active:opacity-70`, !activeShopId && tw`opacity-40`]}
+                  >
+                    <Text style={tw`text-white font-bold text-[14px]`}>Add to Menu</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+
+            {/* Menu Items List & Search Bar */}
+            {(() => {
+              const filteredMenuItems = menuItems.filter(item => {
+                if (!itemSearchQuery.trim()) return true
+                const query = itemSearchQuery.toLowerCase().trim()
+                const name = (item.name || '').toLowerCase()
+                const category = (item.category || '').toLowerCase()
+                return name.includes(query) || category.includes(query)
+              })
+
+              return (
+                <View style={tw`gap-3 mt-1`}>
+                  <View style={tw`flex-row items-center justify-between`}>
+                    <Text style={tw`text-[14px] font-black text-gray-900 uppercase tracking-wide`}>
+                      Menu Items ({filteredMenuItems.length}{itemSearchQuery.trim() ? ` / ${menuItems.length}` : ''})
+                    </Text>
+                  </View>
+
+                  {/* Search Input Bar */}
+                  <View style={tw`bg-white rounded-2xl border border-gray-200 px-3.5 h-11 flex-row items-center gap-2 shadow-xs`}>
+                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <Circle cx="11" cy="11" r="8" />
+                      <Line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </Svg>
+                    <TextInput
+                      placeholder="Search menu items..."
+                      placeholderTextColor="#9ca3af"
+                      value={itemSearchQuery}
+                      onChangeText={setItemSearchQuery}
+                      style={tw`flex-1 text-[14px] font-medium text-gray-900 h-full p-0`}
+                    />
+                    {itemSearchQuery.length > 0 && (
+                      <TouchableOpacity
+                        onPress={() => setItemSearchQuery('')}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={tw`w-5 h-5 rounded-full bg-gray-200 items-center justify-center`}
+                      >
+                        <Text style={tw`text-[11px] font-bold text-gray-600 leading-none`}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {loading ? (
+                    <View style={tw`py-10 items-center`}>
+                      <ActivityIndicator size="large" color="#374151" />
+                    </View>
+                  ) : filteredMenuItems.length === 0 ? (
+                    <View style={tw`bg-white rounded-2xl p-8 items-center border border-gray-200`}>
+                      <Text style={tw`text-[15px] font-bold text-gray-700`}>
+                        {itemSearchQuery.trim() ? `No items matching "${itemSearchQuery}"` : 'No items yet'}
+                      </Text>
+                      <Text style={tw`text-[12px] text-gray-400 mt-1 text-center`}>
+                        {itemSearchQuery.trim() ? 'Try searching for another item name.' : 'Use the form above to add your first menu item.'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={tw`gap-2`}>
+                      {filteredMenuItems.map(item => (
+                        <View key={item.id} style={tw`bg-white rounded-2xl border border-gray-200 overflow-hidden`}>
+                          <View style={tw`flex-row items-center gap-3 p-3`}>
+                            <Image
+                              source={{ uri: item.img || item.image || item.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200' }}
+                              style={tw`w-14 h-14 rounded-lg bg-gray-100`}
+                              resizeMode="cover"
+                            />
+                            <View style={tw`flex-1 min-w-0`}>
+                              <Text style={tw`text-[15px] font-bold text-gray-900`} numberOfLines={1}>{item.name}</Text>
+                              <Text style={tw`text-[14px] font-bold text-gray-600 mt-0.5`}>Rs. {item.price}</Text>
+                            </View>
+                            <View style={tw`flex-row items-center gap-2`}>
+                              <TouchableOpacity
+                                onPress={() => handleToggleStock(item.id, item.available)}
+                                style={[
+                                  tw`px-3 h-9 rounded-lg items-center justify-center border`,
+                                  item.available
+                                    ? tw`bg-gray-900 border-gray-900`
+                                    : tw`bg-white border-gray-300`
+                                ]}
+                              >
+                                <Text style={[
+                                  tw`font-bold text-[11px] uppercase`,
+                                  item.available ? tw`text-white` : tw`text-gray-500`
+                                ]}>
+                                  {item.available ? 'In Stock' : 'Sold Out'}
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => handleDeleteItem(item.id)}
+                                style={tw`w-9 h-9 bg-gray-100 rounded-lg items-center justify-center active:opacity-70`}
+                              >
+                                <Text style={tw`text-gray-500 text-[13px] font-bold`}>✕</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                          <View style={tw`flex-row justify-between items-center px-3 pb-3 gap-3`}>
+                            <Text style={tw`text-[12px] font-medium text-gray-500`}>Qty:</Text>
+                            <View style={tw`flex-row items-center gap-2`}>
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStockQuantity(item.id, -1)}
+                                style={tw`w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 items-center justify-center active:opacity-70`}
+                              >
+                                <Text style={tw`text-gray-700 font-bold text-base`}>−</Text>
+                              </TouchableOpacity>
+                              <TextInput
+                                keyboardType="number-pad"
+                                value={String(item.stockQuantity ?? 0)}
+                                onChangeText={(text) => handleDirectStockQuantityChange(item.id, text)}
+                                scrollEnabled={false}
+                                multiline={false}
+                                textAlign="center"
+                                maxLength={4}
+                                style={tw`w-12 h-8 bg-gray-50 border border-gray-200 rounded-lg text-center text-[14px] font-bold text-gray-900 p-0`}
+                              />
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStockQuantity(item.id, 1)}
+                                style={tw`w-8 h-8 rounded-lg bg-gray-900 border border-gray-900 items-center justify-center active:opacity-70`}
+                              >
+                                <Text style={tw`text-white font-bold text-base`}>+</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )
+            })()}
+
             {/* Store Banner */}
             <View style={tw`bg-white rounded-2xl p-4 border border-gray-200 gap-3`}>
               <View style={tw`flex-row justify-between items-center`}>
@@ -1909,166 +2165,6 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 <Text style={tw`text-white font-bold text-[13px]`}>Change Banner Photo</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Add Item Form */}
-            <View style={tw`bg-white rounded-2xl p-4 border border-gray-200 gap-3`}>
-              <Text style={tw`text-[14px] font-black text-gray-900 uppercase tracking-wide`}>Add New Item</Text>
-
-              {!activeShopId && (
-                <View style={tw`flex-row items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200`}>
-                  <ActivityIndicator size="small" color="#6b7280" />
-                  <Text style={tw`text-[12px] font-medium text-gray-500 flex-1`}>Loading shop...</Text>
-                </View>
-              )}
-
-              {/* Photo Area */}
-              {newItemImg && !newItemImg.includes('unsplash') ? (
-                <View style={tw`w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative`}>
-                  <Image source={{ uri: newItemImg }} style={tw`w-full h-36`} resizeMode="cover" />
-                  <View style={tw`absolute bottom-2 left-2 right-2 flex-row gap-2`}>
-                    <TouchableOpacity
-                      onPress={() => { setImagePickerTarget('item'); setShowImagePickerModal(true) }}
-                      disabled={isUploadingPhoto || !activeShopId}
-                      style={tw`flex-1 bg-black/70 py-2 rounded-lg items-center justify-center active:opacity-70`}
-                    >
-                      <Text style={tw`text-white text-[12px] font-bold`}>Change Photo</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => { setNewItemImg('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200'); showToast('Photo removed') }}
-                      style={tw`bg-black/70 px-3 py-2 rounded-lg items-center justify-center active:opacity-70`}
-                    >
-                      <Text style={tw`text-white text-[12px] font-bold`}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => { setImagePickerTarget('item'); setShowImagePickerModal(true) }}
-                  disabled={isUploadingPhoto || !activeShopId}
-                  style={[tw`w-full h-20 bg-gray-50 border border-dashed border-gray-300 rounded-xl items-center justify-center gap-1 active:opacity-70`, !activeShopId && tw`opacity-40`]}
-                >
-                  {isUploadingPhoto ? (
-                    <View style={tw`items-center gap-1`}>
-                      <ActivityIndicator size="small" color="#6b7280" />
-                      <Text style={tw`text-gray-500 text-[11px] font-medium`}>Uploading...</Text>
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={tw`text-gray-400 font-bold text-[13px]`}>Add Photo (optional)</Text>
-                      <Text style={tw`text-gray-300 text-[11px]`}>Camera or Gallery</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              <TextInput
-                placeholder={t.namePlaceholder}
-                placeholderTextColor="#6b7280"
-                value={newItemName}
-                onChangeText={setNewItemName}
-                editable={!!activeShopId}
-                style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
-              />
-              <TextInput
-                placeholder={t.pricePlaceholder}
-                placeholderTextColor="#6b7280"
-                keyboardType="number-pad"
-                value={newItemPrice}
-                onChangeText={setNewItemPrice}
-                editable={!!activeShopId}
-                style={tw`bg-gray-50 border border-gray-200 rounded-xl px-4 h-12 text-[15px] font-medium text-gray-900`}
-              />
-              <TouchableOpacity
-                onPress={handleAddItem}
-                disabled={!activeShopId}
-                style={[tw`w-full h-12 bg-gray-900 rounded-xl items-center justify-center active:opacity-70`, !activeShopId && tw`opacity-40`]}
-              >
-                <Text style={tw`text-white font-bold text-[14px]`}>Add to Menu</Text>
-              </TouchableOpacity>
-            </View>
-
-
-            {/* Menu Items List */}
-            <Text style={tw`text-[14px] font-black text-gray-900 uppercase tracking-wide`}>Menu Items ({menuItems.length})</Text>
-            {loading ? (
-              <View style={tw`py-10 items-center`}>
-                <ActivityIndicator size="large" color="#374151" />
-              </View>
-            ) : menuItems.length === 0 ? (
-              <View style={tw`bg-white rounded-2xl p-8 items-center border border-gray-200`}>
-                <Text style={tw`text-[15px] font-bold text-gray-700`}>No items yet</Text>
-                <Text style={tw`text-[12px] text-gray-400 mt-1`}>Use the form above to add your first menu item.</Text>
-              </View>
-            ) : (
-              <View style={tw`gap-2`}>
-                {menuItems.map(item => (
-                  <View key={item.id} style={tw`bg-white rounded-2xl border border-gray-200 overflow-hidden`}>
-                    <View style={tw`flex-row items-center gap-3 p-3`}>
-                      <Image
-                        source={{ uri: item.img || item.image || item.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200' }}
-                        style={tw`w-14 h-14 rounded-lg bg-gray-100`}
-                        resizeMode="cover"
-                      />
-                      <View style={tw`flex-1 min-w-0`}>
-                        <Text style={tw`text-[15px] font-bold text-gray-900`} numberOfLines={1}>{item.name}</Text>
-                        <Text style={tw`text-[14px] font-bold text-gray-600 mt-0.5`}>Rs. {item.price}</Text>
-                      </View>
-                      <View style={tw`flex-row items-center gap-2`}>
-                        <TouchableOpacity
-                          onPress={() => handleToggleStock(item.id, item.available)}
-                          style={[
-                            tw`px-3 h-9 rounded-lg items-center justify-center border`,
-                            item.available
-                              ? tw`bg-gray-900 border-gray-900`
-                              : tw`bg-white border-gray-300`
-                          ]}
-                        >
-                          <Text style={[
-                            tw`font-bold text-[11px] uppercase`,
-                            item.available ? tw`text-white` : tw`text-gray-500`
-                          ]}>
-                            {item.available ? 'In Stock' : 'Sold Out'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleDeleteItem(item.id)}
-                          style={tw`w-9 h-9 bg-gray-100 rounded-lg items-center justify-center active:opacity-70`}
-                        >
-                          <Text style={tw`text-gray-500 text-[13px] font-bold`}>✕</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <View style={tw`flex-row justify-between items-center px-3 pb-3 gap-3`}>
-                      <Text style={tw`text-[12px] font-medium text-gray-500`}>Qty:</Text>
-                      <View style={tw`flex-row items-center gap-2`}>
-                        <TouchableOpacity
-                          onPress={() => handleUpdateStockQuantity(item.id, -1)}
-                          style={tw`w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 items-center justify-center active:opacity-70`}
-                        >
-                          <Text style={tw`text-gray-700 font-bold text-base`}>−</Text>
-                        </TouchableOpacity>
-                        <TextInput
-                          keyboardType="number-pad"
-                          value={String(item.stockQuantity ?? 0)}
-                          onChangeText={(text) => handleDirectStockQuantityChange(item.id, text)}
-                          scrollEnabled={false}
-                          multiline={false}
-                          textAlign="center"
-                          maxLength={4}
-                          style={tw`w-12 h-8 bg-gray-50 border border-gray-200 rounded-lg text-center text-[14px] font-bold text-gray-900 p-0`}
-                        />
-                        <TouchableOpacity
-                          onPress={() => handleUpdateStockQuantity(item.id, 1)}
-                          style={tw`w-8 h-8 rounded-lg bg-gray-900 border border-gray-900 items-center justify-center active:opacity-70`}
-                        >
-                          <Text style={tw`text-white font-bold text-base`}>+</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
         )}
 
@@ -2304,17 +2400,100 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             </View>
           </View>
         )}
+        {/* ── 4. NOTIFICATIONS TAB ────── */}
+        {activeTab === 'notifications' && (
+          <View style={tw`gap-4`}>
+            <View style={tw`bg-white rounded-3xl p-5 border border-gray-200 shadow-xs gap-3`}>
+              <View style={tw`flex-row items-center justify-between`}>
+                <View style={tw`flex-row items-center gap-2`}>
+                  <Text style={tw`text-2xl`}>🔔</Text>
+                  <View>
+                    <Text style={tw`text-[17px] font-black text-gray-900`}>Notifications</Text>
+                    <Text style={tw`text-[12px] font-medium text-gray-500`}>Realtime alerts and system updates</Text>
+                  </View>
+                </View>
+                <View style={tw`bg-green-100 px-2.5 py-1 rounded-full`}>
+                  <Text style={tw`text-[11px] font-black text-green-800 uppercase`}>Active</Text>
+                </View>
+              </View>
+
+              <View style={tw`h-px bg-gray-100 my-1`} />
+
+              <View style={tw`gap-3`}>
+                <View style={tw`bg-green-50 p-3.5 rounded-2xl border border-green-200 flex-row items-start gap-3`}>
+                  <Text style={tw`text-xl mt-0.5`}>📦</Text>
+                  <View style={tw`flex-1`}>
+                    <Text style={tw`text-[13px] font-bold text-green-900`}>Realtime Order Sync Active</Text>
+                    <Text style={tw`text-[11px] text-green-700 mt-0.5`}>You will receive instant alerts for incoming student orders.</Text>
+                    <Text style={tw`text-[10px] font-semibold text-green-600 mt-1`}>Just now</Text>
+                  </View>
+                </View>
+
+                <View style={tw`bg-blue-50 p-3.5 rounded-2xl border border-blue-200 flex-row items-start gap-3`}>
+                  <Text style={tw`text-xl mt-0.5`}>🏪</Text>
+                  <View style={tw`flex-1`}>
+                    <Text style={tw`text-[13px] font-bold text-blue-900`}>Store Status: {isLiveToday ? 'OPEN' : 'CLOSED'}</Text>
+                    <Text style={tw`text-[11px] text-blue-700 mt-0.5`}>
+                      {isLiveToday ? 'Your store is currently visible to all campus students.' : 'Your store is closed. Tap Go Live on top to open.'}
+                    </Text>
+                    <Text style={tw`text-[10px] font-semibold text-blue-600 mt-1`}>Today</Text>
+                  </View>
+                </View>
+
+                <View style={tw`bg-purple-50 p-3.5 rounded-2xl border border-purple-200 flex-row items-start gap-3`}>
+                  <Text style={tw`text-xl mt-0.5`}>💰</Text>
+                  <View style={tw`flex-1`}>
+                    <Text style={tw`text-[13px] font-bold text-purple-900`}>Vaayu Fee Exemption</Text>
+                    <Text style={tw`text-[11px] text-purple-700 mt-0.5`}>Platform fee is waived on free tier orders. All delivery fees are retained by your store.</Text>
+                    <Text style={tw`text-[10px] font-semibold text-purple-600 mt-1`}>Today</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ── 5. PROFILE TAB ────── */}
+        {activeTab === 'profile' && (
+          <View style={tw`gap-4`}>
+            <View style={tw`bg-white rounded-3xl p-5 border border-gray-200 shadow-xs gap-4`}>
+              <View style={tw`flex-row items-center gap-3.5`}>
+                <View style={tw`w-14 h-14 rounded-full bg-green-100 items-center justify-center border-2 border-green-300`}>
+                  <Text style={tw`text-2xl`}>👤</Text>
+                </View>
+                <View style={tw`flex-1`}>
+                  <Text style={tw`text-[18px] font-black text-gray-900`}>
+                    {user?.name || user?.full_name || user?.email?.split('@')[0] || 'Shobha Singh'}
+                  </Text>
+                  <Text style={tw`text-[13px] font-bold text-[#22a447] mt-0.5`}>
+                    🏪 {shopName || 'Royal Foods & Cafe'}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHaptic()
+                  if (onSignOut) onSignOut()
+                }}
+                style={tw`w-full h-12 bg-red-50 border border-red-200 rounded-xl items-center justify-center flex-row gap-2 active:opacity-70 mt-1`}
+              >
+                <Text style={tw`text-red-700 font-black text-[14px]`}>🚪 Sign Out of Partner Portal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Sliding Bottom Nav Capsule */}
-      <View style={tw`absolute bottom-4 left-4 right-4 z-40`}>
+      <View style={tw`absolute bottom-8 left-4 right-4 z-40`}>
         <View style={[tw`rounded-[28px] p-1 border shadow-xl`, { backgroundColor: 'rgba(255, 255, 255, 0.96)', borderColor: 'rgba(255, 255, 255, 0.6)' }]}>
           <View style={tw`flex-row items-center justify-around py-1 px-1`}>
             {([
               { id: 'orders', label: t.orders, Icon: IconOrders },
               { id: 'menu', label: t.menu, Icon: IconMenu },
               { id: 'settings', label: t.settings, Icon: IconSettings },
-              { id: 'profile', label: 'Profile', Icon: IconUser },
+              { id: 'notifications', label: 'Notifications', Icon: IconBell },
             ] as const).map(({ id, label, Icon }) => {
               const isActive = activeTab === id
               return (
@@ -2323,6 +2502,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   onPress={() => {
                     triggerHaptic()
                     setActiveTab(id as any)
+                    if (id === 'orders') setOrdersFilter('active')
                   }}
                   style={[
                     tw`flex-row items-center py-3 px-4 rounded-full`,
@@ -2601,6 +2781,153 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           </View>
         </View>
       </Modal>
+
+      {/* Hamburger Dropdown Menu Modal (Matching Image 2) */}
+      {menuOpen && (
+        <Modal
+          visible={menuOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMenuOpen(false)}
+        >
+          <TouchableOpacity
+            style={tw`flex-1 bg-black/40 pt-20 px-4`}
+            activeOpacity={1}
+            onPress={() => setMenuOpen(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              style={tw`bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-100 w-72 mt-2`}
+            >
+              {/* Green Top Header Banner */}
+              <View style={tw`bg-[#22a447] px-4 py-3.5`}>
+                <Text style={tw`text-[10px] font-black text-green-100 tracking-widest uppercase`}>
+                  {user?.role === 'worker' ? 'WORKER PORTAL' : 'SHOP OWNER PORTAL'}
+                </Text>
+                <Text style={tw`text-[18px] font-black text-white leading-tight`} numberOfLines={1}>
+                  {shopName || 'Bits'}
+                </Text>
+              </View>
+
+              {/* Owner Profile Info Section */}
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHaptic()
+                  setActiveTab('profile')
+                  setMenuOpen(false)
+                }}
+                activeOpacity={0.7}
+                style={tw`px-4 py-3 border-b border-gray-100 flex-row items-center gap-2.5 active:bg-gray-50`}
+              >
+                <View style={tw`w-8 h-8 rounded-full bg-gray-100 items-center justify-center`}>
+                  <Text style={tw`text-sm`}>👤</Text>
+                </View>
+                <View style={tw`flex-1`}>
+                  <Text style={tw`text-[13px] font-bold text-gray-800`}>
+                    {user?.name || user?.full_name || user?.email?.split('@')[0] || 'Shobha Singh'}
+                  </Text>
+                  <Text style={tw`text-[11px] font-semibold text-gray-500`}>
+                    📱 {user?.phone_number || '7906651669'}
+                  </Text>
+                </View>
+                <Text style={tw`text-[11px] font-bold text-green-700`}>View Profile ➔</Text>
+              </TouchableOpacity>
+
+              {/* Menu Options List */}
+              <View style={tw`p-2 gap-1`}>
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHaptic()
+                    setActiveTab('orders')
+                    setOrdersFilter('active')
+                    setMenuOpen(false)
+                  }}
+                  style={[
+                    tw`flex-row items-center gap-3 px-3 py-2.5 rounded-xl`,
+                    activeTab === 'orders' && ordersFilter === 'active' ? tw`bg-green-50` : tw`active:bg-gray-100`
+                  ]}
+                >
+                  <Text style={tw`text-base`}>📦</Text>
+                  <Text style={[tw`text-[13px] font-bold`, activeTab === 'orders' && ordersFilter === 'active' ? tw`text-green-700` : tw`text-gray-700`]}>
+                    My Orders
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHaptic()
+                    setActiveTab('orders')
+                    setOrdersFilter('all')
+                    setMenuOpen(false)
+                  }}
+                  style={[
+                    tw`flex-row items-center gap-3 px-3 py-2.5 rounded-xl`,
+                    activeTab === 'orders' && ordersFilter === 'all' ? tw`bg-green-50` : tw`active:bg-gray-100`
+                  ]}
+                >
+                  <Text style={tw`text-base`}>📜</Text>
+                  <Text style={[tw`text-[13px] font-bold`, activeTab === 'orders' && ordersFilter === 'all' ? tw`text-green-700` : tw`text-gray-700`]}>
+                    Old Orders
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHaptic()
+                    setActiveTab('settings')
+                    setMenuOpen(false)
+                  }}
+                  style={[
+                    tw`flex-row items-center gap-3 px-3 py-2.5 rounded-xl`,
+                    activeTab === 'settings' ? tw`bg-green-50` : tw`active:bg-gray-100`
+                  ]}
+                >
+                  <Text style={tw`text-base`}>🏪</Text>
+                  <Text style={[tw`text-[13px] font-bold`, activeTab === 'settings' ? tw`text-green-700` : tw`text-gray-700`]}>
+                    Shop Settings
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHaptic()
+                    showToast(`Reports: ${totalOrdersCount} Total Orders Today`)
+                    setMenuOpen(false)
+                  }}
+                  style={tw`flex-row items-center gap-3 px-3 py-2.5 rounded-xl active:bg-gray-100`}
+                >
+                  <Text style={tw`text-base`}>📊</Text>
+                  <Text style={tw`text-[13px] font-bold text-gray-700`}>Reports</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHaptic()
+                    showToast('Notifications: Active')
+                    setMenuOpen(false)
+                  }}
+                  style={tw`flex-row items-center gap-3 px-3 py-2.5 rounded-xl active:bg-gray-100`}
+                >
+                  <Text style={tw`text-base`}>🔔</Text>
+                  <Text style={tw`text-[13px] font-bold text-gray-700`}>Notifications</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHaptic()
+                    setMenuOpen(false)
+                    if (onSignOut) onSignOut()
+                  }}
+                  style={tw`flex-row items-center gap-3 px-3 py-2.5 rounded-xl active:bg-red-50`}
+                >
+                  <Text style={tw`text-base`}>🚪</Text>
+                  <Text style={tw`text-[13px] font-bold text-red-600`}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+      )}
 
       {/* Order Details Modal */}
       <OrderDetailsModal

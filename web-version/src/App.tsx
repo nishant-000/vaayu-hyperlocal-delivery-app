@@ -1336,7 +1336,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* ── Framer Motion Sliding Bottom Nav Capsule ── */}
-      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-40" style={{ width: 'calc(100% - 32px)', maxWidth: 390 }}>
+      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40" style={{ bottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))', width: 'calc(100% - 32px)', maxWidth: 390 }}>
         <div className="bg-white/95 backdrop-blur-md rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-white/60 p-1">
           <div className="flex items-center justify-around relative px-2 py-1.5">
             {navItems.map(({ id, label, Icon }) => {

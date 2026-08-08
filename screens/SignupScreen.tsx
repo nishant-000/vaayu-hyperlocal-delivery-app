@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator, BackHandler, Platform } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator, BackHandler, Platform, Image, Animated, PanResponder } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line, Circle, Rect } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -8,6 +8,11 @@ import { clearAllUserCache } from '../lib/cache'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const ALLOWED_DOMAINS = ['iiitt.ac.in']
+
+const PHOTO = {
+  delivery1: 'https://images.unsplash.com/photo-1695654390723-479197a8c4a3?w=800&h=1400&fit=crop&auto=format&q=85',
+  delivery2: 'https://images.unsplash.com/photo-1572195577046-2f25894c06fc?w=800&h=1400&fit=crop&auto=format&q=85',
+}
 
 type SignupStep = 'carousel' | 'login' | 'signup_student' | 'signup_owner' | 'verify' | 'verify_reset'
 
@@ -118,6 +123,43 @@ function SlideDots({ active, onDotClick }: { active: number; onDotClick: (idx: 0
         <View style={[tw`h-2 rounded-full`, { width: active === 1 ? 24 : 8, backgroundColor: active === 1 ? '#8fda58' : '#d1d5db' }]} />
       </TouchableOpacity>
     </View>
+  )
+}
+
+function AnimatedBottomSheet({ children }: { children: React.ReactNode }) {
+  const slideAnim = useRef(new Animated.Value(350)).current
+  const opacityAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    slideAnim.setValue(350)
+    opacityAnim.setValue(0)
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        bounciness: 9,
+        speed: 10,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      })
+    ]).start()
+  }, [])
+
+  return (
+    <Animated.View
+      style={[
+        tw`flex-1 bg-white rounded-t-[32px] px-6 pt-3 pb-8 justify-between shadow-2xl`,
+        {
+          transform: [{ translateY: slideAnim }],
+          opacity: opacityAnim,
+        }
+      ]}
+    >
+      {children}
+    </Animated.View>
   )
 }
 
@@ -232,7 +274,22 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
   const [activeSlide, setActiveSlide] = useState(0)
   const scrollViewRef = useRef<ScrollView>(null)
 
-  // Form states
+  // PanResponder for smooth horizontal swipe gesture between Customer & Partner slides
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 15,
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -40) {
+          setActiveSlide(1)
+          setRole('owner')
+        } else if (gestureState.dx > 40) {
+          setActiveSlide(0)
+          setRole('customer')
+        }
+      },
+    })
+  ).current
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -357,6 +414,7 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
     const contentOffset = event.nativeEvent.contentOffset.x
     const index = Math.round(contentOffset / SCREEN_WIDTH)
     setActiveSlide(index)
+    setRole(index === 1 ? 'owner' : 'customer')
   }
 
   const handleStudentSubmit = async () => {
@@ -857,224 +915,266 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
   const goTo = (idx: 0 | 1) => {
     setActiveSlide(idx)
+    setRole(idx === 1 ? 'owner' : 'customer')
     scrollViewRef.current?.scrollTo({ x: idx * SCREEN_WIDTH, animated: true })
   }
 
   return (
     <SafeAreaView style={[tw`flex-1`, { backgroundColor: '#ffffff' }]}>
-      {/* ── 1. SWIPE ONBOARDING CAROUSEL ── */}
+      {/* ── 1. FULL BLEED ONBOARDING CAROUSEL (SWIPEABLE) ── */}
       {step === 'carousel' && (
-        <View style={tw`flex-1 relative`}>
+        <View style={tw`flex-1 relative bg-black`} {...panResponder.panHandlers}>
+          {/* Full bleed background photo */}
+          <Image
+            source={{ uri: activeSlide === 1 ? PHOTO.delivery2 : PHOTO.delivery1 }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+
+          {/* Dark Gradient Overlay */}
           <LinearGradient
-            colors={['#ffffff', '#f4fbf7', '#eafaf1']}
-            locations={[0, 0.45, 1]}
+            colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
+            locations={[0, 0.3, 0.6, 1]}
             style={StyleSheet.absoluteFill}
           />
-          
-          {/* Background Ambient Glow Orbs */}
-          {activeSlide === 0 ? (
-            <>
-              <View style={[tw`absolute rounded-full`, { width: 380, height: 380, borderRadius: 190, backgroundColor: 'rgba(143,218,88,0.12)', top: -80, right: -80 }]} pointerEvents="none" />
-              <View style={[tw`absolute rounded-full`, { width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(110,231,183,0.08)', bottom: 60, left: -60 }]} pointerEvents="none" />
-            </>
-          ) : (
-            <>
-              <View style={[tw`absolute rounded-full`, { width: 380, height: 380, borderRadius: 190, backgroundColor: 'rgba(143,218,88,0.12)', top: -80, left: -80 }]} pointerEvents="none" />
-              <View style={[tw`absolute rounded-full`, { width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(110,231,183,0.08)', bottom: 40, right: -60 }]} pointerEvents="none" />
-            </>
-          )}
 
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            style={tw`flex-1`}
-          >
-            {/* Slide 1: Customer / Student - Shifted Downwards */}
-            <View style={[tw`flex-col items-center justify-between pt-16 pb-6`, { width: SCREEN_WIDTH }]}>
-              {/* Header */}
-              <View style={tw`items-center pt-12`}>
-                <View style={tw`relative w-[88px] h-[88px] mb-4 justify-center items-center`}>
-                  <View style={[tw`absolute -inset-2 rounded-full border`, { borderColor: 'rgba(143,218,88,0.3)', borderWidth: 1.5 }]} />
-                  <LinearGradient
-                    colors={['#f0fdf4', '#dcfce7']}
-                    style={[tw`w-[88px] h-[88px] rounded-full items-center justify-center border`, { borderColor: 'rgba(143,218,88,0.25)', borderWidth: 1.5 }]}
-                  >
-                    <VaayuIcon />
-                  </LinearGradient>
+          {/* Content Container */}
+          <View style={tw`flex-1 justify-end px-7 pb-10`}>
+            {activeSlide === 0 ? (
+              /* Slide 1: Customer / Student */
+              <View style={tw`w-full`}>
+                <View style={tw`mb-6`}>
+                  <Text style={tw`text-[11px] font-bold tracking-[2px] text-green-400 uppercase mb-3`}>
+                    CAMPUS DELIVERY
+                  </Text>
+                  <Text style={tw`text-[52px] font-black text-white leading-none tracking-tight mb-4`}>
+                    ORDER.{"\n"}TRACK.{"\n"}ARRIVE.
+                  </Text>
+                  <Text style={tw`text-[14px] font-medium text-white/70 leading-relaxed max-w-[280px]`}>
+                    Get anything from shops delivered to your campus in minutes.
+                  </Text>
                 </View>
-                <Text style={[tw`text-[38px] font-black text-gray-900 tracking-tighter m-0`, { lineHeight: 38 }]}>vaayu</Text>
-                <Text style={[tw`text-[12px] font-bold tracking-[4px] uppercase mt-1.5`, { color: '#8fda58' }]}>you got it</Text>
+
+                <View style={tw`gap-3 mt-4`}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setRole('customer')
+                      setActiveSlide(0)
+                      setStep('login')
+                    }}
+                    activeOpacity={0.88}
+                    style={tw`w-full py-4 rounded-full bg-green-600 items-center justify-center flex-row gap-2 shadow-lg`}
+                  >
+                    <Text style={tw`text-white font-extrabold text-[16px]`}>Continue ➔</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setActiveSlide(1)
+                      setRole('owner')
+                    }}
+                    activeOpacity={0.7}
+                    style={tw`py-2 items-center`}
+                  >
+                    <Text style={tw`text-[13px] font-semibold text-white/60`}>
+                      Shop Owner? <Text style={tw`text-green-400 font-bold`}>Partner Portal →</Text>
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              /* Slide 2: Shop Owner / Partner */
+              <View style={tw`w-full`}>
+                <View style={tw`mb-6`}>
+                  <Text style={tw`text-[11px] font-bold tracking-[2px] text-green-400 uppercase mb-3`}>
+                    PARTNER PORTAL
+                  </Text>
+                  <Text style={tw`text-[52px] font-black text-white leading-none tracking-tight mb-4`}>
+                    GROW.{"\n"}PARTNER.{"\n"}EARN.
+                  </Text>
+                  <Text style={tw`text-[14px] font-medium text-white/70 leading-relaxed max-w-[280px]`}>
+                    Register your shop and reach hundreds of hostel & campus customers daily.
+                  </Text>
+                </View>
+
+                <View style={tw`gap-3 mt-4`}>
+                  <TouchableOpacity
+                    onPress={() => setStep('signup_owner')}
+                    activeOpacity={0.88}
+                    style={tw`w-full py-3.5 rounded-full bg-white items-center justify-center flex-row gap-2 shadow-lg`}
+                  >
+                    <IconStore color="#111827" size={18} />
+                    <Text style={tw`text-gray-900 font-black text-[15px]`}>Register Your Shop</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setRole('owner')
+                      setActiveSlide(1)
+                      setStep('login')
+                    }}
+                    activeOpacity={0.88}
+                    style={tw`w-full py-3.5 rounded-full border border-white/50 bg-white/10 items-center justify-center flex-row gap-2`}
+                  >
+                    <IconEmail color="#ffffff" size={18} />
+                    <Text style={tw`text-white font-extrabold text-[15px]`}>Partner Log In</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setActiveSlide(0)
+                      setRole('customer')
+                    }}
+                    activeOpacity={0.7}
+                    style={tw`py-2 items-center`}
+                  >
+                    <Text style={tw`text-[13px] font-semibold text-white/60`}>
+                      Customer? <Text style={tw`text-green-400 font-bold`}>Customer Portal →</Text>
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Dots Indicator */}
+            <View style={tw`flex-row items-center gap-1.5 mt-6`}>
+              <TouchableOpacity onPress={() => { setActiveSlide(0); setRole('customer'); }}>
+                <View style={[tw`h-1.5 rounded-full`, { width: activeSlide === 0 ? 20 : 6, backgroundColor: activeSlide === 0 ? '#ffffff' : 'rgba(255,255,255,0.4)' }]} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setActiveSlide(1); setRole('owner'); }}>
+                <View style={[tw`h-1.5 rounded-full`, { width: activeSlide === 1 ? 20 : 6, backgroundColor: activeSlide === 1 ? '#ffffff' : 'rgba(255,255,255,0.4)' }]} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ── 2. LOGIN SCREEN (SLIDING BOTTOM SHEET DESIGN FROM ZIP) ── */}
+      {step === 'login' && (
+        <View style={tw`flex-1 relative bg-black`}>
+          {/* Full bleed background photo */}
+          <Image
+            source={{ uri: role === 'owner' ? PHOTO.delivery2 : PHOTO.delivery1 }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+
+          {/* Dark overlay top section */}
+          <View style={tw`h-[35%] justify-between p-6 pt-12`}>
+            <TouchableOpacity
+              onPress={() => {
+                const slideToReturn = role === 'owner' ? 1 : 0
+                setActiveSlide(slideToReturn)
+                setStep('carousel')
+              }}
+              activeOpacity={0.8}
+              style={[
+                tw`w-10 h-10 rounded-full items-center justify-center border`,
+                { backgroundColor: 'rgba(0,0,0,0.3)', borderColor: 'rgba(255,255,255,0.25)' }
+              ]}
+            >
+              <IconBack color="#ffffff" size={20} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Animated Bottom Sheet */}
+          <AnimatedBottomSheet>
+            {/* Sheet Handle */}
+            <View style={tw`w-10 h-1 bg-gray-300 rounded-full self-center mb-4`} />
+
+            {/* Logo */}
+            <Text style={tw`text-[28px] font-black text-gray-900 tracking-tight text-left`}>
+              Vaayu<Text style={tw`text-green-600`}>.</Text>
+            </Text>
+
+            {/* Content */}
+            <View style={tw`flex-1 justify-between py-2`}>
+              <View style={tw`text-left`}>
+                <Text style={tw`text-[20px] font-extrabold text-gray-900 mb-0.5`}>
+                  {role === 'owner' ? "Welcome Back, Partner!" : "Welcome Back!"}
+                </Text>
+                <Text style={tw`text-[13px] font-medium text-gray-500`}>
+                  {role === 'owner'
+                    ? "Log in to manage your shop and track orders."
+                    : "Log in to order from your favourite campus shops."}
+                </Text>
               </View>
 
-              {/* White Card */}
-              <View style={[tw`w-full max-w-[340px] rounded-[24px] p-6 gap-5 border mt-6`, { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+              <View style={tw`gap-3 my-2 text-left`}>
                 <View>
-                  <Text style={[tw`text-[12px] font-bold uppercase tracking-[2px] mb-1`, { color: '#8fda58' }]}>Customer</Text>
-                  <Text style={tw`text-[24px] font-extrabold text-gray-900`}>Welcome back</Text>
-                  <Text style={tw`text-[13px] text-gray-500 mt-1 font-normal`}>Order food, groceries & more</Text>
+                  <Text style={tw`text-[12px] font-bold text-gray-700 mb-1.5`}>
+                    {role === 'owner' ? "Owner Email" : "Username / College Email"}
+                  </Text>
+                  <TextInput
+                    placeholder={role === 'owner' ? "owner@royal-foods.com" : "251420@iiitt.ac.in"}
+                    placeholderTextColor="#9ca3af"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={tw`w-full h-12 bg-gray-50 border border-gray-200 rounded-xl px-3.5 text-[14px] font-medium text-gray-900`}
+                  />
                 </View>
 
-                <View style={tw`gap-3`}>
-                  <PremiumInputField placeholder="Email address" value={email} onChange={setEmail} type="email-address" />
-                  <PremiumInputField placeholder="Password" value={password} onChange={setPassword} secure />
+                <View>
+                  <Text style={tw`text-[12px] font-bold text-gray-700 mb-1.5`}>Password</Text>
+                  <TextInput
+                    placeholder="••••••••"
+                    placeholderTextColor="#9ca3af"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    style={tw`w-full h-12 bg-gray-50 border border-gray-200 rounded-xl px-3.5 text-[14px] font-medium text-gray-900`}
+                  />
                 </View>
 
                 <TouchableOpacity
                   onPress={() => handleForgotPassword(email)}
                   style={tw`self-end`}
                 >
-                  <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
+                  <Text style={tw`text-[12px] font-bold text-green-600`}>Forgot Password?</Text>
                 </TouchableOpacity>
+              </View>
 
-                <PrimarySubmitButton
+              <View style={tw`gap-2.5`}>
+                <TouchableOpacity
                   onPress={handleLoginSubmit}
-                  isLoading={isSubmitting}
-                  label="Log In"
-                />
-
-                <Text style={tw`text-center text-[12px] text-gray-400 mt-4`}>
-                  Don't have an account?{' '}
-                  <Text onPress={() => setStep('signup_student')} style={[tw`font-semibold`, { color: '#8fda58' }]}>Sign Up</Text>
-                </Text>
-              </View>
-
-              {/* Bottom Swipe hint */}
-              <View style={tw`items-center gap-3 pb-6 mt-4`}>
-                <TouchableOpacity onPress={() => goTo(1)} style={tw`flex-row items-center gap-1.5`}>
-                  <ChevronLeftIcon />
-                  <Text style={[tw`text-[13px] font-semibold`, { color: '#9ca3af' }]}>Partner with Vaayu</Text>
+                  disabled={isSubmitting}
+                  activeOpacity={0.88}
+                  style={tw`w-full py-4 rounded-full bg-green-600 items-center justify-center shadow-lg`}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={tw`text-white font-extrabold text-[16px]`}>
+                      {role === 'owner' ? "Log In to Partner Portal" : "Log In"}
+                    </Text>
+                  )}
                 </TouchableOpacity>
-                <SlideDots active={0} onDotClick={goTo} />
-              </View>
-            </View>
 
-            {/* Slide 2: Shop Owner - Shifted Downwards */}
-            <View style={[tw`flex-col items-center justify-between pt-16 pb-6`, { width: SCREEN_WIDTH }]}>
-              {/* Header */}
-              <View style={tw`items-center pt-12`}>
-                <View style={tw`relative w-[88px] h-[88px] mb-4 justify-center items-center`}>
-                  <View style={[tw`absolute -inset-2 rounded-full border`, { borderColor: 'rgba(143,218,88,0.3)', borderWidth: 1.5 }]} />
-                  <LinearGradient
-                    colors={['#f0fdf4', '#dcfce7']}
-                    style={[tw`w-[88px] h-[88px] rounded-full items-center justify-center border`, { borderColor: 'rgba(143,218,88,0.25)', borderWidth: 1.5 }]}
-                  >
-                    <ShopIcon />
-                  </LinearGradient>
-                </View>
-                <Text style={[tw`text-[38px] font-black text-gray-900 tracking-tighter m-0`, { lineHeight: 38 }]}>vaayu</Text>
-                <Text style={[tw`text-[12px] font-bold tracking-[4px] uppercase mt-1.5`, { color: '#8fda58' }]}>Partner Program</Text>
-              </View>
-
-              {/* White Card */}
-              <View style={[tw`w-full max-w-[340px] rounded-[24px] p-6 gap-5 border mt-6`, { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
-                <View>
-                  <Text style={[tw`text-[12px] font-bold uppercase tracking-[2px] mb-1`, { color: '#8fda58' }]}>For Restaurants & Shops</Text>
-                  <Text style={tw`text-[24px] font-extrabold text-gray-900`}>Grow your business</Text>
-                  <Text style={tw`text-[13px] text-gray-500 mt-1 font-normal`}>Partner with campus hyper-local delivery</Text>
-                </View>
-
-                <View style={tw`gap-3`}>
-                  <TouchableOpacity onPress={() => setStep('signup_owner')}>
-                    <LinearGradient
-                      colors={['#8fda58', '#7fc448']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={tw`w-full h-[52px] rounded-[14px] flex-row items-center justify-center gap-2`}
-                    >
-                      <IconStore color="#ffffff" size={20} />
-                      <Text style={tw`text-white text-[15px] font-bold tracking-[0.3px]`}>Register Your Shop</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-
-                  <View style={tw`flex-row items-center gap-3`}>
-                    <View style={[tw`flex-1 h-px`, { backgroundColor: '#e5e7eb' }]} />
-                    <Text style={[tw`text-[12px] font-semibold`, { color: '#9ca3af' }]}>already a partner?</Text>
-                    <View style={[tw`flex-1 h-px`, { backgroundColor: '#e5e7eb' }]} />
+                {role === 'owner' && (
+                  <View style={tw`flex-row items-center gap-3 my-1`}>
+                    <View style={tw`flex-1 h-px bg-gray-200`} />
+                    <Text style={tw`text-[11px] font-medium text-gray-400`}>or</Text>
+                    <View style={tw`flex-1 h-px bg-gray-200`} />
                   </View>
+                )}
 
-                  <TouchableOpacity
-                    onPress={() => {
-                      setRole('owner')
-                      setStep('login')
-                    }}
-                    style={[tw`w-full h-[52px] rounded-[14px] items-center justify-center border`, { borderColor: '#8fda58', backgroundColor: 'transparent' }]}
-                  >
-                    <Text style={tw`text-[#8fda58] text-[15px] font-semibold`}>Partner Log In</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={tw`text-center text-[12px] text-gray-400 mt-4`}>
-                  Need help? <Text style={[tw`font-semibold`, { color: '#8fda58' }]}>Contact Partner Support</Text>
-                </Text>
-              </View>
-
-              {/* Bottom Swipe hint */}
-              <View style={tw`items-center gap-3 pb-6 mt-4`}>
-                <TouchableOpacity onPress={() => goTo(0)} style={tw`flex-row items-center gap-1.5`}>
-                  <Text style={[tw`text-[13px] font-semibold`, { color: '#9ca3af' }]}>Customer Login</Text>
+                <TouchableOpacity
+                  onPress={() => setStep(role === 'owner' ? 'signup_owner' : 'signup_student')}
+                  style={tw`self-center py-1`}
+                >
+                  <Text style={tw`text-[12.5px] font-medium text-gray-500`}>
+                    {role === 'owner' ? "New partner? " : "Don't have an account? "}
+                    <Text style={tw`font-bold text-green-600`}>
+                      {role === 'owner' ? "Register Your Shop" : "Register here"}
+                    </Text>
+                  </Text>
                 </TouchableOpacity>
-                <SlideDots active={1} onDotClick={goTo} />
               </View>
             </View>
-          </ScrollView>
+          </AnimatedBottomSheet>
         </View>
-      )}
-
-      {/* ── 2. LOGIN SCREEN ── */}
-      {step === 'login' && (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`flex-grow pt-16 pb-8`}>
-          <BackHeader onBack={() => setStep('carousel')} title={role === 'owner' ? "Partner Log In" : "Welcome Back"} />
-
-          <View style={tw`px-6 pt-8`}>
-            <Text style={tw`text-[28px] font-black text-gray-900 mb-1`}>Log In</Text>
-            <Text style={tw`text-[13px] text-gray-400 font-semibold mb-8`}>
-              Enter your registered email and password.
-            </Text>
-
-            <CustomInput
-              label="Email Address"
-              placeholder={role === 'owner' ? "e.g. owner@campusbites.com" : "e.g. 251420@iiitt.ac.in"}
-              value={email}
-              onChange={setEmail}
-              type="email-address"
-              Icon={IconEmail}
-              hint={role === 'owner' ? "Registered shop owner email address" : "Must use official @iiitt.ac.in email address"}
-            />
-
-            <CustomInput
-              label="Password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={setPassword}
-              secure
-              Icon={IconLock}
-            />
-
-            {/* Forgot Password */}
-            <TouchableOpacity
-              onPress={() => handleForgotPassword(email)}
-              style={tw`self-end mb-2 mt-1`}
-            >
-              <Text style={[tw`text-[12px] font-bold`, { color: '#8fda58' }]}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            <PrimarySubmitButton
-              onPress={handleLoginSubmit}
-              isLoading={isSubmitting}
-              label="Log In"
-            />
-
-            <TouchableOpacity onPress={() => setStep(role === 'owner' ? 'signup_owner' : 'signup_student')} style={tw`self-center`}>
-              <Text style={tw`text-[13px] text-gray-400 font-semibold`}>
-                Don't have an account? <Text style={[tw`font-bold`, { color: '#8fda58' }]}>Sign Up</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
       )}
 
       {/* ── 3. SIGNUP STUDENT SCREEN ── */}

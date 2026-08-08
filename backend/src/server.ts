@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { CONFIG } from './config';
 import { db } from './database';
@@ -11,14 +11,14 @@ app.use(cors());
 app.use(express.json());
 
 // Log requests
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
 // ── Auth Endpoints ───────────────────────────────────────────────────────────
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', (req: Request, res: Response) => {
   const { email, name, phoneNumber, role } = req.body;
 
   if (!email || !name || !phoneNumber || !role) {
@@ -55,7 +55,7 @@ app.post('/api/auth/register', (req, res) => {
 // ── Orders Endpoints ──────────────────────────────────────────────────────────
 
 // Estimate fees endpoint
-app.post('/api/orders/estimate', (req, res) => {
+app.post('/api/orders/estimate', (req: Request, res: Response) => {
   const { deliveryMode } = req.body as { deliveryMode: DeliveryMode };
 
   if (deliveryMode !== 'regular' && deliveryMode !== 'instant') {
@@ -73,7 +73,7 @@ app.post('/api/orders/estimate', (req, res) => {
 });
 
 // Create Order
-app.post('/api/orders/create', (req, res) => {
+app.post('/api/orders/create', (req: Request, res: Response) => {
   const { userEmail, shopName, items, deliveryMode, selectedSlotId } = req.body;
 
   if (!userEmail || !shopName || !items || !Array.isArray(items) || items.length === 0 || !deliveryMode) {
@@ -130,7 +130,7 @@ app.post('/api/orders/create', (req, res) => {
 });
 
 // Get orders list
-app.get('/api/orders', (req, res) => {
+app.get('/api/orders', (req: Request, res: Response) => {
   const { email, slotId } = req.query;
   let orders = db.getOrders();
 
@@ -149,7 +149,7 @@ app.get('/api/orders', (req, res) => {
 });
 
 // Update Order status
-app.post('/api/orders/:id/status', (req, res) => {
+app.post('/api/orders/:id/status', (req: Request, res: Response) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -167,7 +167,7 @@ app.post('/api/orders/:id/status', (req, res) => {
 });
 
 // Get configurations (whitelist info, slots info)
-app.get('/api/config', (req, res) => {
+app.get('/api/config', (_req: Request, res: Response) => {
   return res.json(CONFIG);
 });
 
