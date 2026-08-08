@@ -146,6 +146,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [isLiveToday, setIsLiveToday] = useState(true)
   const [lang, setLang] = useState<'en' | 'hi' | 'ta'>('en')
   const [loading, setLoading] = useState(true)
+  const [itemSearchQuery, setItemSearchQuery] = useState('')
 
   // Header Hamburger & Dropdown state
   const [menuOpen, setMenuOpen] = useState(false)
@@ -477,24 +478,29 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                     <p className="text-[10px] font-bold text-green-100 tracking-widest uppercase">Shop Owner Portal</p>
                     <p className="text-lg font-extrabold text-white leading-tight">{user?.name || 'Campus Bites Cafe'}</p>
                   </div>
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-                      </svg>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800">{user?.ownerName || user?.name || 'Shobha Singh'}</p>
-                        <p className="text-xs text-gray-500">📱 {user?.phone || '7906651669'}</p>
-                      </div>
+                  <button
+                    onClick={() => {
+                      setActiveTab('profile')
+                      setMenuOpen(false)
+                    }}
+                    className="w-full px-4 py-3 border-b border-gray-100 flex items-center gap-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <svg className="w-4 h-4 text-gray-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{user?.ownerName || user?.name || 'Shobha Singh'}</p>
+                      <p className="text-xs text-gray-500">📱 {user?.phone || '7906651669'}</p>
                     </div>
-                  </div>
+                    <span className="text-xs font-bold text-[#22a447]">View ➔</span>
+                  </button>
                   <div className="px-4 py-2 space-y-1">
                     {[
                       { icon: '📦', label: 'My Orders', tab: 'orders', filter: 'active' },
                       { icon: '📜', label: 'Old Orders', tab: 'orders', filter: 'all' },
                       { icon: '🏪', label: 'Shop Settings', tab: 'settings' },
                       { icon: '📊', label: 'Reports', action: () => showToast(`Reports: ${totalOrdersCount} Total Orders Today`) },
-                      { icon: '🔔', label: 'Notifications', action: () => showToast('Notifications: Active') },
+                      { icon: '🔔', label: 'Notifications', tab: 'notifications' },
                       { icon: '🚪', label: 'Logout', action: onSignOut },
                     ].map((item) => (
                       <button
@@ -586,19 +592,23 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           >
             {/* Pull-to-refresh indicator */}
             <div
-              className="flex items-center justify-center overflow-hidden transition-all duration-300"
-              style={{ height: pullY > 0 || isRefreshing ? pullY || THRESHOLD : 0 }}
+              className="flex items-center justify-center overflow-hidden transition-all duration-200"
+              style={{ height: pullY > 0 || isRefreshing ? (isRefreshing ? 64 : pullY) : 0 }}
             >
-              <div className={`flex flex-col items-center gap-1 ${pullY >= THRESHOLD || isRefreshing ? 'opacity-100' : 'opacity-50'}`}>
+              <div className={`flex flex-col items-center gap-1 py-2 ${pullY > 5 || isRefreshing ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
                 <svg
-                  className={`w-7 h-7 text-[#22a447] ${isRefreshing ? 'animate-spin' : ''}`}
+                  className={`w-7 h-7 text-[#22a447] ${isRefreshing ? 'animate-spin' : 'transition-transform duration-150'}`}
                   style={{ transform: isRefreshing ? undefined : `rotate(${(pullY / THRESHOLD) * 360}deg)` }}
                   fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="text-[10px] font-semibold text-[#22a447]">
-                  {isRefreshing ? 'Syncing orders...' : pullY >= THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
+                <span className="text-xs font-bold text-[#22a447]">
+                  {isRefreshing
+                    ? 'Syncing orders...'
+                    : pullY >= THRESHOLD
+                    ? 'Release to refresh'
+                    : 'Pull to refresh'}
                 </span>
               </div>
             </div>
@@ -606,11 +616,24 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             {/* Orders Section Header */}
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">{t.orders} ({displayedOrders.length})</h2>
-              <div className="flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-[#22a447] animate-pulse" />
-                <span className="text-xs font-semibold text-gray-700">LIVE</span>
-                <span className="w-2 h-2 rounded-full bg-[#22a447] animate-pulse" />
-              </div>
+              <button
+                onClick={() => {
+                  setIsRefreshing(true)
+                  loadShopData().then(() => {
+                    setIsRefreshing(false)
+                    showToast('Orders Synced!')
+                  })
+                }}
+                className="flex items-center gap-2 bg-green-50 border border-green-200 px-3.5 py-1.5 rounded-full shadow-xs cursor-pointer hover:bg-green-100 transition-all active:scale-95"
+              >
+                <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22a447] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22a447] animate-pulse"></span>
+                </span>
+                <span className="text-xs font-bold text-green-800 uppercase tracking-wide">
+                  {isRefreshing ? 'Syncing...' : 'Live Sync'}
+                </span>
+              </button>
             </div>
 
 
@@ -923,28 +946,81 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               )}
             </div>
 
-            <h2 className="text-lg font-bold text-gray-900 mt-2">{t.menu} ({menuItems.length})</h2>
-            <div className="flex flex-col gap-3">
-              {menuItems.map(item => (
-                <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-200 flex items-center justify-between gap-3 shadow-xs">
-                  <img src={item.img} alt={item.name} className="w-14 h-14 rounded-xl object-cover" />
+            {/* Menu Items List & Search Bar */}
+            {(() => {
+              const filteredMenuItems = menuItems.filter(item => {
+                if (!itemSearchQuery.trim()) return true
+                const query = itemSearchQuery.toLowerCase().trim()
+                const name = (item.name || '').toLowerCase()
+                const category = (item.category || '').toLowerCase()
+                return name.includes(query) || category.includes(query)
+              })
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
-                    <p className="text-sm font-bold text-[#22a447] mt-0.5">₹{item.price}</p>
+              return (
+                <div className="flex flex-col gap-3.5 mt-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-extrabold text-gray-900 uppercase tracking-wide">
+                      {t.menu} ({filteredMenuItems.length}{itemSearchQuery.trim() ? ` / ${menuItems.length}` : ''})
+                    </h2>
                   </div>
 
-                  <button
-                    onClick={() => handleToggleStock(item.id, item.available)}
-                    className={`px-4 h-10 rounded-xl font-bold text-xs uppercase text-white shadow-xs cursor-pointer transition-all active:scale-[0.97] ${
-                      item.available ? 'bg-[#22a447]' : 'bg-red-500'
-                    }`}
-                  >
-                    {item.available ? t.inStock : t.soldOut}
-                  </button>
+                  {/* Search Bar Input */}
+                  <div className="bg-white rounded-2xl border border-gray-200 px-3.5 h-11 flex items-center gap-2 shadow-xs focus-within:border-[#22a447] transition-all">
+                    <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Search menu items..."
+                      value={itemSearchQuery}
+                      onChange={e => setItemSearchQuery(e.target.value)}
+                      className="flex-1 bg-transparent border-none text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400"
+                    />
+                    {itemSearchQuery.length > 0 && (
+                      <button
+                        onClick={() => setItemSearchQuery('')}
+                        className="w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-600 cursor-pointer transition-colors"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {filteredMenuItems.length === 0 ? (
+                      <div className="bg-white rounded-2xl p-8 text-center border border-gray-200 shadow-xs">
+                        <p className="text-sm font-bold text-gray-800">
+                          {itemSearchQuery.trim() ? `No items matching "${itemSearchQuery}"` : 'No items yet'}
+                        </p>
+                        <p className="text-xs text-gray-400 font-medium mt-1">
+                          {itemSearchQuery.trim() ? 'Try searching for another item name.' : 'Use the form above to add your first menu item.'}
+                        </p>
+                      </div>
+                    ) : (
+                      filteredMenuItems.map(item => (
+                        <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-200 flex items-center justify-between gap-3 shadow-xs">
+                          <img src={item.img} alt={item.name} className="w-14 h-14 rounded-xl object-cover" />
+
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
+                            <p className="text-sm font-bold text-[#22a447] mt-0.5">₹{item.price}</p>
+                          </div>
+
+                          <button
+                            onClick={() => handleToggleStock(item.id, item.available)}
+                            className={`px-4 h-10 rounded-xl font-bold text-xs uppercase text-white shadow-xs cursor-pointer transition-all active:scale-[0.97] ${
+                              item.available ? 'bg-[#22a447]' : 'bg-red-500'
+                            }`}
+                          >
+                            {item.available ? t.inStock : t.soldOut}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
+              )
+            })()}
           </div>
         )}
 
@@ -1067,6 +1143,104 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             </button>
           </div>
         )}
+
+        {/* ── 4. NOTIFICATIONS TAB ── */}
+        {activeTab === 'notifications' && (
+          <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-3xl p-5 border border-gray-200 shadow-xs flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🔔</span>
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900">Store Notifications</h2>
+                    <p className="text-xs text-gray-500">Live alerts and system updates</p>
+                  </div>
+                </div>
+                <span className="bg-green-100 text-green-800 text-[11px] font-bold px-2.5 py-1 rounded-full uppercase">Active</span>
+              </div>
+
+              <div className="h-px bg-gray-100 my-1" />
+
+              <div className="flex flex-col gap-3">
+                <div className="bg-green-50 p-3.5 rounded-2xl border border-green-200 flex items-start gap-3">
+                  <span className="text-xl mt-0.5">📦</span>
+                  <div>
+                    <h3 className="text-xs font-bold text-green-900">Realtime Order Sync Online</h3>
+                    <p className="text-xs text-green-700 mt-0.5">You will receive instant sound alerts for incoming student orders.</p>
+                    <span className="text-[10px] font-semibold text-green-600 block mt-1">Just now</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-3.5 rounded-2xl border border-blue-200 flex items-start gap-3">
+                  <span className="text-xl mt-0.5">🏪</span>
+                  <div>
+                    <h3 className="text-xs font-bold text-blue-900">Store Status: {isLiveToday ? 'OPEN' : 'CLOSED'}</h3>
+                    <p className="text-xs text-blue-700 mt-0.5">
+                      {isLiveToday ? 'Your store is currently visible to all campus students.' : 'Your store is closed. Tap Go Live on top to open.'}
+                    </p>
+                    <span className="text-[10px] font-semibold text-blue-600 block mt-1">Today</span>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 p-3.5 rounded-2xl border border-purple-200 flex items-start gap-3">
+                  <span className="text-xl mt-0.5">💰</span>
+                  <div>
+                    <h3 className="text-xs font-bold text-purple-900">Vaayu Fee Exemption</h3>
+                    <p className="text-xs text-purple-700 mt-0.5">Platform fee is waived on free tier orders. All delivery fees are retained by your store.</p>
+                    <span className="text-[10px] font-semibold text-purple-600 block mt-1">Today</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── 5. PROFILE TAB ── */}
+        {activeTab === 'profile' && (
+          <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-3xl p-5 border border-gray-200 shadow-xs flex flex-col gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center border-2 border-green-300 text-2xl">
+                  👤
+                </div>
+                <div>
+                  <h2 className="text-lg font-extrabold text-gray-900">
+                    {user?.ownerName || user?.name || 'Shobha Singh'}
+                  </h2>
+                  <p className="text-xs font-bold text-[#22a447] mt-0.5">
+                    🏪 {user?.shop_name || shopName || 'Royal Foods & Cafe'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-px bg-gray-100" />
+
+              <div className="flex flex-col gap-2.5">
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200 flex justify-between items-center text-xs">
+                  <span className="font-bold text-gray-500">Phone Number</span>
+                  <span className="font-bold text-gray-900">📱 {user?.phone || '7906651669'}</span>
+                </div>
+
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200 flex justify-between items-center text-xs">
+                  <span className="font-bold text-gray-500">Account Role</span>
+                  <span className="font-bold text-green-700 uppercase">Shop Owner</span>
+                </div>
+
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200 flex justify-between items-center text-xs">
+                  <span className="font-bold text-gray-500">Shop ID</span>
+                  <span className="font-mono text-gray-700">{activeShopId || 'shop_demo_01'}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={onSignOut}
+                className="w-full h-12 bg-red-50 border border-red-200 text-red-700 font-bold text-sm rounded-xl cursor-pointer hover:bg-red-100 transition-colors mt-1"
+              >
+                🚪 Sign Out of Partner Portal
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sliding Bottom Nav Capsule */}
@@ -1077,6 +1251,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               { id: 'orders', label: t.orders, icon: '📋' },
               { id: 'menu', label: t.menu, icon: '🍔' },
               { id: 'settings', label: t.settings, icon: '⚙️' },
+              { id: 'notifications', label: 'Notifications', icon: '🔔' },
             ].map(({ id, label, icon }) => {
               const isActive = activeTab === id
               return (
@@ -1085,6 +1260,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   onClick={() => {
                     triggerBeep()
                     setActiveTab(id as any)
+                    if (id === 'orders') setOrdersFilter('active')
                   }}
                   className="relative flex items-center gap-1.5 py-2.5 px-4 rounded-full overflow-hidden transition-colors cursor-pointer select-none"
                   style={{

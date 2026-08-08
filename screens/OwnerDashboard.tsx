@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler, LayoutAnimation, UIManager } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler, LayoutAnimation, UIManager, RefreshControl } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -229,6 +229,16 @@ function IconUser({ active }: { active: boolean }) {
   )
 }
 
+function IconBell({ active }: { active: boolean }) {
+  const c = active ? "#ffffff" : "#6b7280"
+  return (
+    <Svg width="26" height="26" viewBox="0 0 24 24" fill={active ? "#ffffff" : "none"} stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </Svg>
+  )
+}
+
 const KNOWN_CATEGORIES = ['Food', 'Grocery', 'Pharmacy', 'Stationery', 'Others']
 
 // DB stores category as lowercase or comma-separated (e.g. "food, others").
@@ -280,6 +290,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
   const [isAddItemOpen, setIsAddItemOpen] = useState(false)
   const [expandedOthers, setExpandedOthers] = useState<Record<string, boolean>>({})
   const [menuItems, setMenuItems] = useState<any[]>([])
+  const [itemSearchQuery, setItemSearchQuery] = useState('')
 
   const toggleAddItemForm = () => {
     triggerHaptic()
@@ -1537,7 +1548,19 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
         )}
       </View>
 
-      <ScrollView contentContainerStyle={tw`p-4 pb-36`}>
+      <ScrollView
+        contentContainerStyle={tw`p-4 pb-36`}
+        refreshControl={
+          <RefreshControl
+            refreshing={isSyncingOrders}
+            onRefresh={() => fetchFreshOrders(true)}
+            colors={['#22a447']}
+            tintColor="#22a447"
+            title="Syncing orders..."
+            titleColor="#22a447"
+          />
+        }
+      >
         {/* ── 1. ORDERS TAB ────── */}
         {activeTab === 'orders' && (
           <View style={tw`gap-4`}>
@@ -1546,15 +1569,18 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               <TouchableOpacity
                 onPress={() => fetchFreshOrders(true)}
                 disabled={isSyncingOrders}
-                style={tw`flex-row items-center gap-1.5 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full`}
+                style={tw`flex-row items-center gap-2 bg-green-50 border border-green-200 px-3.5 py-1.5 rounded-full shadow-xs active:scale-95`}
               >
                 {isSyncingOrders ? (
                   <ActivityIndicator size="small" color="#16a34a" />
                 ) : (
-                  <View style={tw`w-2 h-2 rounded-full bg-green-500`} />
+                  <View style={tw`relative flex-row items-center justify-center`}>
+                    <View style={tw`w-2.5 h-2.5 rounded-full bg-green-500 opacity-75`} />
+                    <View style={tw`absolute w-1.5 h-1.5 rounded-full bg-green-600`} />
+                  </View>
                 )}
-                <Text style={tw`text-[11px] font-black text-green-800 uppercase`}>
-                  {isSyncingOrders ? 'Syncing...' : 'Live Sync 🟢'}
+                <Text style={tw`text-[11px] font-black text-green-800 uppercase tracking-wide`}>
+                  {isSyncingOrders ? 'Syncing...' : 'Live Sync'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1988,87 +2014,134 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             </View>
 
 
-            {/* Menu Items List */}
-            <Text style={tw`text-[14px] font-black text-gray-900 uppercase tracking-wide`}>Menu Items ({menuItems.length})</Text>
-            {loading ? (
-              <View style={tw`py-10 items-center`}>
-                <ActivityIndicator size="large" color="#374151" />
-              </View>
-            ) : menuItems.length === 0 ? (
-              <View style={tw`bg-white rounded-2xl p-8 items-center border border-gray-200`}>
-                <Text style={tw`text-[15px] font-bold text-gray-700`}>No items yet</Text>
-                <Text style={tw`text-[12px] text-gray-400 mt-1`}>Use the form above to add your first menu item.</Text>
-              </View>
-            ) : (
-              <View style={tw`gap-2`}>
-                {menuItems.map(item => (
-                  <View key={item.id} style={tw`bg-white rounded-2xl border border-gray-200 overflow-hidden`}>
-                    <View style={tw`flex-row items-center gap-3 p-3`}>
-                      <Image
-                        source={{ uri: item.img || item.image || item.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200' }}
-                        style={tw`w-14 h-14 rounded-lg bg-gray-100`}
-                        resizeMode="cover"
-                      />
-                      <View style={tw`flex-1 min-w-0`}>
-                        <Text style={tw`text-[15px] font-bold text-gray-900`} numberOfLines={1}>{item.name}</Text>
-                        <Text style={tw`text-[14px] font-bold text-gray-600 mt-0.5`}>Rs. {item.price}</Text>
-                      </View>
-                      <View style={tw`flex-row items-center gap-2`}>
-                        <TouchableOpacity
-                          onPress={() => handleToggleStock(item.id, item.available)}
-                          style={[
-                            tw`px-3 h-9 rounded-lg items-center justify-center border`,
-                            item.available
-                              ? tw`bg-gray-900 border-gray-900`
-                              : tw`bg-white border-gray-300`
-                          ]}
-                        >
-                          <Text style={[
-                            tw`font-bold text-[11px] uppercase`,
-                            item.available ? tw`text-white` : tw`text-gray-500`
-                          ]}>
-                            {item.available ? 'In Stock' : 'Sold Out'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleDeleteItem(item.id)}
-                          style={tw`w-9 h-9 bg-gray-100 rounded-lg items-center justify-center active:opacity-70`}
-                        >
-                          <Text style={tw`text-gray-500 text-[13px] font-bold`}>✕</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <View style={tw`flex-row justify-between items-center px-3 pb-3 gap-3`}>
-                      <Text style={tw`text-[12px] font-medium text-gray-500`}>Qty:</Text>
-                      <View style={tw`flex-row items-center gap-2`}>
-                        <TouchableOpacity
-                          onPress={() => handleUpdateStockQuantity(item.id, -1)}
-                          style={tw`w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 items-center justify-center active:opacity-70`}
-                        >
-                          <Text style={tw`text-gray-700 font-bold text-base`}>−</Text>
-                        </TouchableOpacity>
-                        <TextInput
-                          keyboardType="number-pad"
-                          value={String(item.stockQuantity ?? 0)}
-                          onChangeText={(text) => handleDirectStockQuantityChange(item.id, text)}
-                          scrollEnabled={false}
-                          multiline={false}
-                          textAlign="center"
-                          maxLength={4}
-                          style={tw`w-12 h-8 bg-gray-50 border border-gray-200 rounded-lg text-center text-[14px] font-bold text-gray-900 p-0`}
-                        />
-                        <TouchableOpacity
-                          onPress={() => handleUpdateStockQuantity(item.id, 1)}
-                          style={tw`w-8 h-8 rounded-lg bg-gray-900 border border-gray-900 items-center justify-center active:opacity-70`}
-                        >
-                          <Text style={tw`text-white font-bold text-base`}>+</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+            {/* Menu Items List & Search Bar */}
+            {(() => {
+              const filteredMenuItems = menuItems.filter(item => {
+                if (!itemSearchQuery.trim()) return true
+                const query = itemSearchQuery.toLowerCase().trim()
+                const name = (item.name || '').toLowerCase()
+                const category = (item.category || '').toLowerCase()
+                return name.includes(query) || category.includes(query)
+              })
+
+              return (
+                <View style={tw`gap-3 mt-1`}>
+                  <View style={tw`flex-row items-center justify-between`}>
+                    <Text style={tw`text-[14px] font-black text-gray-900 uppercase tracking-wide`}>
+                      Menu Items ({filteredMenuItems.length}{itemSearchQuery.trim() ? ` / ${menuItems.length}` : ''})
+                    </Text>
                   </View>
-                ))}
-              </View>
-            )}
+
+                  {/* Search Input Bar */}
+                  <View style={tw`bg-white rounded-2xl border border-gray-200 px-3.5 h-11 flex-row items-center gap-2 shadow-xs`}>
+                    <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <Circle cx="11" cy="11" r="8" />
+                      <Line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </Svg>
+                    <TextInput
+                      placeholder="Search menu items..."
+                      placeholderTextColor="#9ca3af"
+                      value={itemSearchQuery}
+                      onChangeText={setItemSearchQuery}
+                      style={tw`flex-1 text-[14px] font-medium text-gray-900 h-full p-0`}
+                    />
+                    {itemSearchQuery.length > 0 && (
+                      <TouchableOpacity
+                        onPress={() => setItemSearchQuery('')}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={tw`w-5 h-5 rounded-full bg-gray-200 items-center justify-center`}
+                      >
+                        <Text style={tw`text-[11px] font-bold text-gray-600 leading-none`}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {loading ? (
+                    <View style={tw`py-10 items-center`}>
+                      <ActivityIndicator size="large" color="#374151" />
+                    </View>
+                  ) : filteredMenuItems.length === 0 ? (
+                    <View style={tw`bg-white rounded-2xl p-8 items-center border border-gray-200`}>
+                      <Text style={tw`text-[15px] font-bold text-gray-700`}>
+                        {itemSearchQuery.trim() ? `No items matching "${itemSearchQuery}"` : 'No items yet'}
+                      </Text>
+                      <Text style={tw`text-[12px] text-gray-400 mt-1 text-center`}>
+                        {itemSearchQuery.trim() ? 'Try searching for another item name.' : 'Use the form above to add your first menu item.'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={tw`gap-2`}>
+                      {filteredMenuItems.map(item => (
+                        <View key={item.id} style={tw`bg-white rounded-2xl border border-gray-200 overflow-hidden`}>
+                          <View style={tw`flex-row items-center gap-3 p-3`}>
+                            <Image
+                              source={{ uri: item.img || item.image || item.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200' }}
+                              style={tw`w-14 h-14 rounded-lg bg-gray-100`}
+                              resizeMode="cover"
+                            />
+                            <View style={tw`flex-1 min-w-0`}>
+                              <Text style={tw`text-[15px] font-bold text-gray-900`} numberOfLines={1}>{item.name}</Text>
+                              <Text style={tw`text-[14px] font-bold text-gray-600 mt-0.5`}>Rs. {item.price}</Text>
+                            </View>
+                            <View style={tw`flex-row items-center gap-2`}>
+                              <TouchableOpacity
+                                onPress={() => handleToggleStock(item.id, item.available)}
+                                style={[
+                                  tw`px-3 h-9 rounded-lg items-center justify-center border`,
+                                  item.available
+                                    ? tw`bg-gray-900 border-gray-900`
+                                    : tw`bg-white border-gray-300`
+                                ]}
+                              >
+                                <Text style={[
+                                  tw`font-bold text-[11px] uppercase`,
+                                  item.available ? tw`text-white` : tw`text-gray-500`
+                                ]}>
+                                  {item.available ? 'In Stock' : 'Sold Out'}
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => handleDeleteItem(item.id)}
+                                style={tw`w-9 h-9 bg-gray-100 rounded-lg items-center justify-center active:opacity-70`}
+                              >
+                                <Text style={tw`text-gray-500 text-[13px] font-bold`}>✕</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                          <View style={tw`flex-row justify-between items-center px-3 pb-3 gap-3`}>
+                            <Text style={tw`text-[12px] font-medium text-gray-500`}>Qty:</Text>
+                            <View style={tw`flex-row items-center gap-2`}>
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStockQuantity(item.id, -1)}
+                                style={tw`w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 items-center justify-center active:opacity-70`}
+                              >
+                                <Text style={tw`text-gray-700 font-bold text-base`}>−</Text>
+                              </TouchableOpacity>
+                              <TextInput
+                                keyboardType="number-pad"
+                                value={String(item.stockQuantity ?? 0)}
+                                onChangeText={(text) => handleDirectStockQuantityChange(item.id, text)}
+                                scrollEnabled={false}
+                                multiline={false}
+                                textAlign="center"
+                                maxLength={4}
+                                style={tw`w-12 h-8 bg-gray-50 border border-gray-200 rounded-lg text-center text-[14px] font-bold text-gray-900 p-0`}
+                              />
+                              <TouchableOpacity
+                                onPress={() => handleUpdateStockQuantity(item.id, 1)}
+                                style={tw`w-8 h-8 rounded-lg bg-gray-900 border border-gray-900 items-center justify-center active:opacity-70`}
+                              >
+                                <Text style={tw`text-white font-bold text-base`}>+</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )
+            })()}
 
             {/* Store Banner */}
             <View style={tw`bg-white rounded-2xl p-4 border border-gray-200 gap-3`}>
@@ -2327,6 +2400,108 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
             </View>
           </View>
         )}
+        {/* ── 4. NOTIFICATIONS TAB ────── */}
+        {activeTab === 'notifications' && (
+          <View style={tw`gap-4`}>
+            <View style={tw`bg-white rounded-3xl p-5 border border-gray-200 shadow-xs gap-3`}>
+              <View style={tw`flex-row items-center justify-between`}>
+                <View style={tw`flex-row items-center gap-2`}>
+                  <Text style={tw`text-2xl`}>🔔</Text>
+                  <View>
+                    <Text style={tw`text-[17px] font-black text-gray-900`}>Notifications</Text>
+                    <Text style={tw`text-[12px] font-medium text-gray-500`}>Realtime alerts and system updates</Text>
+                  </View>
+                </View>
+                <View style={tw`bg-green-100 px-2.5 py-1 rounded-full`}>
+                  <Text style={tw`text-[11px] font-black text-green-800 uppercase`}>Active</Text>
+                </View>
+              </View>
+
+              <View style={tw`h-px bg-gray-100 my-1`} />
+
+              <View style={tw`gap-3`}>
+                <View style={tw`bg-green-50 p-3.5 rounded-2xl border border-green-200 flex-row items-start gap-3`}>
+                  <Text style={tw`text-xl mt-0.5`}>📦</Text>
+                  <View style={tw`flex-1`}>
+                    <Text style={tw`text-[13px] font-bold text-green-900`}>Realtime Order Sync Active</Text>
+                    <Text style={tw`text-[11px] text-green-700 mt-0.5`}>You will receive instant alerts for incoming student orders.</Text>
+                    <Text style={tw`text-[10px] font-semibold text-green-600 mt-1`}>Just now</Text>
+                  </View>
+                </View>
+
+                <View style={tw`bg-blue-50 p-3.5 rounded-2xl border border-blue-200 flex-row items-start gap-3`}>
+                  <Text style={tw`text-xl mt-0.5`}>🏪</Text>
+                  <View style={tw`flex-1`}>
+                    <Text style={tw`text-[13px] font-bold text-blue-900`}>Store Status: {isLiveToday ? 'OPEN' : 'CLOSED'}</Text>
+                    <Text style={tw`text-[11px] text-blue-700 mt-0.5`}>
+                      {isLiveToday ? 'Your store is currently visible to all campus students.' : 'Your store is closed. Tap Go Live on top to open.'}
+                    </Text>
+                    <Text style={tw`text-[10px] font-semibold text-blue-600 mt-1`}>Today</Text>
+                  </View>
+                </View>
+
+                <View style={tw`bg-purple-50 p-3.5 rounded-2xl border border-purple-200 flex-row items-start gap-3`}>
+                  <Text style={tw`text-xl mt-0.5`}>💰</Text>
+                  <View style={tw`flex-1`}>
+                    <Text style={tw`text-[13px] font-bold text-purple-900`}>Vaayu Fee Exemption</Text>
+                    <Text style={tw`text-[11px] text-purple-700 mt-0.5`}>Platform fee is waived on free tier orders. All delivery fees are retained by your store.</Text>
+                    <Text style={tw`text-[10px] font-semibold text-purple-600 mt-1`}>Today</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ── 5. PROFILE TAB ────── */}
+        {activeTab === 'profile' && (
+          <View style={tw`gap-4`}>
+            <View style={tw`bg-white rounded-3xl p-5 border border-gray-200 shadow-xs gap-4`}>
+              <View style={tw`flex-row items-center gap-3.5`}>
+                <View style={tw`w-14 h-14 rounded-full bg-green-100 items-center justify-center border-2 border-green-300`}>
+                  <Text style={tw`text-2xl`}>👤</Text>
+                </View>
+                <View style={tw`flex-1`}>
+                  <Text style={tw`text-[18px] font-black text-gray-900`}>
+                    {user?.name || user?.full_name || user?.email?.split('@')[0] || 'Shobha Singh'}
+                  </Text>
+                  <Text style={tw`text-[13px] font-bold text-[#22a447] mt-0.5`}>
+                    🏪 {shopName || 'Royal Foods & Cafe'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={tw`h-px bg-gray-100`} />
+
+              <View style={tw`gap-2.5`}>
+                <View style={tw`bg-gray-50 p-3 rounded-2xl border border-gray-200 flex-row justify-between items-center`}>
+                  <Text style={tw`text-[12px] font-bold text-gray-500`}>Phone Number</Text>
+                  <Text style={tw`text-[13px] font-bold text-gray-900`}>📱 {user?.phone_number || '7906651669'}</Text>
+                </View>
+
+                <View style={tw`bg-gray-50 p-3 rounded-2xl border border-gray-200 flex-row justify-between items-center`}>
+                  <Text style={tw`text-[12px] font-bold text-gray-500`}>Account Role</Text>
+                  <Text style={tw`text-[13px] font-bold text-green-700 uppercase`}>{user?.role || 'Shop Owner'}</Text>
+                </View>
+
+                <View style={tw`bg-gray-50 p-3 rounded-2xl border border-gray-200 flex-row justify-between items-center`}>
+                  <Text style={tw`text-[12px] font-bold text-gray-500`}>Shop ID</Text>
+                  <Text style={tw`text-[12px] font-mono text-gray-700`}>{activeShopId || 'shop_demo_01'}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHaptic()
+                  if (onSignOut) onSignOut()
+                }}
+                style={tw`w-full h-12 bg-red-50 border border-red-200 rounded-xl items-center justify-center flex-row gap-2 active:opacity-70 mt-1`}
+              >
+                <Text style={tw`text-red-700 font-black text-[14px]`}>🚪 Sign Out of Partner Portal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Sliding Bottom Nav Capsule */}
@@ -2337,7 +2512,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               { id: 'orders', label: t.orders, Icon: IconOrders },
               { id: 'menu', label: t.menu, Icon: IconMenu },
               { id: 'settings', label: t.settings, Icon: IconSettings },
-              { id: 'profile', label: 'Profile', Icon: IconUser },
+              { id: 'notifications', label: 'Notifications', Icon: IconBell },
             ] as const).map(({ id, label, Icon }) => {
               const isActive = activeTab === id
               return (
@@ -2346,6 +2521,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                   onPress={() => {
                     triggerHaptic()
                     setActiveTab(id as any)
+                    if (id === 'orders') setOrdersFilter('active')
                   }}
                   style={[
                     tw`flex-row items-center py-3 px-4 rounded-full`,
@@ -2653,7 +2829,15 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               </View>
 
               {/* Owner Profile Info Section */}
-              <View style={tw`px-4 py-3 border-b border-gray-100 flex-row items-center gap-2.5`}>
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHaptic()
+                  setActiveTab('profile')
+                  setMenuOpen(false)
+                }}
+                activeOpacity={0.7}
+                style={tw`px-4 py-3 border-b border-gray-100 flex-row items-center gap-2.5 active:bg-gray-50`}
+              >
                 <View style={tw`w-8 h-8 rounded-full bg-gray-100 items-center justify-center`}>
                   <Text style={tw`text-sm`}>👤</Text>
                 </View>
@@ -2665,7 +2849,8 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                     📱 {user?.phone_number || '7906651669'}
                   </Text>
                 </View>
-              </View>
+                <Text style={tw`text-[11px] font-bold text-green-700`}>View Profile ➔</Text>
+              </TouchableOpacity>
 
               {/* Menu Options List */}
               <View style={tw`p-2 gap-1`}>
