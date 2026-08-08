@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Vibration, ActivityIndicator, Alert, ActionSheetIOS, Platform, Linking, BackHandler } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
+import { LinearGradient } from 'expo-linear-gradient'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
 import { supabase } from '../lib/supabase'
@@ -1432,7 +1433,26 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
               activeOpacity={0.7}
               style={tw`w-9 h-9 items-center justify-center rounded-xl bg-gray-100 active:bg-gray-200`}
             >
-              <Text style={tw`text-lg font-bold text-gray-800`}>{menuOpen ? '✕' : '☰'}</Text>
+              <View style={tw`w-5 h-4 justify-between items-center py-0.5`}>
+                <View
+                  style={[
+                    tw`w-5 h-0.5 bg-gray-800 rounded-full`,
+                    menuOpen ? { transform: [{ translateY: 5 }, { rotate: '45deg' }] } : {}
+                  ]}
+                />
+                <View
+                  style={[
+                    tw`w-5 h-0.5 bg-gray-800 rounded-full`,
+                    menuOpen ? { opacity: 0 } : {}
+                  ]}
+                />
+                <View
+                  style={[
+                    tw`w-5 h-0.5 bg-gray-800 rounded-full`,
+                    menuOpen ? { transform: [{ translateY: -5 }, { rotate: '-45deg' }] } : {}
+                  ]}
+                />
+              </View>
             </TouchableOpacity>
 
             <Text style={[tw`font-extrabold tracking-wide text-[17px]`, { color: '#22a447' }]}>
@@ -1548,10 +1568,14 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 const prof = customerProfiles[order.user_id] || (order.user_id ? customerProfiles[order.user_id.toLowerCase()] : null)
                 const customerName = order.customer_name || prof?.full_name || 'Campus Student'
                 const customerPhone = order.customer_phone || prof?.phone_number || ''
-                const compactLoc = getCompactLocation(order.location)
+                const isInstant = order.delivery_mode === 'instant'
+                const ContainerComponent: any = LinearGradient
+                const containerProps = isInstant
+                  ? { colors: ['#f97736', '#ffffff'], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 }, style: tw`rounded-3xl overflow-hidden border border-gray-100 shadow-sm` }
+                  : { colors: ['#90D5FF', '#ffffff', '#ffffff'], start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 }, style: tw`rounded-3xl overflow-hidden border border-gray-100 shadow-sm` }
 
                 return (
-                  <View key={order.id} style={tw`bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm`}>
+                  <ContainerComponent key={order.id} {...containerProps}>
                     {/* Top Row: Delivery type heading + Status Badge */}
                     <View style={tw`px-4 pt-4 pb-3 flex-row items-start justify-between gap-2`}>
                       <View style={tw`flex-row items-center gap-1.5 flex-1 mr-2`}>
@@ -1831,7 +1855,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                       )}
                     </View>
                     </View>
-                  </View>
+                  </ContainerComponent>
                 )
               })
             )}
@@ -2565,13 +2589,13 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
           onRequestClose={() => setMenuOpen(false)}
         >
           <TouchableOpacity
-            style={tw`flex-1 bg-black/40 pt-14 px-4`}
+            style={tw`flex-1 bg-black/40 pt-20 px-4`}
             activeOpacity={1}
             onPress={() => setMenuOpen(false)}
           >
             <TouchableOpacity
               activeOpacity={1}
-              style={tw`bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-100 w-72`}
+              style={tw`bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-100 w-72 mt-2`}
             >
               {/* Green Top Header Banner */}
               <View style={tw`bg-[#22a447] px-4 py-3.5`}>

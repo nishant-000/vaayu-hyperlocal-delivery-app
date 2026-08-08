@@ -471,7 +471,7 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
 
               {/* Dropdown Menu */}
               {menuOpen && (
-                <div className="absolute top-11 left-0 z-50 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="absolute top-11 mt-2.5 left-0 z-50 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                   <div className="bg-[#22a447] px-4 py-3">
                     <p className="text-[10px] font-bold text-green-100 tracking-widest uppercase">Shop Owner Portal</p>
                     <p className="text-lg font-extrabold text-white leading-tight">{user?.name || 'Campus Bites Cafe'}</p>
@@ -628,7 +628,14 @@ export default function OwnerDashboard({ user, onSignOut }: OwnerDashboardProps)
                 const bill = getOrderBill(order)
 
                 return (
-                  <div key={order.id} className="bg-white rounded-2xl shadow-xs border border-gray-100 overflow-hidden flex flex-col">
+                  <div
+                    key={order.id}
+                    className={`rounded-2xl shadow-xs border border-gray-100 overflow-hidden flex flex-col ${
+                      order.delivery_mode === 'instant'
+                        ? 'bg-gradient-to-b from-[#f97736] to-white'
+                        : 'bg-gradient-to-b from-[#90D5FF] via-white to-white'
+                    }`}
+                  >
                     {/* Scheduled / Delivery Mode & Status */}
                     <div className="px-4 pt-4 pb-3">
                       <div className="flex items-start justify-between gap-2">
