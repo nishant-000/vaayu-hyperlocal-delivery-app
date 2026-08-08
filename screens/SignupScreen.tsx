@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator, BackHandler, Platform, Image, Animated } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, StyleSheet, ActivityIndicator, BackHandler, Platform, Image, Animated, PanResponder } from 'react-native'
 import tw from 'twrnc'
 import Svg, { Path, Polyline, Line, Circle, Rect } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -274,7 +274,22 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
   const [activeSlide, setActiveSlide] = useState(0)
   const scrollViewRef = useRef<ScrollView>(null)
 
-  // Form states
+  // PanResponder for smooth horizontal swipe gesture between Customer & Partner slides
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 15,
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -40) {
+          setActiveSlide(1)
+          setRole('owner')
+        } else if (gestureState.dx > 40) {
+          setActiveSlide(0)
+          setRole('customer')
+        }
+      },
+    })
+  ).current
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -906,9 +921,9 @@ export default function SignupScreen({ onDone, onRegister }: SignupScreenProps) 
 
   return (
     <SafeAreaView style={[tw`flex-1`, { backgroundColor: '#ffffff' }]}>
-      {/* ── 1. FULL BLEED ONBOARDING CAROUSEL ── */}
+      {/* ── 1. FULL BLEED ONBOARDING CAROUSEL (SWIPEABLE) ── */}
       {step === 'carousel' && (
-        <View style={tw`flex-1 relative bg-black`}>
+        <View style={tw`flex-1 relative bg-black`} {...panResponder.panHandlers}>
           {/* Full bleed background photo */}
           <Image
             source={{ uri: activeSlide === 1 ? PHOTO.delivery2 : PHOTO.delivery1 }}
